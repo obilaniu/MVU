@@ -1,0 +1,3 @@
+[submodule "3rdparty/CodeSnips"]
+	path = 3rdparty/CodeSnips
+	url = git@github.com:obilaniu/CodeSnips.git

@@ -55,3 +55,6 @@
 /build
 /install
 /old
+
+# Experiments
+/experiments/
