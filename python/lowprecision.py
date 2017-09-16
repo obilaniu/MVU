@@ -8,6 +8,7 @@ import numpy                                as np
 import os
 import pysnips.ml.experiment                as PySMlExp
 import pysnips.ml.loop                      as PySMlL
+import pysnips.ml.pytorch                   as PySMlPy
 import torch                                as T
 import torch.autograd                       as TA
 import torch.cuda                           as TC
@@ -57,6 +58,13 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 			                         (self.d.optimizer.beta1,
 			                          self.d.optimizer.beta2),
 			                         self.d.optimizer.eps)
+		elif self.d.optimizer.name == "yellowfin":
+			self.optimizer = PySMlPy.YellowFin(self.model.parameters(),
+			                                   self.d.optimizer.lr,
+			                                   self.d.optimizer.mom,
+			                                   self.d.optimizer.beta,
+			                                   self.d.optimizer.curvWW,
+			                                   self.d.optimizer.nesterov)
 		else:
 			raise NotImplementedError("Optimizer "+self.d.optimizer.name+" not implemented!")
 	
@@ -123,8 +131,7 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 	def finiEpoch(self, d): pass
 	def finiBatch(self, d): pass
 	def preempt  (self, d):
-		# Choose a more intelligent snapshot rule here
-		if False:
+		if d["std/loop/state"] == "anteEpoch" and d["std/loop/epochNum"] > 0:
 			self.snapshot()
 
 
