@@ -109,6 +109,8 @@ class Train(Subcommand):
 		argp.add_argument("--act",                  default="relu",             type=str,
 		    choices=["relu"],
 		    help="Activation.")
+		argp.add_argument("--cuda",                 default=None,               type=int,
+		    help="CUDA device to use.")
 		optp = argp.add_argument_group("Optimizers", "Tunables for all optimizers")
 		optp.add_argument("--optimizer", "--opt", action=OptimizerAction,
 		    type=str, default="nag", help="Optimizer selection.")
