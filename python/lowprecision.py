@@ -120,6 +120,7 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 	def anteTrain(self, d): pass
 	def anteEpoch(self, d):
 		d["user/epochErr"] = 0
+		d["user/epochErr"] = 0
 	def anteBatch(self, d): pass
 	def execBatch(self, d):
 		b = d["std/loop/batchNum"]
@@ -147,7 +148,17 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		# Step
 		self.optimizer.step()
 	def postBatch(self, d): pass
-	def postEpoch(self, d): pass
+	def postEpoch(self, d):
+		d.update(self.validate())
+		sys.stdout.write(
+			"\nValLoss: {:6.2f}  ValAccuracy: {:6.2f}%".format(
+				d["user/valLoss"],
+				d["user/valAcc"],
+			)
+		)
+		self.log.write("{:d},{:6.2f},{:6.2f}\n".format(d["std/loop/epochNum"],
+		                                               d["user/valLoss"],
+		                                               100.0*d["user/valAcc"]))
 	def postTrain(self, d): pass
 	def finiTrain(self, d): pass
 	def finiEpoch(self, d): pass
@@ -165,13 +176,54 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 			)
 		)
 		
-		self.log.write("{:d},{:6.2f},{:6.2f}\n".format(d["std/loop/stepNum"],
-		                                               ceLoss,
-		                                               100.0*batchErr/batchSize))
-		self.log.flush()
+		#self.log.write("{:d},{:6.2f},{:6.2f}\n".format(d["std/loop/stepNum"],
+		#                                               ceLoss,
+		#                                               100.0*batchErr/batchSize))
+		#self.log.flush()
 	def preempt  (self, d):
 		if d["std/loop/state"] == "anteEpoch" and d["std/loop/epochNum"] > 0:
 			self.snapshot()
+	
+	def validate (self):
+		# Switch to validation mode
+		self.model.train(False)
+		valErr  = 0
+		valLoss = 0
+		
+		numBatches = len(self.validX) // self.d.batch_size
+		
+		for b in xrange(numBatches):
+			#
+			# Get the data...
+			#
+			X = self.validX[b*self.d.batch_size:(b+1)*self.d.batch_size]
+			Y = self.validY[b*self.d.batch_size:(b+1)*self.d.batch_size]
+			if self.d.cuda is None:
+				X = T. FloatTensor(X)
+				Y = T. LongTensor (Y)
+			else:
+				X = TC.FloatTensor(X)
+				Y = TC.LongTensor (Y)
+			X = TA.Variable(X)
+			Y = TA.Variable(Y)
+			
+			#
+			# Feed it to model and step the optimizer
+			#
+			d = self.model(X, Y)
+			valErr  += int  (d["user/batchErr"].data.cpu().numpy())
+			valLoss += float(d["user/ceLoss"]  .data.cpu().numpy())
+		
+		# Switch back to train mode
+		self.model.train(True)
+		
+		valAcc   = float(valErr) / (numBatches*self.d.batch_size)
+		valLoss /= numBatches
+		
+		return {
+			"user/valAcc":  valAcc,
+			"user/valLoss": valLoss,
+		}
 
 
 
