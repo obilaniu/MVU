@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+
+#Imports
+import numpy                                as np
+import os, pdb, sys
+import torch                                as T
+import torch.autograd                       as TA
+import torch.cuda                           as TC
+import torch.nn                             as TN
+import torch.optim                          as TO
+
+
+
+class TTQW(TA.Function):
+	"""
+	TTQ Weight Quantization and Gradient Override.
+	"""
+	
+	@staticmethod
+	def forward(ctx, weights, Wp, Wn, thresh):
+		deltat = thresh * weights.abs().max(0)[0].max(0)[0].max(0)[0].max(0)[0]
+		wP     = (weights >=  deltat).float()
+		wN     = (weights <= -deltat).float()
+		w      = Wp*wP - Wn*wN
+		
+		ctx.save_for_backward(weights, Wp, Wn, thresh)
+		
+		return w
+	@staticmethod
+	def backward(ctx, dw):
+		weights, Wp, Wn, thresh = ctx.saved_variables
+		
+		deltat = thresh * weights.abs().max(0)[0].max(0)[0].max(0)[0].max(0)[0]
+		wP     = (weights >=  deltat).float()
+		wN     = (weights <= -deltat).float()
+		
+		dweights = Wp  * wP        * dw + \
+		           1.0 * (1-wP-wN) * dw + \
+		           Wn  * wN        * dw
+		dWp      = (wP * dw).sum(0).sum(0).sum(0).sum(0)
+		dWn      = (wN * dw).sum(0).sum(0).sum(0).sum(0)
+		
+		return dweights, dWp, dWn, None
+
+
+class Thresh3(TA.Function):
+	"""
+	Threshold ternarization.
+	"""
+	
+	@staticmethod
+	def forward(ctx, x, lo, hi):
+		#
+		# Justification for defaults:
+		#
+		# 33% of the mass of a Gaussian is below   stddev -0.44.
+		# 33% of the mass of a Gaussian is between stddev -0.44 and +0.44.
+		# 33% of the mass of a Gaussian is above   stddev +0.44.
+		#
+		
+		ctx.save_for_backward(x)
+		tzx = (x >= hi).float() - (x <= lo).float()
+		return tzx
+	@staticmethod
+	def backward(ctx, dx):
+		return dx, None, None
+

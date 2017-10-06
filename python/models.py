@@ -1,0 +1,152 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+
+
+# Imports.
+import cPickle                              as pkl
+import ipdb
+import numpy                                as np
+import os
+import sys
+import torch                                as T
+import torch.autograd                       as TA
+import torch.cuda                           as TC
+import torch.nn                             as TN
+import torch.optim                          as TO
+import torch.utils                          as TU
+import torch.utils.data                     as TUD
+
+from   layers import                        Conv2dTTQ, BatchNorm2dTz
+
+
+
+#
+# Real-valued model
+#
+
+class RealModel(TN.Module):
+	def __init__(self, d):
+		super(RealModel, self).__init__()
+		self.d      = d
+		self.conv0  = TN.Conv2d          (  1,  64, (3,3), padding=1)
+		self.bn0    = TN.BatchNorm2d     ( 64,  affine=False)
+		self.relu0  = TN.ReLU            ()
+		self.conv1  = TN.Conv2d          ( 64,  64, (3,3), padding=1)
+		self.bn1    = TN.BatchNorm2d     ( 64,  affine=False)
+		self.relu1  = TN.ReLU            ()
+		self.conv2  = TN.Conv2d          ( 64, 128, (3,3), padding=1, stride=2)
+		self.bn2    = TN.BatchNorm2d     (128,  affine=False)
+		self.relu2  = TN.ReLU            ()
+		self.conv3  = TN.Conv2d          (128, 128, (3,3), padding=1)
+		self.bn3    = TN.BatchNorm2d     (128,  affine=False)
+		self.relu3  = TN.ReLU            ()
+		self.conv4  = TN.Conv2d          (128, 128, (3,3), padding=1)
+		self.bn4    = TN.BatchNorm2d     (128,  affine=False)
+		self.relu4  = TN.ReLU            ()
+		self.conv5  = TN.Conv2d          (128, 256, (3,3), padding=1, stride=2)
+		self.bn5    = TN.BatchNorm2d     (256,  affine=False)
+		self.relu5  = TN.ReLU            ()
+		self.conv6  = TN.Conv2d          (256, 256, (3,3), padding=1)
+		self.bn6    = TN.BatchNorm2d     (256,  affine=False)
+		self.relu6  = TN.ReLU            ()
+		self.conv7  = TN.Conv2d          (256, 256, (3,3), padding=1)
+		self.bn7    = TN.BatchNorm2d     (256,  affine=False)
+		self.relu7  = TN.ReLU            ()
+		self.conv8  = TN.Conv2d          (256, 256, (3,3), padding=1)
+		self.bn8    = TN.BatchNorm2d     (256,  affine=False)
+		self.relu8  = TN.ReLU            ()
+		self.conv9  = TN.Conv2d          (256,  10, (1,1), padding=0)
+		self.pool   = TN.MaxPool2d       ((7,7))
+		self.celoss = TN.CrossEntropyLoss()
+	def forward(self, X, Y):
+		v, y     = X.view(self.d.batch_size, 1, 28, 28), Y
+		v        = self.relu0(self.bn0(self.conv0(v)))
+		v        = self.relu1(self.bn1(self.conv1(v)))
+		v        = self.relu2(self.bn2(self.conv2(v)))
+		v        = self.relu3(self.bn3(self.conv3(v)))
+		v        = self.relu4(self.bn4(self.conv4(v)))
+		v        = self.relu5(self.bn5(self.conv5(v)))
+		v        = self.relu6(self.bn6(self.conv6(v)))
+		v        = self.relu7(self.bn7(self.conv7(v)))
+		v        = self.relu8(self.bn8(self.conv8(v)))
+		v        = self.pool (self.conv9(v))
+		v        = v.view(self.d.batch_size, 10)
+		
+		ceLoss   = self.celoss(v, y)
+		yPred    = T.max(v, 1)[1]
+		batchErr = yPred.eq(y).long().sum(0)
+		
+		return {
+			"user/ceLoss":   ceLoss,
+			"user/batchErr": batchErr,
+			"user/yPred":    yPred,
+		}
+
+
+
+
+
+#
+# TTQ model
+#
+
+class TTQModel(TN.Module):
+	def __init__(self, d):
+		super(TTQModel, self).__init__()
+		self.d      = d
+		self.conv0  = Conv2dTTQ        (  1,  64, (3,3), padding=1)
+		self.bntz0  = BatchNorm2dTz    ( 64)
+		self.conv1  = Conv2dTTQ        ( 64,  64, (3,3), padding=1)
+		self.bntz1  = BatchNorm2dTz    ( 64)
+		self.conv2  = Conv2dTTQ        ( 64, 128, (3,3), padding=1, stride=2)
+		self.bntz2  = BatchNorm2dTz    (128)
+		self.conv3  = Conv2dTTQ        (128, 128, (3,3), padding=1)
+		self.bntz3  = BatchNorm2dTz    (128)
+		self.conv4  = Conv2dTTQ        (128, 128, (3,3), padding=1)
+		self.bntz4  = BatchNorm2dTz    (128)
+		self.conv5  = Conv2dTTQ        (128, 256, (3,3), padding=1, stride=2)
+		self.bntz5  = BatchNorm2dTz    (256)
+		self.conv6  = Conv2dTTQ        (256, 256, (3,3), padding=1)
+		self.bntz6  = BatchNorm2dTz    (256)
+		self.conv7  = Conv2dTTQ        (256, 256, (3,3), padding=1)
+		self.bntz7  = BatchNorm2dTz    (256)
+		self.conv8  = Conv2dTTQ        (256, 256, (3,3), padding=1)
+		self.bntz8  = BatchNorm2dTz    (256)
+		self.conv9  = Conv2dTTQ        (256,  10, (1,1), padding=0)
+		self.pool   = TN.MaxPool2d     ((7,7))
+		self.celoss = TN.CrossEntropyLoss()
+	def forward(self, X, Y):
+		self.conv0.reconstrain()
+		self.conv1.reconstrain()
+		self.conv2.reconstrain()
+		self.conv3.reconstrain()
+		self.conv4.reconstrain()
+		self.conv5.reconstrain()
+		self.conv6.reconstrain()
+		self.conv7.reconstrain()
+		self.conv8.reconstrain()
+		self.conv9.reconstrain()
+		
+		v, y     = X.view(self.d.batch_size, 1, 28, 28), Y
+		v        = self.bntz0(self.conv0(v))
+		v        = self.bntz1(self.conv1(v))
+		v        = self.bntz2(self.conv2(v))
+		v        = self.bntz3(self.conv3(v))
+		v        = self.bntz4(self.conv4(v))
+		v        = self.bntz5(self.conv5(v))
+		v        = self.bntz6(self.conv6(v))
+		v        = self.bntz7(self.conv7(v))
+		v        = self.bntz8(self.conv8(v))
+		v        = self.pool (self.conv9(v))
+		v        = v.view(self.d.batch_size, 10)
+		
+		ceLoss   = self.celoss(v, y)
+		yPred    = T.max(v, 1)[1]
+		batchErr = yPred.eq(y).long().sum(0)
+		
+		return {
+			"user/ceLoss":   ceLoss,
+			"user/batchErr": batchErr,
+			"user/yPred":    yPred,
+		}

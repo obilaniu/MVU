@@ -3,16 +3,18 @@
 
 # Imports.
 import sys, os, __main__
-base    = os.path.realpath(os.path.abspath(__main__.__file__))
-base    = os.path.dirname(os.path.dirname(base))
-PySBase = os.path.join   (base, "3rdparty", "CodeSnips", "python")
-sys.path += [".", PySBase]
+base       = os.path.realpath(os.path.abspath(__main__.__file__))
+base       = os.path.dirname(os.path.dirname(base))
+ThirdPBase = os.path.join   (base, "3rdparty")
+PySBase    = os.path.join   (ThirdPBase, "CodeSnips", "python")
+sys.path  += [".", PySBase]
 import argparse                             as Ap
+import ipdb
 import logging                              as L
 import numpy                                as np
-import pdb
 from   pysnips.ml.argparseactions import OptimizerAction
 import time
+import traceback
 
 __version__ = "0.0.0"
 
@@ -94,11 +96,11 @@ class Train(Subcommand):
 		    help="Seed for PRNGs.")
 		argp.add_argument("--summary",     action="store_true",
 		    help="""Print a summary of the network.""")
-		argp.add_argument("--model",                default="ternary",          type=str,
-		    choices=["ternary"],
+		argp.add_argument("--model",                default="ttq",              type=str,
+		    choices=["real", "ttq"],
 		    help="Model Selection.")
-		argp.add_argument("--dataset",              default="cifar10",          type=str,
-		    choices=["cifar10", "cifar100", "svhn"],
+		argp.add_argument("--dataset",              default="mnist",            type=str,
+		    choices=["mnist", "cifar10", "cifar100", "svhn"],
 		    help="Dataset Selection.")
 		argp.add_argument("--dropout",              default=0,                  type=float,
 		    help="Dropout probability.")
@@ -111,9 +113,13 @@ class Train(Subcommand):
 		    help="Activation.")
 		argp.add_argument("--cuda",                 default=None,               type=int,
 		    help="CUDA device to use.")
+		argp.add_argument("--pdb",     action="store_true",
+		    help="""Breakpoint before model entry.""")
 		optp = argp.add_argument_group("Optimizers", "Tunables for all optimizers")
 		optp.add_argument("--optimizer", "--opt", action=OptimizerAction,
-		    type=str, default="nag", help="Optimizer selection.")
+		    type=str,
+		    default=Ap.Namespace(name="nag", lr=1e-3, mom=0.9, nesterov=True),
+		    help="Optimizer selection.")
 		optp.add_argument("--clipnorm", "--cn",     default=1.0,                type=float,
 		    help="The norm of the gradient will be clipped at this magnitude.")
 		optp.add_argument("--clipval",  "--cv",     default=1.0,                type=float,
@@ -161,8 +167,9 @@ class Train(Subcommand):
 		
 		np.random.seed(d.seed % 2**32)
 		
-		import lowprecision;
-		lowprecision.getExperiment(d).rollback().run()
+		import lowprecision
+		if d.pdb: ipdb.set_trace()
+		lowprecision.Experiment(d.workDir, d).rollback().run()
 
 
 
@@ -206,5 +213,9 @@ def main(argv):
 	d = getArgParser(argv[0]).parse_args(argv[1:])
 	return d.__subcmdfn__(d)
 if __name__ == "__main__":
-	main(sys.argv)
+	try:
+		main(sys.argv)
+	except:
+		traceback.print_exc()
+		ipdb.post_mortem(sys.exc_info()[2])
 
