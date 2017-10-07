@@ -5,6 +5,7 @@
 # Imports.
 import cPickle                              as pkl
 import ipdb
+from   ipdb import set_trace as bp
 import math
 import numpy                                as np
 import os
@@ -20,9 +21,8 @@ import torch.optim                          as TO
 import torch.utils                          as TU
 import torch.utils.data                     as TUD
 import torchvision                          as Tv
-
+import torchvision.transforms               as TvT
 from   models import                        *
-
 
 
 class Experiment(PySMlExp.Experiment, PySMlL.Callback):
@@ -33,26 +33,34 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		
 		"""Dataset Selection"""
 		if   self.d.dataset == "mnist":
-			self.Dtrain  = Tv.datasets.MNIST   (self.dataDir, True, download=True)
-			self.Dtest   = Tv.datasets.MNIST   (self.dataDir, False)
+			self.Dxform  = [TvT.ToTensor()]
+			self.Dxform  = TvT.Compose(self.Dxform)
+			self.Dtrain  = Tv.datasets.MNIST   (self.dataDir, True,    self.Dxform)
+			self.Dtest   = Tv.datasets.MNIST   (self.dataDir, False,   self.Dxform)
 			self.Dimgsz  = (1, 28, 28)
 			self.DNclass = 10
 			self.DNvalid = 10000
 		elif self.d.dataset == "cifar10":
-			self.Dtrain  = Tv.datasets.CIFAR10 (self.dataDir, True)
-			self.Dtest   = Tv.datasets.CIFAR10 (self.dataDir, False)
+			self.Dxform  = [TvT.ToTensor()]
+			self.Dxform  = TvT.Compose(self.Dxform)
+			self.Dtrain  = Tv.datasets.CIFAR10 (self.dataDir, True,    self.Dxform)
+			self.Dtest   = Tv.datasets.CIFAR10 (self.dataDir, False,   self.Dxform)
 			self.Dimgsz  = (3, 32, 32)
 			self.DNclass = 10
 			self.DNvalid = 10000
 		elif self.d.dataset == "cifar100":
-			self.Dtrain  = Tv.datasets.CIFAR100(self.dataDir, True)
-			self.Dtest   = Tv.datasets.CIFAR100(self.dataDir, False)
+			self.Dxform  = [TvT.ToTensor()]
+			self.Dxform  = TvT.Compose(self.Dxform)
+			self.Dtrain  = Tv.datasets.CIFAR100(self.dataDir, True,    self.Dxform)
+			self.Dtest   = Tv.datasets.CIFAR100(self.dataDir, False,   self.Dxform)
 			self.Dimgsz  = (3, 32, 32)
 			self.DNclass = 100
 			self.DNvalid = 10000
 		elif self.d.dataset == "svhn":
-			self.Dtrain  = Tv.datasets.SVHN    (self.dataDir, "train")
-			self.Dtest   = Tv.datasets.SVHN    (self.dataDir, "test")
+			self.Dxform  = [TvT.ToTensor()]
+			self.Dxform  = TvT.Compose(self.Dxform)
+			self.Dtrain  = Tv.datasets.SVHN    (self.dataDir, "train", self.Dxform)
+			self.Dtest   = Tv.datasets.SVHN    (self.dataDir, "test",  self.Dxform)
 			self.Dimgsz  = (3, 32, 32)
 			self.DNclass = 10
 			self.DNvalid = 10000
@@ -209,7 +217,6 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		# Load Data
 		#
 		
-		ipdb.set_trace()
 		I, (X, Y) = self.DtrainIter.next()
 		if self.d.cuda is None:
 			X, Y = X.cpu(), Y.cpu()

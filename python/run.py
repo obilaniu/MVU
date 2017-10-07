@@ -112,6 +112,7 @@ class Train(Subcommand):
 		    choices=["relu"],
 		    help="Activation.")
 		argp.add_argument("--cuda",                 default=None,               type=int,
+		    nargs="?", const=0,
 		    help="CUDA device to use.")
 		argp.add_argument("--pdb",     action="store_true",
 		    help="""Breakpoint before model entry.""")
@@ -215,6 +216,8 @@ def main(argv):
 if __name__ == "__main__":
 	try:
 		main(sys.argv)
+	except KeyboardInterrupt as ki:
+		raise
 	except:
 		traceback.print_exc()
 		ipdb.post_mortem(sys.exc_info()[2])
