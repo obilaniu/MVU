@@ -92,8 +92,8 @@ class Train(Subcommand):
 		argp.add_argument("-l", "--loglevel",       default="info",             type=str,
 		    choices=cls.LOGLEVELS.keys(),
 		    help="Logging severity level.")
-		argp.add_argument("-s", "--seed",           default=0xe4223644e98b8e64, type=long,
-		    help="Seed for PRNGs.")
+		argp.add_argument("-s", "--seed",           default=0x6a09e667f3bcc908, type=long,
+		    help="Seed for PRNGs. Default is 64-bit fractional expansion of sqrt(2).")
 		argp.add_argument("--summary",     action="store_true",
 		    help="""Print a summary of the network.""")
 		argp.add_argument("--model",                default="ttq",              type=str,
