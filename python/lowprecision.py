@@ -18,6 +18,7 @@ import torch.autograd                       as TA
 import torch.cuda                           as TC
 import torch.nn                             as TN
 import torch.optim                          as TO
+import torch.random                         as TR
 import torch.utils                          as TU
 import torch.utils.data                     as TUD
 import torchvision                          as Tv
@@ -30,37 +31,44 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		super(Experiment, self).__init__(workDir, d=d)
 		self.__dataDir = self.d.dataDir
 		
+		"""PRNG Seeding"""
+		seed = self.d.seed & (2**64-1)
+		seed = seed-2**63 if seed>=2**63 else seed   # manual_seed() chokes on unsigned
+		TR.manual_seed(seed)
+		self._masterPRNGState = TR.get_rng_state()
+		self.reseed()
+		
 		
 		"""Dataset Selection"""
 		if   self.d.dataset == "mnist":
 			self.Dxform  = [TvT.ToTensor()]
 			self.Dxform  = TvT.Compose(self.Dxform)
-			self.Dtrain  = Tv.datasets.MNIST   (self.dataDir, True,    self.Dxform)
-			self.Dtest   = Tv.datasets.MNIST   (self.dataDir, False,   self.Dxform)
+			self.Dtrain  = Tv.datasets.MNIST   (self.dataDir, True,    self.Dxform, download=True)
+			self.Dtest   = Tv.datasets.MNIST   (self.dataDir, False,   self.Dxform, download=True)
 			self.Dimgsz  = (1, 28, 28)
 			self.DNclass = 10
 			self.DNvalid = 10000
 		elif self.d.dataset == "cifar10":
 			self.Dxform  = [TvT.ToTensor()]
 			self.Dxform  = TvT.Compose(self.Dxform)
-			self.Dtrain  = Tv.datasets.CIFAR10 (self.dataDir, True,    self.Dxform)
-			self.Dtest   = Tv.datasets.CIFAR10 (self.dataDir, False,   self.Dxform)
+			self.Dtrain  = Tv.datasets.CIFAR10 (self.dataDir, True,    self.Dxform, download=True)
+			self.Dtest   = Tv.datasets.CIFAR10 (self.dataDir, False,   self.Dxform, download=True)
 			self.Dimgsz  = (3, 32, 32)
 			self.DNclass = 10
 			self.DNvalid = 10000
 		elif self.d.dataset == "cifar100":
 			self.Dxform  = [TvT.ToTensor()]
 			self.Dxform  = TvT.Compose(self.Dxform)
-			self.Dtrain  = Tv.datasets.CIFAR100(self.dataDir, True,    self.Dxform)
-			self.Dtest   = Tv.datasets.CIFAR100(self.dataDir, False,   self.Dxform)
+			self.Dtrain  = Tv.datasets.CIFAR100(self.dataDir, True,    self.Dxform, download=True)
+			self.Dtest   = Tv.datasets.CIFAR100(self.dataDir, False,   self.Dxform, download=True)
 			self.Dimgsz  = (3, 32, 32)
 			self.DNclass = 100
 			self.DNvalid = 10000
 		elif self.d.dataset == "svhn":
 			self.Dxform  = [TvT.ToTensor()]
 			self.Dxform  = TvT.Compose(self.Dxform)
-			self.Dtrain  = Tv.datasets.SVHN    (self.dataDir, "train", self.Dxform)
-			self.Dtest   = Tv.datasets.SVHN    (self.dataDir, "test",  self.Dxform)
+			self.Dtrain  = Tv.datasets.SVHN    (self.dataDir, "train", self.Dxform, download=True)
+			self.Dtest   = Tv.datasets.SVHN    (self.dataDir, "test",  self.Dxform, download=True)
 			self.Dimgsz  = (3, 32, 32)
 			self.DNclass = 10
 			self.DNvalid = 10000
@@ -127,17 +135,50 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 	@property
 	def logDir(self):  return os.path.join(self.workDir, "logs")
 	
+	def reseed(self):
+		"""Reseed all known PRNGs from the master PyTorch PRNG."""
+		
+		#
+		# The following highly-contrived way to generate a new signed Long from 8
+		# Byte is necessary because PyTorch does NOT currently generate full-range
+		# random numbers for torch.LongTensor(1).random_().
+		#
+		TR.set_rng_state(self._masterPRNGState)
+		r0 = T.LongStorage.from_buffer(T.ByteTensor(8).random_().numpy(), "little")[0]
+		r1 = T.LongStorage.from_buffer(T.ByteTensor(8).random_().numpy(), "little")[0]
+		r2 = T.LongStorage.from_buffer(T.ByteTensor(8).random_().numpy(), "little")[0]
+		self._masterPRNGStatePrev = self._masterPRNGState
+		self._masterPRNGState     = TR.get_rng_state()
+		
+		TR.manual_seed    (r0)
+		TC.manual_seed_all(r1)
+		np.random.seed    (r2 & 0xFFFFFFFF)
 	
 	#
 	# Experiment API
 	#
-	def dump(self, path):
-		return self
 	def load(self, path):
+		state = T.load(os.path.join(path, "snapshot.pkl"))
+		self._masterPRNGState        = state["_masterPRNGState"]
+		self.loopDict                = state["loopDict"]
+		self.model    .load_state_dict(state["model"])
+		self.optimizer.load_state_dict(state["optimizer"])
+		self.reseed()
+		return self
+	
+	def dump(self, path):
+		self.mkdirp(path)
+		T.save({
+		    "softwareversions": {
+		        "torch": T.__dict__.get("__version__", "unknown"),
+		    },
+		    "_masterPRNGState": self._masterPRNGStatePrev,
+		    "loopDict":         self.loopDict,
+		    "model":            self.model.state_dict(),
+		    "optimizer":        self.optimizer.state_dict(),
+		}, os.path.join(path, "snapshot.pkl"))
 		return self
 	def fromScratch(self):
-		super(Experiment, self).fromScratch()
-		
 		self.loopDict = {
 			"std/loop/epochMax": self.d.num_epochs,
 			"std/loop/batchMax": len(self.Dtrain)/self.d.batch_size
@@ -145,8 +186,7 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		
 		return self
 	def fromSnapshot(self, path):
-		super(Experiment, self).fromSnapshot(path)
-		return self
+		return self.load(path)
 	def run(self):
 		#
 		# With the RNGs properly seeded, create the dataset iterators.
@@ -205,31 +245,21 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		d["user/epochErr"] = 0
 		d["user/epochErr"] = 0
 		
-		self.model.train(True)
+		self.model.train()
 		self.DtrainIter = enumerate(self.DtrainLoad)
 		self.DvalidIter = enumerate(self.DvalidLoad)
 		self.DtestIter  = enumerate(self.DtestLoad)
-	def anteBatch(self, d): pass
-	def execBatch(self, d):
-		b = d["std/loop/batchNum"]
-		
-		#
-		# Load Data
-		#
-		
+	def anteBatch(self, d):
 		I, (X, Y) = self.DtrainIter.next()
 		if self.d.cuda is None:
 			X, Y = X.cpu(), Y.cpu()
 		else:
 			X, Y = X.cuda(self.d.cuda), Y.cuda(self.d.cuda)
 		X, Y = TA.Variable(X), TA.Variable(Y)
-		
-		
-		#
-		# Feed it to model and step the optimizer
-		#
+		d["user/X"], d["user/Y"] = X, Y
+	def execBatch(self, d):
 		self.optimizer.zero_grad()
-		d.update(self.model(X, Y))
+		d.update(self.model(d["user/X"], d["user/Y"]))
 		d["user/ceLoss"].backward()
 		self.optimizer.step()
 	def postBatch(self, d): pass
@@ -241,9 +271,6 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 				100.0*d["user/valAcc"],
 			)
 		)
-		self.log.write("{:d},{:6.2f},{:6.2f}\n".format(d["std/loop/epochNum"],
-		                                               d["user/valLoss"],
-		                                               100.0*d["user/valAcc"]))
 	def postTrain(self, d): pass
 	def finiTrain(self, d): pass
 	def finiEpoch(self, d): pass
@@ -266,26 +293,19 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 	
 	def validate (self):
 		# Switch to validation mode
-		self.model.train(False)
+		self.model.eval()
 		valErr  = 0
 		valLoss = 0
 		
-		numBatches = len(self.validX) // self.d.batch_size
+		N       = 0
+		B       = 0
 		
-		for b in xrange(numBatches):
-			#
-			# Get the data...
-			#
-			X = self.validX[b*self.d.batch_size:(b+1)*self.d.batch_size]
-			Y = self.validY[b*self.d.batch_size:(b+1)*self.d.batch_size]
+		for I, (X, Y) in self.DvalidIter:
 			if self.d.cuda is None:
-				X = T. FloatTensor(X)
-				Y = T. LongTensor (Y)
+				X, Y = X.cpu(), Y.cpu()
 			else:
-				X = TC.FloatTensor(X)
-				Y = TC.LongTensor (Y)
-			X = TA.Variable(X)
-			Y = TA.Variable(Y)
+				X, Y = X.cuda(self.d.cuda), Y.cuda(self.d.cuda)
+			X, Y = TA.Variable(X), TA.Variable(Y)
 			
 			#
 			# Feed it to model and step the optimizer
@@ -293,12 +313,14 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 			d = self.model(X, Y)
 			valErr  += int  (d["user/batchErr"].data.cpu().numpy())
 			valLoss += float(d["user/ceLoss"]  .data.cpu().numpy())
+			N       += len(X)
+			B       += 1
 		
 		# Switch back to train mode
-		self.model.train(True)
+		self.model.train()
 		
-		valAcc   = float(valErr) / (numBatches*self.d.batch_size)
-		valLoss /= numBatches
+		valAcc   = float(valErr) / N
+		valLoss /= B
 		
 		return {
 			"user/valAcc":  valAcc,

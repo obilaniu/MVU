@@ -29,7 +29,8 @@ class RealModel(TN.Module):
 	def __init__(self, d):
 		super(RealModel, self).__init__()
 		self.d      = d
-		self.conv0  = TN.Conv2d          (  1,  64, (3,3), padding=1)
+		self.conv0  = TN.Conv2d          (  1 if self.d.dataset == "mnist" else 3,
+		                                        64, (3,3), padding=1)
 		self.bn0    = TN.BatchNorm2d     ( 64,  affine=False)
 		self.relu0  = TN.ReLU            ()
 		self.conv1  = TN.Conv2d          ( 64,  64, (3,3), padding=1)
@@ -56,11 +57,12 @@ class RealModel(TN.Module):
 		self.conv8  = TN.Conv2d          (256, 256, (3,3), padding=1)
 		self.bn8    = TN.BatchNorm2d     (256,  affine=False)
 		self.relu8  = TN.ReLU            ()
-		self.conv9  = TN.Conv2d          (256,  10, (1,1), padding=0)
-		self.pool   = TN.MaxPool2d       ((7,7))
+		self.conv9  = TN.Conv2d          (256,  100 if self.d.dataset == "cifar100" else 10,
+		                                            (1,1), padding=0)
+		self.pool   = TN.MaxPool2d       ((7,7) if self.d.dataset == "mnist" else (8,8))
 		self.celoss = TN.CrossEntropyLoss()
 	def forward(self, X, Y):
-		v, y     = X.view(self.d.batch_size, 1, 28, 28), Y
+		v, y     = X.view(-1, 1, 28, 28), Y
 		v        = self.relu0(self.bn0(self.conv0(v)))
 		v        = self.relu1(self.bn1(self.conv1(v)))
 		v        = self.relu2(self.bn2(self.conv2(v)))
@@ -71,7 +73,7 @@ class RealModel(TN.Module):
 		v        = self.relu7(self.bn7(self.conv7(v)))
 		v        = self.relu8(self.bn8(self.conv8(v)))
 		v        = self.pool (self.conv9(v))
-		v        = v.view(self.d.batch_size, 10)
+		v        = v.view(-1, 10)
 		
 		ceLoss   = self.celoss(v, y)
 		yPred    = T.max(v, 1)[1]
@@ -95,7 +97,8 @@ class TTQModel(TN.Module):
 	def __init__(self, d):
 		super(TTQModel, self).__init__()
 		self.d      = d
-		self.conv0  = Conv2dTTQ        (  1,  64, (3,3), padding=1)
+		self.conv0  = Conv2dTTQ        (  1 if self.d.dataset == "mnist" else 3,
+		                                      64, (3,3), padding=1)
 		self.bntz0  = BatchNorm2dTz    ( 64)
 		self.conv1  = Conv2dTTQ        ( 64,  64, (3,3), padding=1)
 		self.bntz1  = BatchNorm2dTz    ( 64)
@@ -113,8 +116,9 @@ class TTQModel(TN.Module):
 		self.bntz7  = BatchNorm2dTz    (256)
 		self.conv8  = Conv2dTTQ        (256, 256, (3,3), padding=1)
 		self.bntz8  = BatchNorm2dTz    (256)
-		self.conv9  = Conv2dTTQ        (256,  10, (1,1), padding=0)
-		self.pool   = TN.MaxPool2d     ((7,7))
+		self.conv9  = Conv2dTTQ        (256, 100 if self.d.dataset == "cifar100" else 10,
+		                                          (1,1), padding=0)
+		self.pool   = TN.MaxPool2d     ((7,7) if self.d.dataset == "mnist" else (8,8))
 		self.celoss = TN.CrossEntropyLoss()
 	def forward(self, X, Y):
 		self.conv0.reconstrain()
@@ -128,7 +132,7 @@ class TTQModel(TN.Module):
 		self.conv8.reconstrain()
 		self.conv9.reconstrain()
 		
-		v, y     = X.view(self.d.batch_size, 1, 28, 28), Y
+		v, y     = X.view(-1, 1, 28, 28), Y
 		v        = self.bntz0(self.conv0(v))
 		v        = self.bntz1(self.conv1(v))
 		v        = self.bntz2(self.conv2(v))
@@ -139,7 +143,7 @@ class TTQModel(TN.Module):
 		v        = self.bntz7(self.conv7(v))
 		v        = self.bntz8(self.conv8(v))
 		v        = self.pool (self.conv9(v))
-		v        = v.view(self.d.batch_size, 10)
+		v        = v.view(-1, 10)
 		
 		ceLoss   = self.celoss(v, y)
 		yPred    = T.max(v, 1)[1]
