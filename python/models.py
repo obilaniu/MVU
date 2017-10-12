@@ -132,7 +132,8 @@ class TTQModel(TN.Module):
 		self.conv8.reconstrain()
 		self.conv9.reconstrain()
 		
-		v, y     = X.view(-1, 1, 28, 28), Y
+		shape = (-1, 1, 28, 28) if self.d.dataset == "mnist" else (-1, 3, 32, 32)
+		v, y     = X.view(*shape), Y
 		v        = self.bntz0(self.conv0(v))
 		v        = self.bntz1(self.conv1(v))
 		v        = self.bntz2(self.conv2(v))
@@ -143,7 +144,7 @@ class TTQModel(TN.Module):
 		v        = self.bntz7(self.conv7(v))
 		v        = self.bntz8(self.conv8(v))
 		v        = self.pool (self.conv9(v))
-		v        = v.view(-1, 10)
+		v        = v.view(-1, 100 if self.d.dataset == "cifar100" else 10)
 		
 		ceLoss   = self.celoss(v, y)
 		yPred    = T.max(v, 1)[1]
