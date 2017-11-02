@@ -81,8 +81,9 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		
 		"""Model Instantiation"""
 		self.model = None
-		if   self.d.model == "real": self.model = RealModel(self.d)
-		elif self.d.model == "ttq":  self.model = TTQModel (self.d)
+		if   self.d.model == "real":       self.model = RealModel     (self.d)
+		elif self.d.model == "ttq":        self.model = TTQModel      (self.d)
+		elif self.d.model == "ttqresnet":  self.model = TTQResnetModel(self.d)
 		if   self.model is None:
 			raise ValueError("Unsupported dataset-model pair \""+self.d.dataset+"-"+self.d.model+"\"!")
 		
@@ -281,7 +282,7 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		batchErr  = int  (d["user/batchErr"].data.cpu().numpy())
 		d["user/epochErr"] += batchErr
 		sys.stdout.write(
-			"CE Loss: {:8.6f}  Batch Accuracy: {:6.2f}%  Accuracy: {:6.2f}%".format(
+			"CE Loss: {:10.6f}  Batch Accuracy: {:6.2f}%  Accuracy: {:6.2f}%".format(
 				ceLoss,
 				100.0*batchErr/batchSize,
 				100.0*d["user/epochErr"]/((batchNum+1)*batchSize)

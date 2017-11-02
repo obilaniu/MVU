@@ -67,3 +67,16 @@ class Thresh3(TA.Function):
 	def backward(ctx, dx):
 		return dx, None, None
 
+
+class Residual3(TA.Function):
+	"""
+	Ternarized ResNet residual connection.
+	"""
+	
+	@staticmethod
+	def forward(ctx, a, b):
+		return T.clamp(a+b, -1, +1)
+	@staticmethod
+	def backward(ctx, dx):
+		return dx, dx
+
