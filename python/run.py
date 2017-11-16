@@ -3,11 +3,7 @@
 
 # Imports.
 import sys, os, __main__
-base       = os.path.realpath(os.path.abspath(__main__.__file__))
-base       = os.path.dirname(os.path.dirname(base))
-ThirdPBase = os.path.join   (base, "3rdparty")
-PySBase    = os.path.join   (ThirdPBase, "CodeSnips", "python")
-sys.path  += [".", PySBase]
+sys.path  += ["."]
 import argparse                             as Ap
 import ipdb
 import logging                              as L
