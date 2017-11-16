@@ -97,7 +97,7 @@ class Train(Subcommand):
 		argp.add_argument("--summary",     action="store_true",
 		    help="""Print a summary of the network.""")
 		argp.add_argument("--model",                default="ttq",              type=str,
-		    choices=["real", "ttq", "ttqresnet"],
+		    choices=["real", "ttq", "ttqresnet", "ttqresnet32"],
 		    help="Model Selection.")
 		argp.add_argument("--dataset",              default="mnist",            type=str,
 		    choices=["mnist", "cifar10", "cifar100", "svhn"],

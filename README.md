@@ -5,9 +5,15 @@
 - PyTorch 0.2.0
 - PyTorch Vision 0.1.9
 
-## Downloading
+## Downloading & Installing
+
+The repository includes as a Git submodule a reference to a personal collection of
+code snippets called CodeSnips. The python portion of it must be installed as a
+Python package.
 
     git clone --recursive 'git@bitbucket.org:obilaniu/lowprecision.git' LowPrecision
+    cd 3rdparty/CodeSnips/python
+    python setup.py install --no-deps --upgrade --force --user
 
 ## Running
 

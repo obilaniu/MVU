@@ -60,7 +60,7 @@ class RealModel(TN.Module):
 		self.relu8  = TN.ReLU            ()
 		self.conv9  = TN.Conv2d          (256,  100 if self.d.dataset == "cifar100" else 10,
 		                                            (1,1), padding=0)
-		self.pool   = TN.MaxPool2d       ((7,7) if self.d.dataset == "mnist" else (8,8))
+		self.pool   = TN.AvgPool2d       ((7,7) if self.d.dataset == "mnist" else (8,8))
 		self.celoss = TN.CrossEntropyLoss()
 	def forward(self, X, Y):
 		v, y     = X.view(-1, 1, 28, 28), Y
@@ -119,7 +119,7 @@ class TTQModel(TN.Module):
 		self.bntz8  = BatchNorm2dTz    (256, lo=0, hi=0)
 		self.conv9  = Conv2dTTQ        (256, 100 if self.d.dataset == "cifar100" else 10,
 		                                          (1,1), padding=0)
-		self.pool   = TN.MaxPool2d     ((7,7) if self.d.dataset == "mnist" else (8,8))
+		self.pool   = TN.AvgPool2d     ((7,7) if self.d.dataset == "mnist" else (8,8))
 		self.celoss = TN.CrossEntropyLoss()
 	def forward(self, X, Y):
 		self.conv0.reconstrain()
@@ -188,11 +188,11 @@ class TTQResnetModel(TN.Module):
 		self.bntz6  = BatchNorm2dTz    (256, lo=0, hi=0)
 		self.conv7  = Conv2dTTQ        (256, 256, (3,3), padding=1)
 		self.bntz7  = BatchNorm2dTz    (256, lo=0, hi=0)
-		self.conv8  = Conv2dTTQ        (256, 256, (3,3), padding=1)
+		self.conv8  = TN.Conv2d        (256, 256, (3,3), padding=1)
 		self.bntz8  = BatchNorm2dTz    (256, lo=0, hi=0)
-		self.conv9  = Conv2dTTQ        (256, 100 if self.d.dataset == "cifar100" else 10,
+		self.conv9  = TN.Conv2d        (256, 100 if self.d.dataset == "cifar100" else 10,
 		                                          (1,1), padding=0)
-		self.pool   = TN.MaxPool2d     ((7,7) if self.d.dataset == "mnist" else (8,8))
+		self.pool   = TN.AvgPool2d     ((7,7) if self.d.dataset == "mnist" else (8,8))
 		self.celoss = TN.CrossEntropyLoss()
 	def forward(self, X, Y):
 		self.conv0.reconstrain()
@@ -203,8 +203,8 @@ class TTQResnetModel(TN.Module):
 		self.conv5.reconstrain()
 		self.conv6.reconstrain()
 		self.conv7.reconstrain()
-		self.conv8.reconstrain()
-		self.conv9.reconstrain()
+		#self.conv8.reconstrain()
+		#self.conv9.reconstrain()
 		
 		shape = (-1, 1, 28, 28) if self.d.dataset == "mnist" else (-1, 3, 32, 32)
 		v, y     = X.view(*shape), Y
@@ -231,3 +231,140 @@ class TTQResnetModel(TN.Module):
 			"user/batchErr": batchErr,
 			"user/yPred":    yPred,
 		}
+
+
+
+#
+# TTQ Resnet32 model
+#
+
+class TTQResnet32Model(TN.Module):
+	def __init__(self, d):
+		super(TTQResnet32Model, self).__init__()
+		self.d      = d
+		self.conv0  = Conv2dTTQ        (  1 if self.d.dataset == "mnist" else 3,
+		                                      16, (3,3), padding=1)
+		self.bntz0  = BatchNorm2dTz    ( 16, lo=0, hi=0)
+		
+		self.bb00   = TTQResnetBB      ( 16,  16, 1)
+		self.bb01   = TTQResnetBB      ( 16,  16, 1)
+		self.bb02   = TTQResnetBB      ( 16,  16, 1)
+		self.bb03   = TTQResnetBB      ( 16,  16, 1)
+		self.bb04   = TTQResnetBB      ( 16,  16, 1)
+		
+		self.bb10   = TTQResnetBB      ( 16,  32, 2)
+		self.bb11   = TTQResnetBB      ( 32,  32, 1)
+		self.bb12   = TTQResnetBB      ( 32,  32, 1)
+		self.bb13   = TTQResnetBB      ( 32,  32, 1)
+		self.bb14   = TTQResnetBB      ( 32,  32, 1)
+		
+		self.bb20   = TTQResnetBB      ( 32,  64, 2)
+		self.bb21   = TTQResnetBB      ( 64,  64, 1)
+		self.bb22   = TTQResnetBB      ( 64,  64, 1)
+		self.bb23   = TTQResnetBB      ( 64,  64, 1)
+		self.bb24   = TTQResnetBB      ( 64,  64, 1)
+		
+		self.pool   = TN.AvgPool2d     ((7,7) if self.d.dataset    == "mnist"    else (8,8))
+		
+		self.conv4  = TN.Conv2d        ( 64, 100 if self.d.dataset == "cifar100" else 10,
+		                                (3,3), padding=1)
+		
+		self.celoss = TN.CrossEntropyLoss()
+	def forward(self, X, Y):
+		self.conv0.reconstrain()
+		
+		self.bb00.reconstrain()
+		self.bb01.reconstrain()
+		self.bb02.reconstrain()
+		self.bb03.reconstrain()
+		self.bb04.reconstrain()
+		
+		self.bb10.reconstrain()
+		self.bb11.reconstrain()
+		self.bb12.reconstrain()
+		self.bb13.reconstrain()
+		self.bb14.reconstrain()
+		
+		self.bb20.reconstrain()
+		self.bb21.reconstrain()
+		self.bb22.reconstrain()
+		self.bb23.reconstrain()
+		self.bb24.reconstrain()
+		
+		shape = (-1, 1, 28, 28) if self.d.dataset == "mnist" else (-1, 3, 32, 32)
+		v, y     = X.view(*shape), Y
+		
+		v        = self.bntz0(self.conv0(v))
+		
+		v        = self.bb00 (v)
+		v        = self.bb01 (v)
+		v        = self.bb02 (v)
+		v        = self.bb03 (v)
+		v        = self.bb04 (v)
+		
+		v        = self.bb10 (v)
+		v        = self.bb11 (v)
+		v        = self.bb12 (v)
+		v        = self.bb13 (v)
+		v        = self.bb14 (v)
+		
+		v        = self.bb20 (v)
+		v        = self.bb21 (v)
+		v        = self.bb22 (v)
+		v        = self.bb23 (v)
+		v        = self.bb24 (v)
+		
+		v        = self.conv4(self.pool(v))
+		v        = v.view(-1, 100 if self.d.dataset == "cifar100" else 10)
+		
+		ceLoss   = self.celoss(v, y)
+		yPred    = T.max(v, 1)[1]
+		batchErr = yPred.eq(y).long().sum(0)
+		
+		return {
+			"user/ceLoss":   ceLoss,
+			"user/batchErr": batchErr,
+			"user/yPred":    yPred,
+		}
+
+class TTQResnetBB(TN.Module):
+	def __init__(self, in_channels, out_channels, stride):
+		super(TTQResnetBB, self).__init__()
+		self.in_channels  = in_channels
+		self.out_channels = out_channels
+		self.stride       = stride
+		
+		#
+		# Bypass Connection
+		#
+		
+		if self.stride != 1 or self.in_channels != self.out_channels:
+			self.bp     = Conv2dTTQ        (self.in_channels,
+			                                self.out_channels,
+			                                (3,3),
+			                                stride=self.stride,
+			                                padding=1)
+		else:
+			self.bp     = lambda x:x
+		
+		#
+		# Residual Connection
+		#
+		
+		self.conv0  = Conv2dTTQ        (self.in_channels,  self.in_channels,  (3,3), padding=1)
+		self.bntz0  = BatchNorm2dTz    (self.in_channels,                     lo=0, hi=0)
+		self.conv1  = Conv2dTTQ        (self.in_channels,  self.out_channels, (3,3), stride=self.stride, padding=1)
+		self.bntz1  = BatchNorm2dTz    (self.out_channels, self.out_channels, lo=0, hi=0)
+	def reconstrain(self):
+		self.conv0.reconstrain()
+		self.conv1.reconstrain()
+	
+	def forward(self, v):
+		bpV = self.bp(v) # Bypass
+		
+		v        = self.conv0(v)
+		v        = self.bntz0(v)
+		v        = self.conv1(v)
+		v        = self.bntz1(v)
+		
+		return Residual3.apply(bpV, v)

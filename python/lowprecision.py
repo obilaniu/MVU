@@ -81,9 +81,10 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		
 		"""Model Instantiation"""
 		self.model = None
-		if   self.d.model == "real":       self.model = RealModel     (self.d)
-		elif self.d.model == "ttq":        self.model = TTQModel      (self.d)
-		elif self.d.model == "ttqresnet":  self.model = TTQResnetModel(self.d)
+		if   self.d.model == "real":         self.model = RealModel       (self.d)
+		elif self.d.model == "ttq":          self.model = TTQModel        (self.d)
+		elif self.d.model == "ttqresnet":    self.model = TTQResnetModel  (self.d)
+		elif self.d.model == "ttqresnet32":  self.model = TTQResnet32Model(self.d)
 		if   self.model is None:
 			raise ValueError("Unsupported dataset-model pair \""+self.d.dataset+"-"+self.d.model+"\"!")
 		
