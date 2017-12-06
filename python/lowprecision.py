@@ -274,6 +274,10 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 				100.0*d["user/valAcc"],
 			)
 		)
+		
+		# LR decay hack.
+		for pgroup in self.optimizer.state_dict()["param_groups"]
+			pgroup["lr"] *= (self.d.opt.lr/3e-7)**(1./self.d.num_epochs)
 	def postTrain(self, d): pass
 	def finiTrain(self, d): pass
 	def finiEpoch(self, d): pass
