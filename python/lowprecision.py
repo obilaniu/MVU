@@ -276,8 +276,8 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		)
 		
 		# LR decay hack.
-		for pgroup in self.optimizer.state_dict()["param_groups"]
-			pgroup["lr"] *= (self.d.opt.lr/3e-7)**(1./self.d.num_epochs)
+		for pgroup in self.optimizer.state_dict()["param_groups"]:
+			pgroup["lr"] *= (3e-7/self.d.optimizer.lr)**(1./self.d.num_epochs)
 	def postTrain(self, d): pass
 	def finiTrain(self, d): pass
 	def finiEpoch(self, d): pass
