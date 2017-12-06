@@ -47,7 +47,7 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 			self.Dtest   = Tv.datasets.MNIST   (self.dataDir, False,   self.Dxform, download=True)
 			self.Dimgsz  = (1, 28, 28)
 			self.DNclass = 10
-			self.DNvalid = 10000
+			self.DNvalid = 5000
 		elif self.d.dataset == "cifar10":
 			self.Dxform  = [TvT.ToTensor()]
 			self.Dxform  = TvT.Compose(self.Dxform)
@@ -55,7 +55,7 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 			self.Dtest   = Tv.datasets.CIFAR10 (self.dataDir, False,   self.Dxform, download=True)
 			self.Dimgsz  = (3, 32, 32)
 			self.DNclass = 10
-			self.DNvalid = 10000
+			self.DNvalid = 5000
 		elif self.d.dataset == "cifar100":
 			self.Dxform  = [TvT.ToTensor()]
 			self.Dxform  = TvT.Compose(self.Dxform)
@@ -63,7 +63,7 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 			self.Dtest   = Tv.datasets.CIFAR100(self.dataDir, False,   self.Dxform, download=True)
 			self.Dimgsz  = (3, 32, 32)
 			self.DNclass = 100
-			self.DNvalid = 10000
+			self.DNvalid = 5000
 		elif self.d.dataset == "svhn":
 			self.Dxform  = [TvT.ToTensor()]
 			self.Dxform  = TvT.Compose(self.Dxform)
@@ -71,7 +71,7 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 			self.Dtest   = Tv.datasets.SVHN    (self.dataDir, "test",  self.Dxform, download=True)
 			self.Dimgsz  = (3, 32, 32)
 			self.DNclass = 10
-			self.DNvalid = 10000
+			self.DNvalid = 5000
 		else:
 			raise ValueError("Unknown dataset \""+self.d.dataset+"\"!")
 		self.DNtotal    = len(self.Dtrain)
