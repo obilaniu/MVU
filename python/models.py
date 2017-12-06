@@ -379,6 +379,7 @@ class TTQResnetBB(TN.Module):
 class MatthieuBNN(TN.Module):
 	def __init__(self, d):
 		super(MatthieuBNN, self).__init__()
+		T.backends.cudnn.benchmark=True # Hack to hopefully make things faster
 		self.d = d
 		
 		epsilon = 1e-4   # Some epsilon
