@@ -80,3 +80,20 @@ class Residual3(TA.Function):
 	def backward(ctx, dx):
 		return dx, dx
 
+
+class BNNRound3(TA.Function):
+	"""
+	BinaryNet rounding with gradient override
+	"""
+	
+	@staticmethod
+	def forward(ctx, x):
+		return x.round()
+	
+	@staticmethod
+	def backward(ctx, dx):
+		return dx
+
+bnn_round3 = BNNRound3.apply
+
+
