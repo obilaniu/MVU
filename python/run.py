@@ -3,14 +3,15 @@
 
 # Imports.
 import sys, os, __main__
-sys.path  += ["."]
 import argparse                             as Ap
-import ipdb
 import logging                              as L
 import numpy                                as np
-from   pysnips.ml.argparseactions import OptimizerAction
+import pdb
 import time
 import traceback
+
+from   pysnips.ml.argparseactions       import OptimizerAction
+
 
 __version__ = "0.0.0"
 
@@ -28,7 +29,7 @@ class MsgFormatter(L.Formatter):
 	
 	def formatTime(self, record, datefmt):
 		t           = record.created
-		timeFrac    = abs(t-long(t))
+		timeFrac    = abs(t-int(t))
 		timeStruct  = time.localtime(record.created)
 		timeString  = ""
 		timeString += time.strftime("%F %T", timeStruct)
@@ -88,7 +89,7 @@ class Train(Subcommand):
 		argp.add_argument("-l", "--loglevel",       default="info",             type=str,
 		    choices=cls.LOGLEVELS.keys(),
 		    help="Logging severity level.")
-		argp.add_argument("-s", "--seed",           default=0x6a09e667f3bcc908, type=long,
+		argp.add_argument("-s", "--seed",           default=0x6a09e667f3bcc908, type=int,
 		    help="Seed for PRNGs. Default is 64-bit fractional expansion of sqrt(2).")
 		argp.add_argument("--summary",     action="store_true",
 		    help="""Print a summary of the network.""")
@@ -162,11 +163,27 @@ class Train(Subcommand):
 		entryLogger          .setLevel     (cls.LOGLEVELS[d.loglevel])
 		entryLogger          .addHandler   (entryLogFHandler)
 		
-		np.random.seed(d.seed % 2**32)
+		#
+		# np.random.seed() won't use anything more than 32 seed bits.
+		# Be brutal and directly generate an entire MT19937 state using PBKDF2.
+		#
+		
+		state = np.random.get_state()
+		state = (state[0],
+		         np.frombuffer(hashlib.pbkdf2_hmac("sha256",         # Hash
+		                                           str(d.seed),      # Password
+		                                           state[0],         # Salt
+		                                           1,                # Rounds
+		                                           state[1].nbytes), # DKLen
+		                       dtype=np.uint32),
+		         624,
+		         0,
+		         0.0)
+		np.random.set_state(state)
 		
 		import lowprecision
-		if d.pdb: ipdb.set_trace()
-		lowprecision.Experiment(d.workDir, d).rollback().run()
+		if d.pdb: pdb.set_trace()
+		lowprecision.Experiment(d).rollback().run()
 
 
 
@@ -216,5 +233,4 @@ if __name__ == "__main__":
 		raise
 	except:
 		traceback.print_exc()
-		ipdb.post_mortem(sys.exc_info()[2])
 

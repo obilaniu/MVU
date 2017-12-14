@@ -23,12 +23,14 @@ import torch.utils                          as TU
 import torch.utils.data                     as TUD
 import torchvision                          as Tv
 import torchvision.transforms               as TvT
-from   models import                        *
+
+from   models                           import *
+from   pysnips.ml.eventlogger           import *
 
 
 class Experiment(PySMlExp.Experiment, PySMlL.Callback):
-	def __init__(self, workDir, d):
-		super(Experiment, self).__init__(workDir, d=d)
+	def __init__(self, d):
+		super(Experiment, self).__init__(d.workDir, d=d)
 		self.__dataDir = self.d.dataDir
 		
 		"""PRNG Seeding"""
@@ -235,7 +237,8 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		# Run training loop.
 		#
 		
-		self.loopDict = PySMlL.loop(self.callbacks, self.loopDict)
+		with EventLogger(self.logDir):
+			self.loopDict = PySMlL.loop(self.callbacks, self.loopDict)
 		
 		return self
 	
@@ -278,6 +281,10 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 		# LR decay hack.
 		for pgroup in self.optimizer.state_dict()["param_groups"]:
 			pgroup["lr"] *= (3e-7/self.d.optimizer.lr)**(1./self.d.num_epochs)
+		
+		# TensorBoard logging
+		logScalar("valLoss", d["user/valLoss"])
+		logScalar("valAcc",  d["user/valAcc"])
 	def postTrain(self, d): pass
 	def finiTrain(self, d): pass
 	def finiEpoch(self, d): pass
@@ -294,6 +301,9 @@ class Experiment(PySMlExp.Experiment, PySMlL.Callback):
 				100.0*d["user/epochErr"]/((batchNum+1)*batchSize)
 			)
 		)
+		logScalar("ceLoss",   ceLoss)
+		logScalar("batchAcc", float(batchErr)/batchSize)
+		getEventLogger().step()
 	def preempt  (self, d):
 		if d["std/loop/state"] == "anteEpoch" and d["std/loop/epochNum"] > 0:
 			self.snapshot()
