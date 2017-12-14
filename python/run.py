@@ -4,6 +4,7 @@
 # Imports.
 import sys, os, __main__
 import argparse                             as Ap
+import hashlib
 import logging                              as L
 import numpy                                as np
 import pdb
