@@ -423,7 +423,7 @@ class MatthieuBNN(TN.Module):
 		self.bn9       = TN.BatchNorm2d(  10, epsilon, alpha)
 	
 	
-	def forward(self, X, Y):
+	def forward(self, X):
 		self.conv1  .reconstrain()
 		self.conv2  .reconstrain()
 		self.conv3  .reconstrain()
@@ -435,7 +435,7 @@ class MatthieuBNN(TN.Module):
 		self.linear9.reconstrain()
 		
 		shape = (-1, 1, 28, 28) if self.d.dataset == "mnist" else (-1, 3, 32, 32)
-		v, y     = X.view(*shape), Y
+		v = X.view(*shape)
 		
 		v = v*2-1
 		
@@ -474,18 +474,12 @@ class MatthieuBNN(TN.Module):
 		v = self.linear9 (v)
 		v = self.bn9     (v)
 		
-		onehoty  = T.zeros_like(v).scatter_(1, y.unsqueeze(1), 1)*2 - 1
-		ceLoss   = T.mean(T.clamp(1.0 - v*onehoty, min=0)**2)
-		yPred    = T.max(v, 1)[1]
-		batchErr = yPred.eq(y).long().sum(0)
-		
-		return {
-			"user/ceLoss":   ceLoss,
-			"user/batchErr": batchErr,
-			"user/yPred":    yPred,
-		}
+		return v
+	
+	def loss(self, Ypred, Y):
+		onehotY   = T.zeros_like(Ypred).scatter_(1, Y.unsqueeze(1), 1)*2 - 1
+		hingeLoss = T.mean(T.clamp(1.0 - Ypred*onehotY, min=0)**2)
+		return hingeLoss
 
-
-# Sketch tree reduction on paper
 
 

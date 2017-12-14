@@ -88,11 +88,18 @@ class BNNRound3(TA.Function):
 	
 	@staticmethod
 	def forward(ctx, x):
-		return x.round()
+		ctx.save_for_backward(x)
+		return x.sign()
 	
 	@staticmethod
 	def backward(ctx, dx):
-		return dx
+		x, = ctx.saved_variables
+		
+		gt1  = x > +1
+		lsm1 = x < -1
+		gi   = 1-gt1.float()-lsm1.float()
+		
+		return gi*dx
 
 bnn_round3 = BNNRound3.apply
 

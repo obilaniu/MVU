@@ -81,11 +81,7 @@ class Conv2dBNN(TN.Conv2d):
 	def reconstrain(self):
 		self.weight.data.clamp_(-self.H, +self.H)
 	def forward(self, input):
-		Wb = self.weight/self.H
-		Wb = T.clamp((Wb+1.)/2., 0, 1)
-		Wb = T.round(Wb)
-		Wb = (Wb-0.5)*2.0*self.H
-		
+		Wb = bnn_round3(self.weight/self.H)*self.H
 		return TNF.conv2d(input,
 		                  Wb,
 		                  self.bias, self.stride, self.padding,
@@ -125,11 +121,7 @@ class LinearBNN(TN.Linear):
 	def reconstrain(self):
 		self.weight.data.clamp_(-self.H, +self.H)
 	def forward(self, input):
-		Wb = self.weight/self.H
-		Wb = T.clamp((Wb+1.)/2., 0, 1)
-		Wb = T.round(Wb)
-		Wb = (Wb*2 - 1) * self.H
-		
+		Wb = bnn_round3(self.weight/self.H)*self.H
 		return TNF.linear(input, Wb, self.bias)
 
 
@@ -163,7 +155,6 @@ class BNNTanh(TN.Module):
 		super(BNNTanh, self).__init__()
 	
 	def forward(self, x):
-		x = T.clamp((x+1.0)/2.0, 0, 1)
-		return 2.*bnn_round3(x) - 1
+		return bnn_round3(x)
 
 
