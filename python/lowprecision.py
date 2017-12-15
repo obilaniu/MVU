@@ -275,6 +275,9 @@ class Experiment(Experiment):
 		# Validation.
 		#
 		self.S.model.eval()
+		self.S.valLoss = 0.0
+		self.S.valAcc  = 0.0
+		self.S.valNum  = 0.0
 		for I, (X,Y) in enumerate(self.DvalidLoad):
 			"""Data Load"""
 			if self.d.cuda is None:
@@ -288,17 +291,21 @@ class Experiment(Experiment):
 			Ypred = self.S.model(X)
 			loss  = self.S.model.loss(Ypred, Y)
 			self.validStats(X, Ypred, Y, loss)
-			self.eventLogger.step()
+		with tagscope("valid"):
+			with tagscope("losses"):
+				logScalar("loss", self.S.valLoss/self.S.valNum)
+				logScalar("acc",  self.S.valAcc /self.S.valNum)
 		
 		#
 		# Epoch step and return.
 		#
 		
-		self.S.epoch += 1
-		
 		# LR decay hack.
 		for pgroup in self.S.optimizer.state_dict()["param_groups"]:
 			pgroup["lr"] *= (3e-7/self.d.optimizer.lr)**(1./self.d.num_epochs)
+		
+		sys.stdout.write("Epoch {:d} done.\n".format(self.S.epoch))
+		self.S.epoch += 1
 		
 		return self
 	
@@ -314,13 +321,10 @@ class Experiment(Experiment):
 					logScalar("acc",  float(correct)/batchSz)
 	
 	def validStats(self, X, Ypred, Y, loss):
-		with tagscope("valid"):
-			with tagscope("losses"):
-				with tagscope("batch"):
-					correct = T.max(Ypred, 1)[1].eq(Y).long().sum()
-					batchSz = Y.size(0)
-					
-					logScalar("size", float(batchSz))
-					logScalar("loss", float(loss))
-					logScalar("acc",  float(correct)/batchSz)
+		correct = T.max(Ypred, 1)[1].eq(Y).long().sum()
+		batchSz = Y.size(0)
+		
+		self.S.valNum  += float(batchSz)
+		self.S.valAcc  += float(correct)
+		self.S.valLoss += float(loss*batchSz) # Because the loss is a mean
 
