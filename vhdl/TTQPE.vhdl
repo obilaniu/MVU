@@ -6,22 +6,23 @@ use ieee.std_logic_1164.all;
 use work.TTQPkg.all;
 
 
-
+--
 -- TTQ PE (Processing Element)
---   Cost:
+--
 entity TTQPE is
 	port(
-		clk:   in  std_logic;
-		Din:   in  unsigned(15 downto 0);
-		Win:   in  unsigned(15 downto 0);
-		SPin:  in  unsigned(15 downto 0);
-		SNin:  in  unsigned(15 downto 0);
-		Dout:  out unsigned(15 downto 0);
-		Wout:  out unsigned(15 downto 0);
-		SPout: out unsigned(15 downto 0);
-		SNout: out unsigned(15 downto 0)
+		clk:         in  std_logic;
+		modeCnnRnn:  in  std_logic;
+		shiftLeft:   in  std_logic;
+		Din:         in  unsigned(15 downto 0);
+		Win:         in  unsigned(15 downto 0);
+		Sin:         in  unsigned(31 downto 0);
+		Dout:        out unsigned(15 downto 0);
+		Wout:        out unsigned(15 downto 0);
+		Sout:        out unsigned(31 downto 0)
 	);
 end entity;
+
 architecture TTQPEImpl of TTQPE is
 	component TTQDFF is
 		generic(
@@ -35,27 +36,25 @@ architecture TTQPEImpl of TTQPE is
 	end component;
 	component TTQPEALU is
 		port(
-			D:     in  unsigned(15 downto 0);
-			W:     in  unsigned(15 downto 0);
-			SPin:  in  unsigned(15 downto 0);
-			SNin:  in  unsigned(15 downto 0);
-			SPout: out unsigned(15 downto 0);
-			SNout: out unsigned(15 downto 0)
+			modeCnnRnn:  in  std_logic;
+			shiftLeft:   in  std_logic;
+			D:           in  unsigned(15 downto 0);
+			W:           in  unsigned(15 downto 0);
+			Sin:         in  unsigned(31 downto 0);
+			Sout:        out unsigned(31 downto 0)
 		);
 	end component;
 	
-	signal sumP:  unsigned(15 downto 0);
-	signal sumN:  unsigned(15 downto 0);
+	signal sumout:  unsigned(31 downto 0);
 begin
 	-- Processing Element ALU at front end:
-	TTQPEALU0     : TTQPEALU    port map(Din, Win, SPin, SNin, sumP, sumN);
+	TTQPEALU0     : TTQPEALU    port map(modeCnnRnn, shiftLeft, Din, Win, Sin, sumout);
 
 	-- PE "register file"
 	--   Registers the data, weights and dot-product+partial accumulation this
 	--   PE has computed within itself.
 	--   Only stateful blocks within the PE.
-	TTQDFFD       : TTQDFF      generic map(Din'length)  port map(clk, Din,  Dout);
-	TTQDFFW       : TTQDFF      generic map(Win'length)  port map(clk, Win,  Wout);
-	TTQDFFSPout   : TTQDFF      generic map(SPin'length) port map(clk, sumP, SPout);
-	TTQDFFSNout   : TTQDFF      generic map(SNin'length) port map(clk, sumN, SNout);
+	TTQDFFD       : TTQDFF      generic map(Din'length)  port map(clk, Din,    Dout);
+	TTQDFFW       : TTQDFF      generic map(Win'length)  port map(clk, Win,    Wout);
+	TTQDFFSout    : TTQDFF      generic map(Sin'length)  port map(clk, sumout, Sout);
 end architecture;

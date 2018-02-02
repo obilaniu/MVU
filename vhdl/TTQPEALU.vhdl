@@ -6,18 +6,21 @@ use ieee.std_logic_1164.all;
 use work.TTQPkg.all;
 
 
+--
+-- PE (Processing Element) ALU (Arithmetic Logic Unit)
+--
 
--- TTQ PE (Processing Element) ALU (Arithmetic Logic Unit)
 entity TTQPEALU is
 	port(
-		D:     in  unsigned(15 downto 0);
-		W:     in  unsigned(15 downto 0);
-		SPin:  in  unsigned(15 downto 0);
-		SNin:  in  unsigned(15 downto 0);
-		SPout: out unsigned(15 downto 0);
-		SNout: out unsigned(15 downto 0)
+		modeCnnRnn:  in  std_logic;
+		shiftLeft:   in  std_logic;
+		D:           in  unsigned(15 downto 0);
+		W:           in  unsigned(15 downto 0);
+		Sin:         in  unsigned(31 downto 0);
+		Sout:        out unsigned(31 downto 0)
 	);
 end entity;
+
 architecture TTQPEALUImpl of TTQPEALU is
 	component TTQMul is
 		port(
@@ -34,10 +37,11 @@ architecture TTQPEALUImpl of TTQPEALU is
 		);
 	end component;
 	
-	signal PP:    unsigned( 7 downto 0);
-	signal PN:    unsigned( 7 downto 0);
-	signal pcntP: unsigned( 3 downto 0);
-	signal pcntN: unsigned( 3 downto 0);
+	signal PP:        unsigned( 7 downto 0);
+	signal PN:        unsigned( 7 downto 0);
+	signal pcntP:     unsigned( 3 downto 0);
+	signal pcntN:     unsigned( 3 downto 0);
+	signal unshifted: unsigned(31 downto 0);
 begin
 	-- Eight 2-bit-by-2-bit multipliers with two 1-bit results.
 	--   The 1-bit signal PP indicates "Product Positive"
@@ -56,8 +60,20 @@ begin
 	TTQPopcountP  : TTQPopcount port map(PP, pcntP);
 	TTQPopcountN  : TTQPopcount port map(PN, pcntN);
 	
-	-- Accumulations of popcounts into running sum
+	-- Accumulation/Subtraction of popcount or D into running sum
 	--   Requires zero-extending the 4-bit popcounts to 16 bits
-	SPout <= to_unsigned(to_integer(SPin) + to_integer(pcntP), SPout'length);
-	SNout <= to_unsigned(to_integer(SNin) + to_integer(pcntN), SNout'length);
+	unshifted <= to_unsigned(to_integer(SPin)  +
+	                         to_integer(pcntP) -
+	                         to_integer(pcntN),
+	                         unshifted'length)
+	             when modeCnnRnn = '1' else
+	             to_unsigned(to_integer(SPin)  +
+	                         to_integer(signed(D)) when W(0) = 0 else 0,
+	                         unshifted'length);
+	
+	-- Conditional shift
+	--   (Implemented with addition, which is equivalent)
+	Sout <= shift_left(unshifted, 1) when shiftLeft = '1' else unshifted;
+	
+	-- Sout will be latched into the register.
 end architecture;
