@@ -1,34 +1,28 @@
 --Imports
 library ieee;
-library TTQPkg;
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
-use work.TTQPkg.all;
 
 
 --
 -- MVFU (Matrix-Vector Functional Unit)
 --
--- Current: 32x32 matrix by 32-vector.
+-- 32x32 matrix by 32-vector.
 --
 
 entity MVFU is
 	port(
 		clk:         in  std_logic;
-		latch:       in  std_logic;
-		swap:        in  std_logic;
-		Din:         in  unsigned(  31 downto 0);
-		Win:         in  unsigned(  31 downto 0);
-		Sout:        out unsigned(1023 downto 0)
+		trans:       in  std_logic;
+		Win:         in  unsigned(1023 downto 0); -- Weights Matrix Tile.
+		Din:         in  unsigned(  31 downto 0); -- Data Vector Input.
+		Dout:        out unsigned(  31 downto 0)  -- Data Vector Output.
 	);
 end entity;
 
 
 architecture MVFUImpl of MVFU is
 	component TTQDFF is
-		generic(
-			n:  natural := 32
-		);
 		port(
 			clk:   in  std_logic;
 			Din:   in  unsigned(n-1 downto 0);
@@ -36,51 +30,78 @@ architecture MVFUImpl of MVFU is
 		);
 	end component;
 	
-	signal D0in:  unsigned(Din'length-1  downto 0);
-	signal D0out: unsigned(Din'length-1  downto 0);
-	signal D1in:  unsigned(Din'length-1  downto 0);
-	signal D1out: unsigned(Din'length-1  downto 0);
-	signal S0in:  unsigned(Sout'length-1 downto 0);
-	signal S0out: unsigned(Sout'length-1 downto 0);
-	signal S1in:  unsigned(Sout'length-1 downto 0);
-	signal S1out: unsigned(Sout'length-1 downto 0);
+	signal W:      unsigned(Win'length-1     downto 0);
+	signal eprod:  unsigned(W'length-1       downto 0);
+	signal Dp:     unsigned(Dout'length*8-1  downto 0);
+	signal ACCin:  unsigned(32*Din'length-1  downto 0);
+	signal ACCout: unsigned(32*Din'length-1  downto 0);
 begin
 	-- FU "register file"
-	D0      : TTQDFF      generic map(Din'length)   port map(clk, D0in, D0out);
-	D1      : TTQDFF      generic map(Din'length)   port map(clk, D1in, D1out);
-	S0      : TTQDFF      generic map(Sout'length)  port map(clk, S0in, S0out);
-	S1      : TTQDFF      generic map(Sout'length)  port map(clk, S1in, S1out);
+	ACC     : TTQDFF      generic map(32*Din'length)   port map(clk, ACCin, ACCout);
 	
+	--
+	-- Transpose.
+	--
+	-- The W signal is the Win signal, conditionally transposed.
+	transposeRows: for r in 0 to 31 generate
+		transposeCols: for c in 0 to 31 generate
+			W(r*32+c) <= Tin(r*32+c) when trans = '0' else Tin(c*32+r);
+		end generate transposeCols;
+	end generate transposeRows;
 	
-	-- Action on every clock cycle
-	process(clk) is
-	begin
-		if rising_edge(clk) then
-			if swap = '0' then
-				if latch = '1' then
-					D0in <= Din;
-				end if;
-				
-				Sout <= S1out;
-				
-				-- Linear math
-				-- Vector S0 += D0*Win
-				genFMA0: for r in 0 to 31 generate
-					S0in(32*(r+1) downto 31*r) <= S0in(32*(r+1) downto 31*r) + D0in(r)*Win(r);
-				end generate genFMA0
-			else
-				if latch = '1' then
-					D1in <= Din;
-				end if;
-				
-				Sout <= S0out;
-				
-				-- Linear math
-				-- Vector S1 += D1*Win
-				genFMA1: for r in 0 to 31 generate
-					S1in(32*(r+1) downto 31*r) <= S1in(32*(r+1) downto 31*r) + D1in(r)*Win(r);
-				end generate genFMA1
-			end if;
-		end if;
-	end process;
+	--
+	-- Matrix-Vector multiplication.
+	--
+	-- Binary
+	gemvRows: for r in 0 to 31 generate
+		eprod <= W(r*32+31 downto r*32) xor not Din;
+		Dp(r*8+7 downto r*8) <= to_signed(to_integer(unsigned(eprod( 0 downto  0))) +
+		                                  to_integer(unsigned(eprod( 1 downto  1))) +
+		                                  to_integer(unsigned(eprod( 2 downto  2))) +
+		                                  to_integer(unsigned(eprod( 3 downto  3))) +
+		                                  to_integer(unsigned(eprod( 4 downto  4))) +
+		                                  to_integer(unsigned(eprod( 5 downto  5))) +
+		                                  to_integer(unsigned(eprod( 6 downto  6))) +
+		                                  to_integer(unsigned(eprod( 7 downto  7))) +
+		                                  to_integer(unsigned(eprod( 8 downto  8))) +
+		                                  to_integer(unsigned(eprod( 9 downto  9))) +
+		                                  to_integer(unsigned(eprod(10 downto 10))) +
+		                                  to_integer(unsigned(eprod(11 downto 11))) +
+		                                  to_integer(unsigned(eprod(12 downto 12))) +
+		                                  to_integer(unsigned(eprod(13 downto 13))) +
+		                                  to_integer(unsigned(eprod(14 downto 14))) +
+		                                  to_integer(unsigned(eprod(15 downto 15))) +
+		                                  to_integer(unsigned(eprod(16 downto 16))) +
+		                                  to_integer(unsigned(eprod(17 downto 17))) +
+		                                  to_integer(unsigned(eprod(18 downto 18))) +
+		                                  to_integer(unsigned(eprod(19 downto 19))) +
+		                                  to_integer(unsigned(eprod(20 downto 20))) +
+		                                  to_integer(unsigned(eprod(21 downto 21))) +
+		                                  to_integer(unsigned(eprod(22 downto 22))) +
+		                                  to_integer(unsigned(eprod(23 downto 23))) +
+		                                  to_integer(unsigned(eprod(24 downto 24))) +
+		                                  to_integer(unsigned(eprod(25 downto 25))) +
+		                                  to_integer(unsigned(eprod(26 downto 26))) +
+		                                  to_integer(unsigned(eprod(27 downto 27))) +
+		                                  to_integer(unsigned(eprod(28 downto 28))) +
+		                                  to_integer(unsigned(eprod(29 downto 29))) +
+		                                  to_integer(unsigned(eprod(30 downto 30))) +
+		                                  to_integer(unsigned(eprod(31 downto 31))), 8);
+	end generate gemvRows;
+	
+	--
+	-- Accumulation 8-bit to 32-bit.
+	--
+	accRows: for r in 0 to 31 generate
+		ACCin(r*32+31 downto r*32) <= to_unsigned(to_integer(ACCin(r*32+31 downto r*32)) + 
+		                                          to_integer(Dp   (r* 8+7  downto r* 8)), 32);
+	end generate accRows;
+	
+	--
+	-- Output
+	--
+	-- For now, only connect sign bit to output. Later, add thresholder signal.
+	outRows: for r in 0 to 31 generate
+		Dout(r) <= ACCout(r*32+31);
+	end generate outRows;
 end architecture;
