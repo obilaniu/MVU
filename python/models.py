@@ -4,11 +4,10 @@
 
 
 # Imports.
-import cPickle                              as pkl
-import ipdb
 import numpy                                as np
 import os
 import sys
+import torch
 import torch                                as T
 import torch.autograd                       as TA
 import torch.cuda                           as TC
@@ -17,10 +16,26 @@ import torch.optim                          as TO
 import torch.utils                          as TU
 import torch.utils.data                     as TUD
 
+from   torch.nn     import (Conv2d, BatchNorm2d, MaxPool2d, AvgPool2d, ReLU,
+                            CrossEntropyLoss,)
+
 from   functional                           import *
 from   layers                               import *
 
 
+
+#
+# For the sake of ease of use, all models below inherit from this class, which
+# exposes a constrain() method that allows re-applying the module's constraints
+# to its parameters.
+#
+class ModelConstrained(torch.nn.Module):
+	def constrain(self):
+		def fn(module):
+			if module is not self and hasattr(module, "constrain"):
+				module.constrain()
+		
+		self.apply(fn)
 
 
 #
@@ -376,65 +391,55 @@ class TTQResnetBB(TN.Module):
 # Matthieu Courbariaux model reproduction attempt
 #
 
-class MatthieuBNN(TN.Module):
-	def __init__(self, d):
-		super(MatthieuBNN, self).__init__()
-		T.backends.cudnn.benchmark=True # Hack to hopefully make things faster
-		self.d = d
+class MatthieuBNN(ModelConstrained):
+	"""
+	https://arxiv.org/pdf/1602.02830.pdf
+	"""
+	def __init__(self, a):
+		super().__init__()
+		self.a = a
 		
-		epsilon = 1e-4   # Some epsilon
-		alpha   = 1-0.9  # Exponential moving average factor for BN.
+		actArgs        = (self.a.override,) if self.a.act == "sign" else ()
+		override       = self.a.override
+		act            = SignBNN if self.a.act == "sign" else PACT
+		inChan         =     1 if self.a.dataset == "mnist"    else  3
+		outChan        =   100 if self.a.dataset == "cifar100" else 10
+		epsilon        = 1e-4   # Some epsilon
+		alpha          = 1-0.9  # Exponential moving average factor for BN.
 		
-		#
-		# Model Layers
-		#
+		self.conv1     = Conv2dBNN  (inChan, 128, (3,3), padding=1, H=1, W_LR_scale="Glorot", override=override)
+		self.bn1       = BatchNorm2d( 128, epsilon, alpha)
+		self.tanh1     = act        (*actArgs)
+		self.conv2     = Conv2dBNN  ( 128,  128, (3,3), padding=1, H=1, W_LR_scale="Glorot", override=override)
+		self.maxpool2  = MaxPool2d  ((2,2), stride=(2,2))
+		self.bn2       = BatchNorm2d( 128, epsilon, alpha)
+		self.tanh2     = act        (*actArgs)
 		
-		self.conv1     = Conv2dBNN     (   3,  128, (3,3), padding=1, H=1, W_LR_scale="Glorot")
-		self.bn1       = TN.BatchNorm2d( 128, epsilon, alpha)
-		self.tanh1     = BNNTanh       ()
-		self.conv2     = Conv2dBNN     ( 128,  128, (3,3), padding=1, H=1, W_LR_scale="Glorot")
-		self.maxpool2  = TN.MaxPool2d  ((2,2), stride=(2,2))
-		self.bn2       = TN.BatchNorm2d( 128, epsilon, alpha)
-		self.tanh2     = BNNTanh       ()
+		self.conv3     = Conv2dBNN  ( 128,  256, (3,3), padding=1, H=1, W_LR_scale="Glorot", override=override)
+		self.bn3       = BatchNorm2d( 256, epsilon, alpha)
+		self.tanh3     = act        (*actArgs)
+		self.conv4     = Conv2dBNN  ( 256,  256, (3,3), padding=1, H=1, W_LR_scale="Glorot", override=override)
+		self.maxpool4  = MaxPool2d  ((2,2), stride=(2,2))
+		self.bn4       = BatchNorm2d( 256, epsilon, alpha)
+		self.tanh4     = act        (*actArgs)
 		
-		self.conv3     = Conv2dBNN     ( 128,  256, (3,3), padding=1, H=1, W_LR_scale="Glorot")
-		self.bn3       = TN.BatchNorm2d( 256, epsilon, alpha)
-		self.tanh3     = BNNTanh       ()
-		self.conv4     = Conv2dBNN     ( 256,  256, (3,3), padding=1, H=1, W_LR_scale="Glorot")
-		self.maxpool4  = TN.MaxPool2d  ((2,2), stride=(2,2))
-		self.bn4       = TN.BatchNorm2d( 256, epsilon, alpha)
-		self.tanh4     = BNNTanh       ()
+		self.conv5     = Conv2dBNN  ( 256,  512, (3,3), padding=1, H=1, W_LR_scale="Glorot", override=override)
+		self.bn5       = BatchNorm2d( 512, epsilon, alpha)
+		self.tanh5     = act        (*actArgs)
+		self.conv6     = Conv2dBNN  ( 512,  512, (3,3), padding=1, H=1, W_LR_scale="Glorot", override=override)
+		self.maxpool6  = MaxPool2d  ((2,2), stride=(2,2))
+		self.bn6       = BatchNorm2d( 512, epsilon, alpha)
+		self.tanh6     = act        (*actArgs)
 		
-		self.conv5     = Conv2dBNN     ( 256,  512, (3,3), padding=1, H=1, W_LR_scale="Glorot")
-		self.bn5       = TN.BatchNorm2d( 512, epsilon, alpha)
-		self.tanh5     = BNNTanh       ()
-		self.conv6     = Conv2dBNN     ( 512,  512, (3,3), padding=1, H=1, W_LR_scale="Glorot")
-		self.maxpool6  = TN.MaxPool2d  ((2,2), stride=(2,2))
-		self.bn6       = TN.BatchNorm2d( 512, epsilon, alpha)
-		self.tanh6     = BNNTanh       ()
-		
-		self.linear7   = LinearBNN     (4*4*512, 1024, H=1, W_LR_scale="Glorot")
-		self.bn7       = TN.BatchNorm2d(1024, epsilon, alpha)
-		self.tanh7     = BNNTanh       ()
-		self.linear8   = LinearBNN     (1024, 1024, H=1, W_LR_scale="Glorot")
-		self.bn8       = TN.BatchNorm2d(1024, epsilon, alpha)
-		self.tanh8     = BNNTanh       ()
-		self.linear9   = LinearBNN     (1024,   10, H=1, W_LR_scale="Glorot")
-		self.bn9       = TN.BatchNorm2d(  10, epsilon, alpha)
+		self.linear7   = LinearBNN  (4*4*512, 1024, H=1, W_LR_scale="Glorot", override=override)
+		self.tanh7     = act        (*actArgs)
+		self.linear8   = LinearBNN  (1024, 1024, H=1, W_LR_scale="Glorot", override=override)
+		self.tanh8     = act        (*actArgs)
+		self.linear9   = LinearBNN  (1024,  outChan, H=1, W_LR_scale="Glorot", override=override)
 	
 	
 	def forward(self, X):
-		self.conv1  .reconstrain()
-		self.conv2  .reconstrain()
-		self.conv3  .reconstrain()
-		self.conv4  .reconstrain()
-		self.conv5  .reconstrain()
-		self.conv6  .reconstrain()
-		self.linear7.reconstrain()
-		self.linear8.reconstrain()
-		self.linear9.reconstrain()
-		
-		shape = (-1, 1, 28, 28) if self.d.dataset == "mnist" else (-1, 3, 32, 32)
+		shape = (-1, 1, 28, 28) if self.a.dataset == "mnist" else (-1, 3, 32, 32)
 		v = X.view(*shape)
 		
 		v = v*2-1
@@ -463,23 +468,18 @@ class MatthieuBNN(TN.Module):
 		v = self.bn6     (v)
 		v = self.tanh6   (v)
 		
-		v = v.view(-1, 4*4*512)
+		v = v.view(v.size(0), -1)
 		
 		v = self.linear7 (v)
-		v = self.bn7     (v)
 		v = self.tanh7   (v)
 		v = self.linear8 (v)
-		v = self.bn8     (v)
 		v = self.tanh8   (v)
 		v = self.linear9 (v)
-		v = self.bn9     (v)
 		
 		return v
 	
 	def loss(self, Ypred, Y):
-		onehotY   = T.zeros_like(Ypred).scatter_(1, Y.unsqueeze(1), 1)*2 - 1
-		hingeLoss = T.mean(T.clamp(1.0 - Ypred*onehotY, min=0)**2)
+		onehotY   = torch.zeros_like(Ypred).scatter_(1, Y.unsqueeze(1), 1)*2 - 1
+		hingeLoss = torch.mean(torch.clamp(1.0 - Ypred*onehotY, min=0)**2)
 		return hingeLoss
-
-
 
