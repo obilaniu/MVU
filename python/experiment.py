@@ -55,6 +55,7 @@ class Experiment(nauka.exp.Experiment):
 		elif self.a.model == "ttqresnet":    self.S.model = TTQResnetModel  (self.a)
 		elif self.a.model == "ttqresnet32":  self.S.model = TTQResnet32Model(self.a)
 		elif self.a.model == "bnn":          self.S.model = MatthieuBNN     (self.a)
+		elif self.a.model == "ff":           self.S.model = FFBNN           (self.a)
 		if   self.S.model is None:
 			raise ValueError("Unsupported dataset-model pair \""+self.a.dataset+"-"+self.a.model+"\"!")
 		
@@ -171,7 +172,15 @@ class Experiment(nauka.exp.Experiment):
 		self.S.totalTrainErr  += int(torch.max(Ypred, 1)[1].eq(Y).long().sum())
 		self.S.totalTrainCnt  += batchSize
 		logScalar("batchLoss", loss)
-		
+		if self.a.model == "ff" and self.a.act == "pact":
+			logScalar("act/alpha1", float(self.S.model.act1.alpha))
+			logScalar("act/alpha2", float(self.S.model.act2.alpha))
+			logScalar("act/alpha3", float(self.S.model.act3.alpha))
+			logScalar("act/alpha4", float(self.S.model.act4.alpha))
+			logScalar("act/alpha5", float(self.S.model.act5.alpha))
+			logScalar("act/alpha6", float(self.S.model.act6.alpha))
+			logScalar("act/alpha7", float(self.S.model.act7.alpha))
+			logScalar("act/alpha8", float(self.S.model.act8.alpha))
 	
 	def recordValidBatchStats(self, X, Ypred, Y, loss):
 		batchSize = Y.size(0)

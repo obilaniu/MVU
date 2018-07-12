@@ -17,7 +17,7 @@ import torch.utils                          as TU
 import torch.utils.data                     as TUD
 
 from   torch.nn     import (Conv2d, BatchNorm2d, MaxPool2d, AvgPool2d, ReLU,
-                            CrossEntropyLoss,)
+                            CrossEntropyLoss, Linear)
 
 from   functional                           import *
 from   layers                               import *
@@ -483,3 +483,110 @@ class MatthieuBNN(ModelConstrained):
 		hingeLoss = torch.mean(torch.clamp(1.0 - Ypred*onehotY, min=0)**2)
 		return hingeLoss
 
+
+#
+# Simple Feed-Forward
+#
+
+class FFBNN(ModelConstrained):
+	"""
+	https://arxiv.org/pdf/1602.02830.pdf
+	"""
+	def __init__(self, a):
+		super().__init__()
+		self.a = a
+		
+		if self.a.act == "pact":
+			actArgs = ()
+			act     = PACT
+		else:
+			actArgs = (self.a.override,)
+			act     = SignBNN
+		override       = self.a.override
+		inChan         = 3
+		outChan        = 100 if self.a.dataset == "cifar100" else 10
+		bnArgs         = (1e-5, 1-0.9, False)
+		
+		self.conv1     = Conv2d     (inChan, 128, (3,3), padding=1)
+		self.bn1       = BatchNorm2d( 128, *bnArgs)
+		self.act1      = act        (*actArgs)
+		self.conv2     = Conv2d     ( 128,  128, (3,3), padding=1)
+		self.maxpool2  = MaxPool2d  ((2,2), stride=(2,2))
+		self.bn2       = BatchNorm2d( 128, *bnArgs)
+		self.act2      = act        (*actArgs)
+		
+		self.conv3     = Conv2d     ( 128,  256, (3,3), padding=1)
+		self.bn3       = BatchNorm2d( 256, *bnArgs)
+		self.act3      = act        (*actArgs)
+		self.conv4     = Conv2d     ( 256,  256, (3,3), padding=1)
+		self.maxpool4  = MaxPool2d  ((2,2), stride=(2,2))
+		self.bn4       = BatchNorm2d( 256, *bnArgs)
+		self.act4      = act        (*actArgs)
+		
+		self.conv5     = Conv2d     ( 256,  512, (3,3), padding=1)
+		self.bn5       = BatchNorm2d( 512, *bnArgs)
+		self.act5      = act        (*actArgs)
+		self.conv6     = Conv2d     ( 512,  512, (3,3), padding=1)
+		self.maxpool6  = MaxPool2d  ((2,2), stride=(2,2))
+		self.bn6       = BatchNorm2d( 512, *bnArgs)
+		self.act6      = act        (*actArgs)
+		
+		self.linear7   = Linear     (4*4*512, 1024)
+		self.act7      = act        (*actArgs)
+		self.linear8   = Linear     (1024, 1024)
+		self.act8      = act        (*actArgs)
+		self.linear9   = Linear     (1024,  outChan)
+	
+	
+	def forward(self, X):
+		shape = (-1, 3, 32, 32)
+		v = X.view(*shape)
+		
+		v = v*2-1
+		
+		v = self.conv1   (v)
+		v = self.bn1     (v)
+		v = self.act1    (v)
+		v = self.conv2   (v)
+		v = self.maxpool2(v)
+		v = self.bn2     (v)
+		v = self.act2    (v)
+		
+		v = self.conv3   (v)
+		v = self.bn3     (v)
+		v = self.act3    (v)
+		v = self.conv4   (v)
+		v = self.maxpool4(v)
+		v = self.bn4     (v)
+		v = self.act4    (v)
+		
+		v = self.conv5   (v)
+		v = self.bn5     (v)
+		v = self.act5    (v)
+		v = self.conv6   (v)
+		v = self.maxpool6(v)
+		v = self.bn6     (v)
+		v = self.act6    (v)
+		
+		v = v.view(v.size(0), -1)
+		
+		v = self.linear7 (v)
+		v = self.act7    (v)
+		v = self.linear8 (v)
+		v = self.act8    (v)
+		v = self.linear9 (v)
+		
+		return v
+	
+	def loss(self, Ypred, Y):
+		L = torch.nn.functional.cross_entropy(Ypred, Y)
+		if self.a.act == "pact":
+			L += self.a.l2*(self.act1.alpha**2 +
+			                self.act2.alpha**2 +
+			                self.act3.alpha**2 +
+			                self.act4.alpha**2 +
+			                self.act5.alpha**2 +
+			                self.act6.alpha**2 +
+			                self.act7.alpha**2 +
+			                self.act8.alpha**2)
+		return L

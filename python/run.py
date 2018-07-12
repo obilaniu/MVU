@@ -22,7 +22,7 @@ class root(nauka.ap.Subcommand):
 			argp.add_argument("-s", "--seed",           default=0x6a09e667f3bcc908, type=int,
 			    help="Seed for PRNGs. Default is 64-bit fractional expansion of sqrt(2).")
 			argp.add_argument("--model",                default="ttq",              type=str,
-			    choices=["real", "ttq", "ttqresnet", "ttqresnet32", "bnn"],
+			    choices=["real", "ttq", "ttqresnet", "ttqresnet32", "bnn", "ff"],
 			    help="Model Selection.")
 			argp.add_argument("--dataset",              default="cifar10",    type=str,
 			    choices=DATASETS,
