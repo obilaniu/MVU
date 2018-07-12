@@ -218,7 +218,7 @@ class Experiment(nauka.exp.Experiment):
 			if i == 0: logScalar("lr", pgroup["lr"])
 			pgroup["lr"] *= (3e-7/self.a.optimizer.lr)**(1./self.a.num_epochs)
 		
-		sys.stdout.write("Epoch {:d} done.\n".format(self.S.epoch))
+		sys.stdout.write("Epoch {:d} done.\n".format(self.S.epochNum))
 		
 		return self
 	
