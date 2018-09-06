@@ -499,7 +499,7 @@ class FFBNN(ModelConstrained):
 		if self.a.act == "pact":
 			actArgs = ()
 			act     = PACT
-		elif self.a.act == "pact":
+		elif self.a.act == "bipact":
 			actArgs = ()
 			act     = BiPACT
 		else:
