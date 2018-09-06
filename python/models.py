@@ -499,6 +499,9 @@ class FFBNN(ModelConstrained):
 		if self.a.act == "pact":
 			actArgs = ()
 			act     = PACT
+		elif self.a.act == "pact":
+			actArgs = ()
+			act     = BiPACT
 		else:
 			actArgs = (self.a.override,)
 			act     = SignBNN
