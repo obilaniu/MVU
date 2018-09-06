@@ -50,13 +50,15 @@ class PACTFunction(torch.autograd.Function):
 	"""
 	
 	@staticmethod
-	def forward(ctx, x, alpha):
-		ctx.save_for_backward(x, alpha)
+	def forward(ctx, x, alpha=10.0, k=0):
+		alpha = torch.tensor(alpha).to(x)
+		k     = torch.tensor(k    ).to('cpu', torch.int64)
+		ctx.save_for_backward(x, alpha, k)
 		return x.clamp(min=0.0).min(alpha)
 	
 	@staticmethod
 	def backward(ctx, dLdy):
-		x, alpha = ctx.saved_variables
+		x, alpha, k = ctx.saved_variables
 		
 		lt0      = x < 0
 		gta      = x > alpha
@@ -64,9 +66,42 @@ class PACTFunction(torch.autograd.Function):
 		
 		dLdx     = dLdy*gi
 		dLdalpha = torch.sum(dLdy*x.ge(alpha).float())
-		return dLdx, dLdalpha
+		return dLdx, dLdalpha, None
 
 pact          = PACTFunction.apply
+
+
+class BiPACTFunction(torch.autograd.Function):
+	"""
+	Bipolar Parametrized Clipping Activation Function
+	https://arxiv.org/pdf/1709.04054.pdf
+	https://arxiv.org/pdf/1805.06085.pdf
+	"""
+	
+	@staticmethod
+	def forward(ctx, x, alpha=10.0, k=0):
+		alpha = torch.tensor(alpha).to(x)
+		k     = torch.tensor(k    ).to('cpu', torch.int64)
+		M     = torch.arange(2, 2*x.size(1)+2, 2)&2
+		M     = M.sub_(1).repeat([1]*x.dim()).transpose_(1,-1).to(x)
+		
+		x     = x*M
+		ctx.save_for_backward(x, alpha, k, M)
+		return x.clamp(min=0.0).min(alpha).mul(M)
+	
+	@staticmethod
+	def backward(ctx, dLdy):
+		x, alpha, k, M = ctx.saved_variables
+		
+		lt0      = x < 0
+		gta      = x > alpha
+		gi       = 1.0-lt0.float()-gta.float()
+		
+		dLdx     = dLdy*gi*M
+		dLdalpha = torch.sum(dLdy*x.ge(alpha).float())
+		return dLdx, dLdalpha, None
+
+bipact        = BiPACTFunction.apply
 
 
 
