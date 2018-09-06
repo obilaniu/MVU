@@ -583,8 +583,8 @@ class FFBNN(ModelConstrained):
 	
 	def loss(self, Ypred, Y):
 		CEL = torch.nn.functional.cross_entropy(Ypred, Y)
-		L2P = 0
-		if self.a.act == "pact":
+		L2P = torch.tensor(0, dtype=torch.float32)
+		if self.a.act == "pact" or self.a.act == "bipact":
 			L2P = self.a.l2*(self.act1.alpha**2 +
 			                 self.act2.alpha**2 +
 			                 self.act3.alpha**2 +
