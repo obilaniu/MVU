@@ -477,6 +477,8 @@ class Experiment(nauka.exp.Experiment):
 			self.a.dropout,
 			self.a.num_epochs,
 			self.a.batch_size,
+			self.a.override,
+			self.a.act,
 			self.a.cuda,
 			self.a.optimizer,
 			self.a.lr,
