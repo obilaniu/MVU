@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
+import benzina.torch
 import nauka
-import os, sys
+import os, sys, time, pdb
 import torch
 import torchvision
+import uuid
+
+from   benzina.torch                    import (ImageNet, NvdecodeDataLoader)
 from   torch.nn                         import (DataParallel,)
 from   torch.nn.parallel                import (data_parallel,)
 from   torch.optim                      import (SGD, RMSprop, Adam,)
@@ -31,7 +35,12 @@ class Experiment(nauka.exp.Experiment):
 		if self.a.workDir:
 			super().__init__(self.a.workDir)
 		else:
-			super().__init__(os.path.join(*([self.a.baseDir]+self.a.name)))
+			projName = "LowPrecision-9afe7dd9-1410-4c24-a7b6-e0065d891cdb"
+			workDir  = nauka.fhs.createWorkDir(self.a.baseDir,
+			                                   projName,
+			                                   self.uuid,
+			                                   self.a.name)
+			super().__init__(workDir)
 		self.mkdirp(self.logDir)
 	
 	def fromScratch(self):
@@ -61,17 +70,19 @@ class Experiment(nauka.exp.Experiment):
 		
 		if self.a.cuda: self.S.model = self.S.model.cuda(self.a.cuda[0])
 		else:           self.S.model = self.S.model.cpu()
-			
 		
 		
 		"""Optimizer Selection"""
+		self.S.lr        = nauka.utils.lr.fromSpecList     ([self.a.optimizer.lr]+self.a.lr)
 		self.S.optimizer = nauka.utils.torch.optim.fromSpec(self.S.model.parameters(),
 		                                                    self.a.optimizer)
+		nauka.utils.torch.optim.setLR(self.S.optimizer, self.S.lr)
 		
 		
-		"""Epoch/Interval counters"""
+		"""Counters"""
 		self.S.epochNum    = 0
 		self.S.intervalNum = 0
+		self.S.zvitStepNum = 0
 		
 		
 		return self
@@ -80,7 +91,7 @@ class Experiment(nauka.exp.Experiment):
 		"""
 		Run by intervals until experiment completion.
 		"""
-		with ZvitWriter(self.logDir, 0) as self.z:
+		with ZvitWriter(self.logDir, self.S.zvitStepNum) as self.z:
 			self.readyDataset(download=False)
 			while not self.isDone:
 				self.interval().snapshot().purge()
@@ -102,8 +113,6 @@ class Experiment(nauka.exp.Experiment):
 		of every interval.
 		"""
 		
-		self.reseed()
-		self.readyLoaders()
 		self.onIntervalBegin()
 		
 		with tagscope("train"):
@@ -124,9 +133,6 @@ class Experiment(nauka.exp.Experiment):
 			self.onValidLoopEnd()
 		
 		self.onIntervalEnd()
-		self.S.epochNum    += 1
-		self.S.intervalNum += 1
-		self.z.step()
 		return self
 	
 	def onTrainBatch(self, D, i):
@@ -134,18 +140,33 @@ class Experiment(nauka.exp.Experiment):
 		
 		self.S.optimizer.zero_grad()
 		if self.a.cuda:
-			Y, X  = Y.cuda(), X.cuda()
+			Y, X  = Y.cuda(self.a.cuda[0]), X.cuda(self.a.cuda[0])
+			X.requires_grad_()
 			Ypred = data_parallel(self.S.model, X, self.a.cuda)
 		else:
 			Y, X  = Y.cpu(),  X.cpu()
+			X.requires_grad_()
 			Ypred = self.S.model(X)
 		loss = self.S.model.loss(Ypred, Y)
-		loss.backward()
+		loss[0].backward()
+		gradInput        = X.grad.pow(2).sum(3).sum(2).sum(1).sqrt().mean(0)
+		gradMagUnclipped = self.getGradMagnitude()
+		if self.a.clipval:
+			torch.nn.utils.clip_grad_value_(self.S.model.parameters(), self.a.clipval)
+		if self.a.clipnorm:
+			torch.nn.utils.clip_grad_norm_ (self.S.model.parameters(), self.a.clipnorm)
+		gradMagClipped   = self.getGradMagnitude()
 		self.S.optimizer.step()
-		self.S.model.constrain()
 		
 		with torch.no_grad():
-			self.recordTrainBatchStats(X, Ypred, Y, loss)
+			with tagscope("batch"):
+				with tagscope("grad"):
+					with tagscope("input"):
+						logScalar("l2",           gradInput)
+					with tagscope("param"):
+						logScalar("unclipped/l2", gradMagUnclipped)
+						logScalar("master/l2",    gradMagClipped)
+				self.recordTrainBatchStats(X, Ypred, Y, loss)
 		
 		return self
 	
@@ -154,7 +175,7 @@ class Experiment(nauka.exp.Experiment):
 		
 		with torch.no_grad():
 			if self.a.cuda:
-				Y, X  = Y.cuda(), X.cuda()
+				Y, X  = Y.cuda(self.a.cuda[0]), X.cuda(self.a.cuda[0])
 				Ypred = data_parallel(self.S.model, X, self.a.cuda)
 			else:
 				Y, X  = Y.cpu(),  X.cpu()
@@ -168,35 +189,34 @@ class Experiment(nauka.exp.Experiment):
 	
 	def recordTrainBatchStats(self, X, Ypred, Y, loss):
 		batchSize = Y.size(0)
-		self.S.totalTrainLoss += float(loss*batchSize)
-		self.S.totalTrainErr  += int(torch.max(Ypred, 1)[1].eq(Y).long().sum())
+		
+		self.S.totalTrainLoss += float(loss[0]*batchSize)
+		self.S.totalTrainErr  += int(torch.max(Ypred, 1)[1].ne(Y).long().sum())
 		self.S.totalTrainCnt  += batchSize
-		logScalar("batchLoss", loss)
-		if self.a.model == "ff" and self.a.act == "pact":
-			logScalar("act/alpha1", float(self.S.model.act1.alpha))
-			logScalar("act/alpha2", float(self.S.model.act2.alpha))
-			logScalar("act/alpha3", float(self.S.model.act3.alpha))
-			logScalar("act/alpha4", float(self.S.model.act4.alpha))
-			logScalar("act/alpha5", float(self.S.model.act5.alpha))
-			logScalar("act/alpha6", float(self.S.model.act6.alpha))
-			logScalar("act/alpha7", float(self.S.model.act7.alpha))
-			logScalar("act/alpha8", float(self.S.model.act8.alpha))
+		batchEndTime           = time.time()
+		batchTime              = batchEndTime-self.batchStartTime
+		self.batchStartTime    = batchEndTime
+		logScalar("loss/master", loss[0])
+		logScalar("time",  batchTime)
+		logScalars(loss[1])
 	
 	def recordValidBatchStats(self, X, Ypred, Y, loss):
 		batchSize = Y.size(0)
-		self.S.totalValidLoss += float(loss*batchSize)
-		self.S.totalValidErr  += int(torch.max(Ypred, 1)[1].eq(Y).long().sum())
+		self.S.totalValidLoss += float(loss[1]["loss/ce"]*batchSize)
+		self.S.totalValidErr  += int(torch.max(Ypred, 1)[1].ne(Y).long().sum())
 		self.S.totalValidCnt  += batchSize
 	
 	def onTrainLoopBegin(self):
 		self.S.totalTrainLoss = 0
 		self.S.totalTrainErr  = 0
 		self.S.totalTrainCnt  = 0
+		self.epochStartTime   = self.batchStartTime = time.time()
 		return self
 	
 	def onTrainLoopEnd(self):
-		logScalar("loss", self.S.totalTrainLoss/self.S.totalTrainCnt)
-		logScalar("err",  self.S.totalTrainErr /self.S.totalTrainCnt)
+		with tagscope("epoch"):
+			logScalar("loss", self.S.totalTrainLoss/self.S.totalTrainCnt)
+			logScalar("err",  self.S.totalTrainErr /self.S.totalTrainCnt)
 		return self
 	
 	def onValidLoopBegin(self):
@@ -206,21 +226,34 @@ class Experiment(nauka.exp.Experiment):
 		return self
 	
 	def onValidLoopEnd(self):
-		logScalar("loss", self.S.totalValidLoss/self.S.totalValidCnt)
-		logScalar("err",  self.S.totalValidErr /self.S.totalValidCnt)
+		with tagscope("epoch"):
+			valLoss = self.S.totalValidLoss/self.S.totalValidCnt
+			valErr  = self.S.totalValidErr /self.S.totalValidCnt
+			logScalar("loss", valLoss)
+			logScalar("err",  valErr)
+		self.S.lr.step(metric=valErr)
 		return self
 	
 	def onIntervalBegin(self):
+		self.reseed()
+		self.readyLoaders()
+		nauka.utils.torch.optim.setLR(self.S.optimizer, self.S.lr)
+		logScalar("lr", self.S.lr)
 		return self
 	
 	def onIntervalEnd(self):
-		for i, pgroup in enumerate(self.S.optimizer.state_dict()["param_groups"]):
-			if i == 0: logScalar("lr", pgroup["lr"])
-			pgroup["lr"] *= (3e-7/self.a.optimizer.lr)**(1./self.a.num_epochs)
-		
 		sys.stdout.write("Epoch {:d} done.\n".format(self.S.epochNum))
-		
+		self.S.epochNum    += 1
+		self.S.intervalNum += 1
+		self.z.step()
 		return self
+	
+	def getGradMagnitude(self, p=2):
+		with torch.no_grad():
+			M = 0.0
+			for param in self.S.model.parameters():
+				M = M+param.grad.abs().pow(p).reshape(-1).sum(0)
+			return torch.pow(M, 1.0/p)
 	
 	def reseed(self, password=None):
 		"""
@@ -257,41 +290,77 @@ class Experiment(nauka.exp.Experiment):
 			self.Dxform    = Compose(self.Dxform)
 			self.DsetTrain = MNIST   (self.dataDir, True,    self.Dxform, download=download)
 			self.DsetTest  = MNIST   (self.dataDir, False,   self.Dxform, download=download)
+			self.DsetValid = self.DsetTrain
 			self.Dimgsz    = (1, 28, 28)
 			self.DNclass   = 10
+			self.DNtrnvld  = len(self.DsetTrain)
 			self.DNvalid   = 5000
+			self.DNtest    = len(self.DsetTest)
+			self.DNtrain   = self.DNtrnvld-self.DNvalid
+			self.DidxTrain = range(self.DNtrnvld)[:self.DNtrain]
+			self.DidxValid = range(self.DNtrnvld)[-self.DNvalid:]
+			self.DidxTest  = range(self.DNtest)
 		elif self.a.dataset == "cifar10":
 			self.Dxform    = [ToTensor()]
 			self.Dxform    = Compose(self.Dxform)
 			self.DsetTrain = CIFAR10 (self.dataDir, True,    self.Dxform, download=download)
 			self.DsetTest  = CIFAR10 (self.dataDir, False,   self.Dxform, download=download)
+			self.DsetValid = self.DsetTrain
 			self.Dimgsz    = (3, 32, 32)
 			self.DNclass   = 10
+			self.DNtrnvld  = len(self.DsetTrain)
 			self.DNvalid   = 5000
+			self.DNtest    = len(self.DsetTest)
+			self.DNtrain   = self.DNtrnvld-self.DNvalid
+			self.DidxTrain = range(self.DNtrnvld)[:self.DNtrain]
+			self.DidxValid = range(self.DNtrnvld)[-self.DNvalid:]
+			self.DidxTest  = range(self.DNtest)
 		elif self.a.dataset == "cifar100":
 			self.Dxform    = [ToTensor()]
 			self.Dxform    = Compose(self.Dxform)
 			self.DsetTrain = CIFAR100(self.dataDir, True,    self.Dxform, download=download)
 			self.DsetTest  = CIFAR100(self.dataDir, False,   self.Dxform, download=download)
+			self.DsetValid = self.DsetTrain
 			self.Dimgsz    = (3, 32, 32)
 			self.DNclass   = 100
+			self.DNtrnvld  = len(self.DsetTrain)
 			self.DNvalid   = 5000
+			self.DNtest    = len(self.DsetTest)
+			self.DNtrain   = self.DNtrnvld-self.DNvalid
+			self.DidxTrain = range(self.DNtrnvld)[:self.DNtrain]
+			self.DidxValid = range(self.DNtrnvld)[-self.DNvalid:]
+			self.DidxTest  = range(self.DNtest)
 		elif self.a.dataset == "svhn":
 			self.Dxform    = [ToTensor()]
 			self.Dxform    = Compose(self.Dxform)
 			self.DsetTrain = SVHN    (self.dataDir, "train", self.Dxform, download=download)
 			self.DsetTest  = SVHN    (self.dataDir, "test",  self.Dxform, download=download)
+			self.DsetValid = self.DsetTrain
 			self.Dimgsz    = (3, 32, 32)
 			self.DNclass   = 10
+			self.DNtrnvld  = len(self.DsetTrain)
 			self.DNvalid   = 5000
+			self.DNtest    = len(self.DsetTest)
+			self.DNtrain   = self.DNtrnvld-self.DNvalid
+			self.DidxTrain = range(self.DNtrnvld)[:self.DNtrain]
+			self.DidxValid = range(self.DNtrnvld)[-self.DNvalid:]
+			self.DidxTest  = range(self.DNtest)
+		elif self.a.dataset == "imagenet":
+			self.DsetTrain = ImageNet(self.dataDir)
+			self.DsetValid = self.DsetTrain
+			self.DsetTest  = self.DsetTrain
+			self.Dimgsz    = (3, 224, 224)
+			self.DNclass   = 10
+			self.DNvalid   = 50000
+			self.DNtest    = 50000
+			self.DNtrain   = len(self.DsetTrain)-100000-self.DNvalid-self.DNtest
+			self.DidxTrain = range(self.DNtrain)
+			self.DidxValid = range(self.DNtrain,
+			                       self.DNtrain+self.DNvalid)
+			self.DidxTest  = range(self.DNtrain+self.DNvalid,
+			                       self.DNtrain+self.DNvalid+self.DNtest)
 		else:
 			raise ValueError("Unknown dataset \""+self.a.dataset+"\"!")
-		self.DNtrainvalid  = len(self.DsetTrain)
-		self.DNtest        = len(self.DsetTest)
-		self.DNtrain       = self.DNtrainvalid-self.DNvalid
-		self.DindicesTrain = range(self.DNtrainvalid)[:self.DNtrain]
-		self.DindicesValid = range(self.DNtrainvalid)[-self.DNvalid:]
-		self.DindicesTest  = range(self.DNtest)
 		return self
 	
 	def readyLoaders(self):
@@ -299,27 +368,73 @@ class Experiment(nauka.exp.Experiment):
 		Ready the data loaders reproducibly, knowing and relying on the fact
 		that PRNG states have been reproduced.
 		"""
-		self.DsamplerTrain = SubsetRandomSampler(self.DindicesTrain)
-		self.DsamplerValid = SubsetRandomSampler(self.DindicesValid)
-		self.DsamplerTest  = SubsetRandomSampler(self.DindicesTest)
-		self.DloaderTrain  = DataLoader(dataset     = self.DsetTrain,
-		                                batch_size  = self.a.batch_size,
-		                                shuffle     = False,
-		                                sampler     = self.DsamplerTrain,
-		                                num_workers = 0,
-		                                pin_memory  = False)
-		self.DloaderValid  = DataLoader(dataset     = self.DsetTrain,
-		                                batch_size  = self.a.batch_size,
-		                                shuffle     = False,
-		                                sampler     = self.DsamplerValid,
-		                                num_workers = 0,
-		                                pin_memory  = False)
-		self.DloaderTest   = DataLoader(dataset     = self.DsetTest,
-		                                batch_size  = self.a.batch_size,
-		                                shuffle     = False,
-		                                sampler     = self.DsamplerTest,
-		                                num_workers = 0,
-		                                pin_memory  = False)
+		if self.a.dataset == "imagenet":
+			self.DsamplerTrain = SubsetRandomSampler(self.DidxTrain)
+			self.DsamplerValid = SubsetRandomSampler(self.DidxValid)
+			self.DsamplerTest  = SubsetRandomSampler(self.DidxTest)
+			imagenetWarpTrain = benzina.torch.nvdecode.NvdecodeSimilarityTransform(
+			    tx=( 0,32), ty=( 0,32), reflecth=0.5, autoscale=False
+			)
+			imagenetWarpValid = benzina.torch.nvdecode.NvdecodeSimilarityTransform(
+			    tx=(16,16), ty=(16,16), reflecth=0.0, autoscale=False
+			)
+			imagenetWarpTest  = benzina.torch.nvdecode.NvdecodeSimilarityTransform(
+			    tx=(16,16), ty=(16,16), reflecth=0.0, autoscale=False
+			)
+			imagenetScale   = (5094.0579569570145**-.5, 4840.219848480945**-.5, 5285.324770813224**-.5)
+			imagenetBias    = ( 123.46163626781416,      116.68808194848208,     103.80484430987059)
+			self.DloaderTrain  = NvdecodeDataLoader(dataset     = self.DsetTrain,
+			                                        batch_size  = self.a.batch_size,
+			                                        shuffle     = False,
+			                                        sampler     = self.DsamplerTrain,
+			                                        shape       = (224, 224),
+			                                        device_id   = self.a.cuda[0],
+			                                        warp_transform  = imagenetWarpTrain,
+			                                        color_transform = 1,
+			                                        scale_transform = imagenetScale,
+			                                        bias_transform  = imagenetBias)
+			self.DloaderValid  = NvdecodeDataLoader(dataset     = self.DsetValid,
+			                                        batch_size  = self.a.batch_size,
+			                                        shuffle     = False,
+			                                        sampler     = self.DsamplerValid,
+			                                        shape       = (224, 224),
+			                                        device_id   = self.a.cuda[0],
+			                                        warp_transform  = imagenetWarpValid,
+			                                        color_transform = 1,
+			                                        scale_transform = imagenetScale,
+			                                        bias_transform  = imagenetBias)
+			self.DloaderTest   = NvdecodeDataLoader(dataset     = self.DsetTest,
+			                                        batch_size  = self.a.batch_size,
+			                                        shuffle     = False,
+			                                        sampler     = self.DsamplerTest,
+			                                        shape       = (224, 224),
+			                                        device_id   = self.a.cuda[0],
+			                                        warp_transform  = imagenetWarpTest,
+			                                        color_transform = 1,
+			                                        scale_transform = imagenetScale,
+			                                        bias_transform  = imagenetBias)
+		else:
+			self.DsamplerTrain = SubsetRandomSampler(self.DidxTrain)
+			self.DsamplerValid = SubsetRandomSampler(self.DidxValid)
+			self.DsamplerTest  = SubsetRandomSampler(self.DidxTest)
+			self.DloaderTrain  = DataLoader(dataset     = self.DsetTrain,
+			                                batch_size  = self.a.batch_size,
+			                                shuffle     = False,
+			                                sampler     = self.DsamplerTrain,
+			                                num_workers = 0,
+			                                pin_memory  = False)
+			self.DloaderValid  = DataLoader(dataset     = self.DsetValid,
+			                                batch_size  = self.a.batch_size,
+			                                shuffle     = False,
+			                                sampler     = self.DsamplerValid,
+			                                num_workers = 0,
+			                                pin_memory  = False)
+			self.DloaderTest   = DataLoader(dataset     = self.DsetTest,
+			                                batch_size  = self.a.batch_size,
+			                                shuffle     = False,
+			                                sampler     = self.DsamplerTest,
+			                                num_workers = 0,
+			                                pin_memory  = False)
 		return self
 	
 	def load(self, path):
@@ -327,6 +442,7 @@ class Experiment(nauka.exp.Experiment):
 		return self
 	
 	def dump(self, path):
+		self.S.zvitStepNum = self.z.globalStep
 		torch.save(self.S,  os.path.join(path, "snapshot.pkl"))
 		return self
 	
@@ -352,10 +468,30 @@ class Experiment(nauka.exp.Experiment):
 	
 	@property
 	def name(self):
-		#
-		# A more informative name would be helpful here.
-		#
-		return "" if self.a.name is None else "-".join(self.a.name)
+		"""A unique name containing every attribute that distinguishes this
+		experiment from another and no attribute that does not."""
+		attrs = [
+			self.a.seed,
+			self.a.model,
+			self.a.dataset,
+			self.a.dropout,
+			self.a.num_epochs,
+			self.a.batch_size,
+			self.a.cuda,
+			self.a.optimizer,
+			self.a.lr,
+			self.a.clipnorm,
+			self.a.clipval,
+			self.a.l1,
+			self.a.l2,
+			self.a.fastdebug,
+		]
+		return "-".join([str(s) for s in attrs]).replace("/", "_")
+	@property
+	def uuid(self):
+		u = nauka.utils.pbkdf2int(128, self.name)
+		u = uuid.UUID(int=u)
+		return str(u)
 	@property
 	def dataDir(self):
 		return self.a.dataDir

@@ -4,7 +4,7 @@
 import pickle as pkl, pdb, nauka, os, sys
 
 
-DATASETS = ["mnist", "cifar10", "cifar100", "svhn"]
+DATASETS = ["imagenet", "mnist", "cifar10", "cifar100", "svhn"]
 
 
 class root(nauka.ap.Subcommand):
@@ -24,7 +24,7 @@ class root(nauka.ap.Subcommand):
 			argp.add_argument("--model",                default="ttq",              type=str,
 			    choices=["real", "ttq", "ttqresnet", "ttqresnet32", "bnn", "ff"],
 			    help="Model Selection.")
-			argp.add_argument("--dataset",              default="cifar10",    type=str,
+			argp.add_argument("--dataset",              default=DATASETS[0],  type=str,
 			    choices=DATASETS,
 			    help="Dataset Selection.")
 			argp.add_argument("--dropout",              default=0,            type=float,
@@ -37,7 +37,7 @@ class root(nauka.ap.Subcommand):
 			    choices=["matt", "pass"],
 			    help="Gradient override selection.")
 			argp.add_argument("--act",                  default="sign",       type=str,
-			    choices=["sign", "pact"],
+			    choices=["sign", "pact", "bipact"],
 			    help="Activation function selection.")
 			argp.add_argument("--cuda",                 action=nauka.ap.CudaDevice)
 			argp.add_argument("-p", "--preset",         action=nauka.ap.Preset,
@@ -46,8 +46,9 @@ class root(nauka.ap.Subcommand):
 			    help="Experiment presets for commonly-used settings.")
 			optp = argp.add_argument_group("Optimizers", "Tunables for all optimizers.")
 			optp.add_argument("--optimizer", "--opt",   action=nauka.ap.Optimizer,
-			    default="adam",
-			    help="Optimizer selection.")
+			    default="adam")
+			optp.add_argument("--lr",                   action=nauka.ap.LRSchedule,
+			    default="step:40,0.2*cos:10,1,3")
 			optp.add_argument("--clipnorm", "--cn",     default=1.0,          type=float,
 			    help="The norm of the gradient will be clipped at this magnitude.")
 			optp.add_argument("--clipval",  "--cv",     default=1.0,          type=float,
