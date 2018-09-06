@@ -175,6 +175,14 @@ class PACT(torch.nn.Module):
 	def forward(self, x):
 		return pact(x, self.alpha)
 
+class BiPACT(torch.nn.Module):
+	def __init__(self):
+		super().__init__()
+		self.alpha = torch.nn.Parameter(torch.tensor(10.0, dtype=torch.float32))
+	
+	def forward(self, x):
+		return bipact(x, self.alpha)
+
 class BNNTanh(torch.nn.Module):
 	def __init__(self):
 		super().__init__()
