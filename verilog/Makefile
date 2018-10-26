@@ -1,11 +1,16 @@
 .PHONY: all test
 
 all:
-	@ iverilog -o test_mvu -g2005 *.v
-	@ iverilog -o test_interconn -s test_interconn -g2005 *.v
+	@ mkdir -p bin
+	@ iverilog -o bin/test_mvu -g2005 *.v
+	@ iverilog -o bin/test_dotp -g2005 *.v
+	@ iverilog -o bin/test_interconn -s test_interconn -g2005 *.v
+
+dotp: all
+	@ bin/test_dotp
 
 test: all
-	@ ./test_mvu
+	@ bin/test_mvu
 
 interconn: all
-	@ ./test_interconn
+	@ bin/test_interconn
