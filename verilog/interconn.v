@@ -22,7 +22,7 @@ output wire [n*w-1 : 0] recvMsg;
 
 genvar i;
 
-generate for(i=0;i<n;i=i+1) begin
+generate for(i=0;i<n;i=i+1) begin:xbarloop
 	wire [a-1:0] addr;
 	assign addr                  = sendAddr [i*a+a-1    -: a];
 	assign recvValid[i]          = sendValid[addr];
