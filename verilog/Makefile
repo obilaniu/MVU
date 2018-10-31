@@ -1,16 +1,25 @@
-.PHONY: all test
+.PHONY: all mkdir vvp mvp interconn run test
 
-all:
+mkdir:
 	@ mkdir -p bin
-	@ iverilog -o bin/test_mvu -g2005 *.v
-	@ iverilog -o bin/test_dotp -g2005 *.v
-	@ iverilog -o bin/test_interconn -s test_interconn -g2005 *.v
 
-dotp: all
-	@ bin/test_dotp
+all: vvp mvp shacc interconn
+	@ true
 
-test: all
-	@ bin/test_mvu
+vvp: mkdir vvp.v
+	@ iverilog -g2005 -s test_vvp       -o bin/test_vvp       *.v
 
-interconn: all
+mvp: mkdir vvp mvp.v
+	@ iverilog -g2005 -s test_mvp       -o bin/test_mvp       *.v
+
+shacc: mkdir shacc.v
+	@ iverilog -g2005 -s test_shacc     -o bin/test_shacc     *.v
+
+interconn: mkdir interconn.v
+	@ iverilog -g2005 -s test_interconn -o bin/test_interconn *.v
+
+run: all
+	@ bin/test_vvp
+	@ bin/test_mvp
+	@ bin/test_shacc
 	@ bin/test_interconn
