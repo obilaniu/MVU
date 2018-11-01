@@ -20,6 +20,9 @@ interconn: mkdir interconn.v
 toplevel: mkdir test_bram16k.v
 	@ iverilog -g2005 $(QUARTUS_SIMLIB)/altera_mf.v -s test_bram16k    -o bin/test_bram16k  test_bram16k.v bram16k.v
 
+mvu: mkdir mvp mvu.v
+	@ iverilog -g2005 $(QUARTUS_SIMLIB)/altera_mf.v -s mvu    -o bin/test_mvu  vvp.v mvp.v shacc.v bram16k.v mvu.v
+
 run: all
 	@ bin/test_vvp
 	@ bin/test_mvp
