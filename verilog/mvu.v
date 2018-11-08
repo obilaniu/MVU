@@ -40,9 +40,7 @@ generate for(i=0;i<n;i=i+1) begin:shaccarray
 	shacc #(w,a+2) p (clk, clr, sh, S[i*(a+2) +: a+2], O[i*w +: w]);
 end endgenerate
 /*     Block RAM accesses */
-generate for(i=0;i<n*n;i=i+32) begin:bramarray
-	bram16k b (clk, D[0 +: 32], Raddr, Waddr, Wen, W[i +: 32]);
-end endgenerate
+bram2m b (clk, {n*2{D[0 +: n/2]}}, Raddr, Waddr, Wen, W);
 
 
 /* Module end */
