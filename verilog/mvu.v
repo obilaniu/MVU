@@ -34,7 +34,7 @@ genvar i;
 
 /* Wiring */
 /*     Matrix Multiplier */
-mvp #(n) matrixcore (mulmode, W, D, S);
+mvp #(n, 'b010101) matrixcore (clk, mulmode, W, D, S);
 /*     Accumulators */
 generate for(i=0;i<n;i=i+1) begin:shaccarray
 	shacc #(w,a+2) p (clk, clr, sh, S[i*(a+2) +: a+2], O[i*w +: w]);
