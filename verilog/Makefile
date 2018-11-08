@@ -1,9 +1,9 @@
 .PHONY: all mkdir vvp mvp interconn toplevel run test
 
+all: vvp mvp shacc interconn toplevel
+
 mkdir:
 	@ mkdir -p bin
-
-all: vvp mvp shacc interconn toplevel
 
 vvp: mkdir vvp.v
 	@ iverilog -g2005 -s test_vvp       -o bin/test_vvp       vvp.v
