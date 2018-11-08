@@ -49,26 +49,26 @@ end
 endfunction
 
 
-/* Recursive Hardware Logic Generation */
-generate if(n == 1) begin:calc
-	assign Si = vvp_func(mode, W, D);
-end else if(n >= 2) begin:calc
-	vvp #(nr, pr>>1) r (clk, mode, W[ 0 +: nr], D[  0  +: 2*nr], Sr);
-	vvp #(nl, pr>>1) l (clk, mode, W[nr +: nl], D[2*nr +: 2*nl], Sl);
-	assign Si = {{(a-al){Sl[al+1]}}, Sl} + {{(a-ar){Sr[ar+1]}}, Sr};
-end endgenerate
-
-
 /* Pipeline Register Insertion */
-generate if(pr & 1) begin:pipeline
+generate if(pr & 1) begin:pipe
 	reg [ a+2-1 : 0] R = 0;
 	always @(posedge clk) begin
 		R = Si;
 		//$display("Latching R = %b", R);
 	end
 	assign S = R;
-end else begin
+end else begin:nopipe
 	assign S = Si;
+end endgenerate
+
+
+/* Recursive Hardware Logic Generation */
+generate if(n == 1) begin:base
+	assign Si = vvp_func(mode, W, D);
+end else if(n >= 2) begin:calc
+	vvp #(nr, pr>>1) r (clk, mode, W[ 0 +: nr], D[  0  +: 2*nr], Sr);
+	vvp #(nl, pr>>1) l (clk, mode, W[nr +: nl], D[2*nr +: 2*nl], Sl);
+	assign Si = {{(a-al){Sl[al+1]}}, Sl} + {{(a-ar){Sr[ar+1]}}, Sr};
 end endgenerate
 
 
