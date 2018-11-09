@@ -41,9 +41,12 @@
 *.xz
 
 # Quartus II stuff
+*.qws
 *.qsf
 *.qpf
 *.qar
+*.qip
+*.sdc
 **/db/**
 **/output_files/**
 **/incremental_db/**
