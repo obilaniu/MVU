@@ -23,7 +23,11 @@ toplevel: mkdir test_bram16k.v
 mvu: mkdir mvp mvu.v
 	@ iverilog -g2005 $(QUARTUS_SIMLIB)/altera_mf.v -s mvu    -o bin/test_mvu  vvp.v mvp.v shacc.v bram16k.v bram2m.v mvu.v
 
+portmux: mkdir portmux.v
+	@ iverilog -g2005 -s portmux        -o bin/test_portmux portmux.v
+
 run: all
+	@ bin/test_portmux
 	@ bin/test_vvp
 	@ bin/test_mvp
 	@ bin/test_shacc
