@@ -34,6 +34,7 @@ output wire          grntIC;
 output wire          grntMVU;
 output wire          grntCtrl;
 
+wire       [w-1 : 0] datai;
 wire       [a-1 : 0] addr;
 
 
@@ -45,14 +46,14 @@ assign addr     = (grntIC   ? addrIC   :
                   (grntMVU  ? addrMVU  :
                   (grntCtrl ? addrCtrl :
                               {a{1'bX}})));
-assign data     = (grntIC   ? dataIC   :
+assign datai    = (grntIC   ? dataIC   :
                   (grntMVU  ? dataMVU  :
                   (grntCtrl ? dataCtrl :
                               {w{1'bX}})));
 
 
 /* 64k internal BRAM */
-bram64k b (clk, {w{1'b0}}, addr, addr, 1'b0, data);
+bram64k b (clk, datai, addr, addr, 1'b0, data);
 
 
 /* Module end */
