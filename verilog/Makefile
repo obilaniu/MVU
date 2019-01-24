@@ -26,6 +26,9 @@ mvu: mkdir mvp mvu.v
 portmux: mkdir portmux.v
 	@ iverilog -g2005 -s portmux        -o bin/test_portmux portmux.v
 
+bank64k: mkdir bank64k.v
+	@ iverilog -g2005 $(QUARTUS_SIMLIB)/altera_mf.v -s bank64k        -o bin/test_bank64k bank64k.v portmux.v bram64k.v
+
 run: all
 	@ bin/test_portmux
 	@ bin/test_vvp
