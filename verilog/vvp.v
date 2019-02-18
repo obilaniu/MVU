@@ -36,14 +36,14 @@ function signed[1:0] vvp_func(input[1:0] fmode,
                               input[0:0] fW,
                               input[1:0] fD);
 begin
-	if         (fmode == 2'b00) begin /* Weights {+1,-1} */
-		vvp_func = fW ?   -fD :   +fD;
+	if         (fmode == 2'b00) begin /* Weights { 0, 0} */
+		vvp_func = fW ? 2'b00 : 2'b00;
 	end else if(fmode == 2'b01) begin /* Weights { 0,+1} */
 		vvp_func = fW ?   +fD : 2'b00;
-	end else if(fmode == 2'b10) begin /* Weights { 0,-1} */
+	end else if(fmode == 2'b10) begin /* Weights {+1,-1} */
+		vvp_func = fW ?   -fD :   +fD;
+	end else                    begin /* Weights { 0,-1} */
 		vvp_func = fW ?   -fD : 2'b00;
-	end else                    begin /* Weights { 0, 0} */
-		vvp_func = fW ? 2'b00 : 2'b00;
 	end
 end
 endfunction
