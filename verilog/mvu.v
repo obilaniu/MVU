@@ -211,13 +211,12 @@ generate for(i=0;i<NDBANK;i=i+1) begin:bankarray
         assign rdd_words_t[j*NDBANK+i] = rdd_words[i*BDBANKW+j];
         assign rdi_words_t[j*NDBANK+i] = rdi_words[i*BDBANKW+j];
         assign rdc_words_t[j*NDBANK+i] = rdc_words[i*BDBANKW+j];
-        
-        if(j==0) begin:reduxrdwords
-            assign rdd_word[i] = |rdd_words_t[i*NDBANK +: NDBANK];
-            assign rdi_word[i] = |rdi_words_t[i*NDBANK +: NDBANK];
-            assign rdc_word[i] = |rdc_words_t[i*NDBANK +: NDBANK];
-        end
     end
+end endgenerate
+generate for(i=0;i<BDBANKW;i=i+1) begin:reduxrdwords
+   assign rdd_word[i] = |rdd_words_t[i*NDBANK +: NDBANK];
+   assign rdi_word[i] = |rdi_words_t[i*NDBANK +: NDBANK];
+   assign rdc_word[i] = |rdc_words_t[i*NDBANK +: NDBANK];
 end endgenerate
 assign rdd_grnt  = |rdd_grnts;
 assign rdi_grnt  = |rdi_grnts;

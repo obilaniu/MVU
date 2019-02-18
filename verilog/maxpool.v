@@ -22,10 +22,16 @@ output reg  signed[N-1 : 0] O = 0;
 always @(posedge clk or posedge max_clr) begin
     if(max_clr) begin
         O = 0;
-    end
-    if(clk && max_en) begin
-        if(max_pool) O = O>I ? O : I; /* O = max(O,I) */
-        else         O = I;           /* Plain set */
+    end else if(clk) begin
+        if(max_en) begin
+            if(max_pool) begin
+                if(I>O) begin
+                    O = I;/* O = max(O,I) */
+                end
+            end else begin
+                O = I;    /* Plain set */
+            end
+        end
     end
 end
 

@@ -57,10 +57,11 @@ input  wire[w-1 : 0] wrc_word;
 output wire          wrc_grnt;
 
 /* Local */
+wire          wr_en;
 wire[a-1 : 0] rd_addr;
 wire[a-1 : 0] wr_addr;
-wire[w-1 : 0] wr_word;
 wire[w-1 : 0] rd_word;
+wire[w-1 : 0] wr_word;
 
 
 /* Wiring */

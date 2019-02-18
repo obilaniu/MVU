@@ -37,8 +37,7 @@ generate if(N > 1) begin:multiple
             if(clr) begin
                 recv_en   = 0;
                 recv_word = 0;
-            end
-            if(clk) begin
+            end else if(clk) begin
                 recv_en  [i]        = send_en  [addr];
                 recv_word[i*W +: W] = send_word[addr*W +: W];
             end
@@ -49,8 +48,7 @@ end else begin:single
         if(clr) begin
             recv_en   = 0;
             recv_word = 0;
-        end
-        if(clk) begin
+        end else if(clk) begin
             recv_en   = send_en;
             recv_word = send_word;
         end

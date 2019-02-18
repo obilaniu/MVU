@@ -20,7 +20,6 @@ module toplevel(clk, ic_clr, ic_recv_from,
                 rdi_en,
                 rdi_grnt,
                 rdi_addr,
-                wri_en,
                 wri_grnt,
                 wri_addr,
                 rdc_en,
@@ -35,12 +34,12 @@ module toplevel(clk, ic_clr, ic_recv_from,
 
 /* Parameters */
 parameter  N =  8;
-parameter  n = 64;
+parameter  b = 64;
 parameter  w = 32;
 
 localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
 localparam BDBANKA = 14;            /* Bitwidth of Data    BANK Address */
-localparam BDBANKW = 2*n;           /* Bitwidth of Data    BANK Word */
+localparam BDBANKW = 2*b;           /* Bitwidth of Data    BANK Word */
 
 localparam A = $clog2(N);
 localparam W = 2*N;
@@ -48,7 +47,6 @@ localparam W = 2*N;
 input  wire                  clk;
 
 input  wire                  ic_clr;
-input  wire[        N-1 : 0] ic_send_en;
 input  wire[      N*A-1 : 0] ic_recv_from;
 
 input  wire[      2*N-1 : 0] mul_mode;
@@ -70,7 +68,6 @@ input  wire[N*BDBANKA-1 : 0] wrd_addr;
 input  wire[        N-1 : 0] rdi_en;
 output wire[        N-1 : 0] rdi_grnt;
 input  wire[N*BDBANKA-1 : 0] rdi_addr;
-input  wire[        N-1 : 0] wri_en;
 output wire[        N-1 : 0] wri_grnt;
 input  wire[N*BDBANKA-1 : 0] wri_addr;
 
@@ -87,18 +84,20 @@ genvar i;
 
 
 /* Local Wires */
+wire[        N-1 : 0] ic_send_en;
 wire[N*BDBANKW-1 : 0] ic_send_word;
-wire[N*BDBANKW-1 : 0] ic_recv_word;
 wire[        N-1 : 0] ic_recv_en;
+wire[N*BDBANKW-1 : 0] ic_recv_word;
 
 wire[N*BDBANKW-1 : 0] rdi_word;
+wire[        N-1 : 0] wri_en;
 wire[N*BDBANKW-1 : 0] wri_word;
 
 
 /* Wiring */
 /*   Interconnect... */
-interconn #(N, n*2) ic(clk, ic_clr, ic_send_en, ic_send_word,
-                       ic_recv_from, ic_recv_en, ic_recv_word);
+interconn #(N, BDBANKW) ic(clk, ic_clr, ic_send_en, ic_send_word,
+                           ic_recv_from, ic_recv_en, ic_recv_word);
 assign ic_send_en   = rdi_grnt;
 assign ic_send_word = rdi_word;
 assign wri_word     = ic_recv_word;
@@ -107,7 +106,7 @@ assign wri_en       = ic_recv_en;
 
 /*   Cores... */
 generate for(i=0;i<N;i=i+1) begin:mvuarray
-    mvu #(n, w) mvunit (clk,
+    mvu #(b, w) mvunit (clk,
                         mul_mode[i*2 +: 2],
                         acc_clr[i],
                         acc_sh[i],
