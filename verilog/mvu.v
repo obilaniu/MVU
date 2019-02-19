@@ -114,7 +114,7 @@ input  wire[BDBANKA-1 : 0] wrd_addr;
 input  wire                rdi_en;
 output wire                rdi_grnt;
 input  wire[BDBANKA-1 : 0] rdi_addr;
-output wire[BDBANKW-1 : 0] rdi_word;
+output reg [BDBANKW-1 : 0] rdi_word;
 input  wire                wri_en;
 output wire                wri_grnt;
 input  wire[BDBANKA-1 : 0] wri_addr;
@@ -123,7 +123,7 @@ input  wire[BDBANKW-1 : 0] wri_word;
 input  wire                rdc_en;
 output wire                rdc_grnt;
 input  wire[BDBANKA-1 : 0] rdc_addr;
-output wire[BDBANKW-1 : 0] rdc_word;
+output reg [BDBANKW-1 : 0] rdc_word;
 input  wire                wrc_en;
 output wire                wrc_grnt;
 input  wire[BDBANKA-1 : 0] wrc_addr;
@@ -140,7 +140,7 @@ wire[BSUM*N-1  : 0] core_out;
 wire[BACC*N-1  : 0] acc_out;
 wire[BACC*N-1  : 0] pool_out;
 wire[BDBANKW-1 : 0] quant_out;
-wire[BDBANKW-1 : 0] rdd_word;
+reg [BDBANKW-1 : 0] rdd_word;
 wire[BDBANKW-1 : 0] wrd_word;
 
 wire[NDBANK-1  : 0] rdd_csel;
@@ -214,9 +214,13 @@ generate for(i=0;i<NDBANK;i=i+1) begin:bankarray
     end
 end endgenerate
 generate for(i=0;i<BDBANKW;i=i+1) begin:reduxrdwords
-   assign rdd_word[i] = |rdd_words_t[i*NDBANK +: NDBANK];
-   assign rdi_word[i] = |rdi_words_t[i*NDBANK +: NDBANK];
-   assign rdc_word[i] = |rdc_words_t[i*NDBANK +: NDBANK];
+    always @(posedge clk) begin
+        if(clk) begin
+            rdd_word[i] <= |rdd_words_t[i*NDBANK +: NDBANK];
+            rdi_word[i] <= |rdi_words_t[i*NDBANK +: NDBANK];
+            rdc_word[i] <= |rdc_words_t[i*NDBANK +: NDBANK];
+        end
+    end
 end endgenerate
 assign rdd_grnt  = |rdd_grnts;
 assign rdi_grnt  = |rdi_grnts;
