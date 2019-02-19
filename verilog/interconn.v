@@ -35,8 +35,8 @@ generate if(N > 1) begin:multiple
         
         always @(posedge clk or posedge clr) begin
             if(clr) begin
-                recv_en   = 0;
-                recv_word = 0;
+                recv_en  [i]        = 1'b0;
+                recv_word[i*W +: W] = {W{1'b0}};
             end else if(clk) begin
                 recv_en  [i]        = send_en  [addr];
                 recv_word[i*W +: W] = send_word[addr*W +: W];
@@ -46,8 +46,8 @@ generate if(N > 1) begin:multiple
 end else begin:single
     always @(posedge clk or posedge clr) begin
         if(clr) begin
-            recv_en   = 0;
-            recv_word = 0;
+            recv_en   = 1'b0;
+            recv_word = {W{1'b0}};
         end else if(clk) begin
             recv_en   = send_en;
             recv_word = send_word;
