@@ -136,10 +136,10 @@ genvar i, j;
 /* Local Wires */
 wire                rd_en;
 wire[1 : 0]         rd_muxcode;
-wire[BWBANKA-1 : 0] rd_addr;
+wire[BDBANKA-1 : 0] rd_addr;
 wire                wr_en;
 wire[1 : 0]         wr_muxcode;
-wire[BWBANKA-1 : 0] wr_addr;
+wire[BDBANKA-1 : 0] wr_addr;
 
 wire[BWBANKW-1 : 0] core_weights;
 wire[BDBANKW-1 : 0] core_data;
@@ -149,20 +149,6 @@ wire[BACC*N-1  : 0] pool_out;
 wire[BDBANKW-1 : 0] quant_out;
 reg [BDBANKW-1 : 0] rdd_word;
 wire[BDBANKW-1 : 0] wrd_word;
-
-wire[NDBANK-1  : 0] rdd_csel;
-wire[NDBANK-1  : 0] wrd_csel;
-wire[NDBANK-1  : 0] rdi_csel;
-wire[NDBANK-1  : 0] wri_csel;
-wire[NDBANK-1  : 0] rdc_csel;
-wire[NDBANK-1  : 0] wrc_csel;
-
-wire[NDBANK-1  : 0] rdd_grnts;
-wire[NDBANK-1  : 0] wrd_grnts;
-wire[NDBANK-1  : 0] rdi_grnts;
-wire[NDBANK-1  : 0] wri_grnts;
-wire[NDBANK-1  : 0] rdc_grnts;
-wire[NDBANK-1  : 0] wrc_grnts;
 
 wire[NDBANK*BDBANKW-1 : 0] rdd_words;
 wire[NDBANK*BDBANKW-1 : 0] rdi_words;
@@ -229,12 +215,6 @@ generate for(i=0;i<BDBANKW;i=i+1) begin:reduxrdwords
         end
     end
 end endgenerate
-assign rdd_grnt  = |rdd_grnts;
-assign rdi_grnt  = |rdi_grnts;
-assign rdc_grnt  = |rdc_grnts;
-assign wrd_grnt  = |wrd_grnts;
-assign wri_grnt  = |wri_grnts;
-assign wrc_grnt  = |wrc_grnts;
 
 
 assign core_data = rdd_word;
