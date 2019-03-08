@@ -134,6 +134,13 @@ genvar i, j;
 
 
 /* Local Wires */
+wire                rd_en;
+wire[1 : 0]         rd_muxcode;
+wire[BWBANKA-1 : 0] rd_addr;
+wire                wr_en;
+wire[1 : 0]         wr_muxcode;
+wire[BWBANKA-1 : 0] wr_addr;
+
 wire[BWBANKW-1 : 0] core_weights;
 wire[BDBANKW-1 : 0] core_data;
 wire[BSUM*N-1  : 0] core_out;
@@ -167,13 +174,14 @@ wire[BDBANKW*NDBANK-1 : 0] rdc_words_t;
 
 
 /* Wiring */
-decoder #(NDBANK)       rdd_decoder  (rdd_addr[BDBANKAWS +: BDBANKABS], rdd_csel);
-decoder #(NDBANK)       wrd_decoder  (wrd_addr[BDBANKAWS +: BDBANKABS], wrd_csel);
-decoder #(NDBANK)       rdi_decoder  (rdi_addr[BDBANKAWS +: BDBANKABS], rdi_csel);
-decoder #(NDBANK)       wri_decoder  (wri_addr[BDBANKAWS +: BDBANKABS], wri_csel);
-decoder #(NDBANK)       rdc_decoder  (rdc_addr[BDBANKAWS +: BDBANKABS], rdc_csel);
-decoder #(NDBANK)       wrc_decoder  (wrc_addr[BDBANKAWS +: BDBANKABS], wrc_csel);
-
+cdru    #(BDBANKABS)    read_cdu     (rdi_en, rdi_addr, rdi_grnt,
+                                      rdd_en, rdd_addr, rdd_grnt,
+                                      rdc_en, rdc_addr, rdc_grnt,
+                                      rd_en,  rd_addr,  rd_muxcode);
+cdwu    #(BDBANKABS)    write_cdu    (wri_en, wri_addr, wri_grnt,
+                                      wrd_en, wrd_addr, wrd_grnt,
+                                      wrc_en, wrc_addr, wrc_grnt,
+                                      wr_en,  wr_addr,  wr_muxcode);
 bram2m                  weights_bank (clk, {BWBANKW{1'b0}}, rdw_addr, {BWBANKA{1'b0}}, 1'b0, core_weights);
 mvp     #(N, 'b0010101) matrix_core  (clk, mul_mode, core_weights, core_data, core_out);
 
@@ -200,12 +208,11 @@ end endgenerate
 
 generate for(i=0;i<NDBANK;i=i+1) begin:bankarray
     bank64k #(BDBANKW, BDBANKAWS) db (clk,
-        rdi_csel[i], rdi_en, rdi_addr[0 +: BDBANKAWS], rdi_words[i*BDBANKW +: BDBANKW], rdi_grnts[i],
-        wri_csel[i], wri_en, wri_addr[0 +: BDBANKAWS], wri_word,                        wri_grnts[i],
-        rdd_csel[i], rdd_en, rdd_addr[0 +: BDBANKAWS], rdd_words[i*BDBANKW +: BDBANKW], rdd_grnts[i],
-        wrd_csel[i], wrd_en, wrd_addr[0 +: BDBANKAWS], wrd_word,                        wrd_grnts[i],
-        rdc_csel[i], rdc_en, rdc_addr[0 +: BDBANKAWS], rdc_words[i*BDBANKW +: BDBANKW], rdc_grnts[i],
-        wrc_csel[i], wrc_en, wrc_addr[0 +: BDBANKAWS], wrc_word,                        wrc_grnts[i]
+        rd_en & (rd_addr[BDBANKAWS +: BDBANKABS] == i), rd_addr[0 +: BDBANKAWS], rd_muxcode,
+        wr_en & (wr_addr[BDBANKAWS +: BDBANKABS] == i), wr_addr[0 +: BDBANKAWS], wr_muxcode,
+        rdi_words[i*BDBANKW +: BDBANKW], wri_word,
+        rdd_words[i*BDBANKW +: BDBANKW], wrd_word,
+        rdc_words[i*BDBANKW +: BDBANKW], wrc_word
     );
     for(j=0;j<BDBANKW;j=j+1) begin:transposej
         assign rdd_words_t[j*NDBANK+i] = rdd_words[i*BDBANKW+j];
