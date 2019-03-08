@@ -24,10 +24,10 @@ input  wire          clk;
 
 input  wire          rd_en;
 input  wire[a-1 : 0] rd_addr;
-input  wire          rd_muxcode;
+input  wire[  1 : 0] rd_muxcode;
 input  wire          wr_en;
 input  wire[a-1 : 0] wr_addr;
-input  wire          wr_muxcode;
+input  wire[  1 : 0] wr_muxcode;
 
 output wire[w-1 : 0] rdi_word;
 output wire[w-1 : 0] rdd_word;
