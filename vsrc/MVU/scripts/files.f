@@ -1,0 +1,13 @@
+../rtl/altera_mf.v
+../rtl/bram64k.v
+../rtl/bank64k.v
+../rtl/bram2m.v
+../rtl/cdru.v
+../rtl/cdwu.v
+../rtl/maxpool.v
+../rtl/mvp.v
+../rtl/mvu.v
+../rtl/shacc.v
+../rtl/vvp.v
+../tb/utils.sv
+../tb/mvu_tester.sv
