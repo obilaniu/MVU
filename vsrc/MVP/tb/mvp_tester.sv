@@ -2,14 +2,14 @@
 
 import utils::*;
 
-`define NUM_TEST_VECS 100
+`define NUM_TEST_VECS 100000
 
 /**** Test Module test_mvp ****/
 module mvp_tester();
 
 
 /* Local parameters for test */
-localparam n    = 256;
+localparam n    = 32;
 localparam a    = $clog2(n);
 
 
