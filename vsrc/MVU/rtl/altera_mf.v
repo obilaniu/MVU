@@ -1,1 +1,1 @@
-/CMC/tools/altera/17.0/quartus/eda/sim_lib/altera_mf.v
+../../3RD_PARTY_IP/rtl/altera_mf.v
