@@ -1,0 +1,1 @@
+/home/mhossein/myRepos/lowprecision/vsrc/BRAM16K/rtl/bram16k.v

@@ -1,0 +1,1 @@
+/home/mhossein/myRepos/lowprecision/vsrc/MAXPOOL/rtl/maxpool.v
