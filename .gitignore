@@ -62,3 +62,26 @@
 # Experiments
 /experiments/
 /verilog/bin
+
+# Vivado Stuff
+*.jou
+*.log
+*.str
+*.pb
+*.vcd
+*.wdb
+**/xsim.dir/**
+*.out
+*.sdb
+*.bmp
+*.bin
+*.info
+*.wdm
+*.xml
+*.rtti
+*.xdbg
+*.ini
+*.xsimk
+*.sdb
+*.rlx
+*.Xil
