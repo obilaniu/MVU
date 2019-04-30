@@ -1,0 +1,1 @@
+/home/mhossein/myRepos/lowprecision/vsrc/BRAM2M/rtl/bram2m.v

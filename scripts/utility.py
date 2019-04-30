@@ -6,7 +6,7 @@ import platform
 
 verbose = {"VERB_NONE":0, "VERB_LOW":100, "VERB_MEDIUM":200,"VERB_HIGH":300, "VERB_FULL":400, "VERB_DEBUG":500}
 
-def run_command(command_str, split=True, verbosity="VERB_HIGH"):
+def run_command(command_str, split=False, verbosity="VERB_HIGH"):
         try:
             print_log(command_str, id_str="command", verbosity=verbosity)
             # subprocess needs to receive args seperately
@@ -35,7 +35,7 @@ def print_log(log_str, id_str="INFO", color="white", verbosity="VERB_LOW"):
                 color = "green"
         print(colored(("[{0:<7}]   {1}".format(id_str, log_str)), color))
 
-def print_banner(banner_str, color="white", verbosity=verbose["VERB_HIGH"]):
+def print_banner(banner_str, color="white", verbosity="VERB_HIGH"):
     print_log("=======================================================================", color=color, verbosity=verbosity)
     print_log(banner_str, color=color, verbosity=verbosity)
     print_log("=======================================================================", color=color, verbosity=verbosity)
@@ -54,3 +54,16 @@ def get_platform(verbosity="VERB_LOW"):
     platform_name = platform.system().lower()
     print_log("Working on a {0} platform".format(platform_name), "INFO", verbosity=verbosity, color="green")
     return platform_name
+
+def check_for_file(path, exit=True):
+    if not os.path.exists(path):
+        if exit:
+            print_log("Path to {0} does not exist!".format(path), "ERROR")
+            sys.exit()
+        else:
+            print_log("Path to {0} does not exist!".format(path), "WARNING")
+
+def check_for_dir(path):
+    if not os.path.isdir(path):
+        print_log("Directory {0} does not exist!".format(path), "ERROR")
+        sys.exit()

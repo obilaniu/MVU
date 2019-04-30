@@ -63,35 +63,26 @@
 /experiments/
 /verilog/bin
 
-# Xilinx stuff
+# Vivado Stuff
 *.jou
 *.log
 *.str
 *.pb
+*.vcd
 *.wdb
-*/build/
-xsim.dir/
+**/xsim.dir/**
 *.out
 *.sdb
 *.bmp
 *.bin
 *.info
-*.html
 *.wdm
 *.xml
-*.dbg
-*.mem
-*.reloc
 *.rtti
-*.svtype
-*.type
 *.xdbg
 *.ini
 *.xsimk
 *.sdb
 *.rlx
-*.txt
-*.data
-*.jpg
-*.png
 *.Xil
+#
