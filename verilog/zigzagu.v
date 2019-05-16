@@ -44,14 +44,14 @@ always @(posedge clk) begin
     /* Zig-zag Stepping Active */
     if(step == 1) begin
         /* Diagonal walk. */
-        sh = (iw == 0);
+        sh = ((iw == 0) | (id == pd-1));
         id = id+1;
         iw = iw-1;
         
         /* Perform shift if required. */
         if(sh != 0) begin
-            id = 0;
             iw = iw+id+1;
+            id = 0;
             
             /* Shift may place iw out of bounds. Wrap or clamp. */
             if         (iw >= sump) begin
@@ -63,6 +63,10 @@ always @(posedge clk) begin
                 /* We are deep enough in the multiplication that we must clamp. */
                 id = iw-pw+1;
                 iw = iw-id;
+            end else if(id >= pd)   begin
+                /* We are deep enough in the multiplication that we must clamp. */
+                iw = id-pd+1;
+                id = id-iw;
             end
         end
     end
