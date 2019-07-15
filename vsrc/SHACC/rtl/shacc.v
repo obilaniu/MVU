@@ -21,12 +21,12 @@ output reg  signed[w-1 : 0] O = 0;
 
 /* Logic */
 always @(posedge clk or posedge clr) begin
-	if(clr) begin
-		O = 0;
-	end else if(clk) begin
-		if(sh) O = O+O+I; /* Shift left of accumulator */
-		else   O = O+I;   /* Plain accumulate */
-	end
+    if(clr) begin
+        O = 0;
+    end else if(clk) begin
+        if(sh) O = O+O+I; /* Shift left of accumulator */
+        else   O = O+I;   /* Plain accumulate */
+    end
 end
 
 
@@ -60,17 +60,17 @@ shacc #(w,a) master (clk, clr, sh, I, O);
 initial forever begin #10; $display("%t: %9d", $time, O); end
 always  begin clk=0; #5; clk=1; #5;                       end
 initial begin
-	I= 0; clr=0; sh=0; #10;
-	I= 1; clr=0; sh=0; #10;
-	I= 0; clr=0; sh=0; #10;
-	I=-4; clr=0; sh=0; #10;
-	I=+9; clr=0; sh=0; #10;
-	I= 0; clr=0; sh=1; #10;
-	I=+1; clr=0; sh=1; #10;
-	I=+1; clr=1; sh=1; #10;
-	I=+1; clr=1; sh=0; #10;
-	I= 1; clr=0; sh=0; #10;
-	$finish();
+    I= 0; clr=0; sh=0; #10;
+    I= 1; clr=0; sh=0; #10;
+    I= 0; clr=0; sh=0; #10;
+    I=-4; clr=0; sh=0; #10;
+    I=+9; clr=0; sh=0; #10;
+    I= 0; clr=0; sh=1; #10;
+    I=+1; clr=0; sh=1; #10;
+    I=+1; clr=1; sh=1; #10;
+    I=+1; clr=1; sh=0; #10;
+    I= 1; clr=0; sh=0; #10;
+    $finish();
 end
 
 endmodule

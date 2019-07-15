@@ -2,44 +2,44 @@
  * Matrix-Vector Unit
  * 
  * Signals needed for each MVU:
- *     | Signal   | Description                 | Bits
- *     +----------+-----------------------------+-------
- *     | clk      | Clock                       | 1
- *     | mul_mode | Multiply Mode               | 2
- *     | acc_clr  | Accumulator Clear           | 1
- *     | acc_sh   | Accumulator Shift           | 1
- *     | max_en   | Maxpooling Enable           | 1
- *     | max_clr  | Maxpooling Clear            | 1
- *     | max_pool | Maxpooling Pool/Copy        | 1
- *     |          |                             |
- *     | rdw_addr | Read  Weights      Address  | 9
- *     |          |                             |
- *     | rdd_en   | Read  Data         Enable   | 1
- *     | rdd_grnt | Read  Data         Grant    | 1
- *     | rdd_addr | Read  Data         Address  | 5+9
- *     | wrd_en   | Write Data         Enable   | 1
- *     | wrd_grnt | Write Data         Grant    | 1
- *     | wrd_addr | Write Data         Address  | 5+9
- *     |          |                             |
- *     | rdi_en   | Read  Interconnect Enable   | 1
- *     | rdi_grnt | Read  Interconnect Grant    | 1
- *     | rdi_addr | Read  Interconnect Address  | 5+9
- *     | rdi_word | Read  Interconnect Word     | 128
- *     | wri_en   | Write Interconnect Enable   | 1
- *     | wri_grnt | Write Interconnect Grant    | 1
- *     | wri_addr | Write Interconnect Address  | 5+9
- *     | wri_word | Write Interconnect Word     | 128
- *     |          |                             |
- *     | rdc_en   | Read  Controller   Enable   | 1
- *     | rdc_grnt | Read  Controller   Grant    | 1
- *     | rdc_addr | Read  Controller   Address  | 5+9
- *     | rdc_word | Read  Controller   Word     | 128
- *     | wrc_en   | Write Controller   Enable   | 1
- *     | wrc_grnt | Write Controller   Grant    | 1
- *     | wrc_addr | Write Controller   Address  | 5+9
- *     | wrc_word | Write Controller   Word     | 128
- *     +----------+-----------------------------+-------
- *     | TOTAL                                    625
+ *     | Signal   | Description                 | Direction | Bits 
+ *     +----------+-----------------------------+-----------+------
+ *     | clk      | Clock                       |   Input   | 1    
+ *     | mul_mode | Multiply Mode               |   Input   | 2    
+ *     | acc_clr  | Accumulator Clear           |   Input   | 1    
+ *     | acc_sh   | Accumulator Shift           |   Input   | 1    
+ *     | max_en   | Maxpooling Enable           |   Input   | 1    
+ *     | max_clr  | Maxpooling Clear            |   Input   | 1    
+ *     | max_pool | Maxpooling Pool/Copy        |   Input   | 1    
+ *     |          |                             |   Input   |      
+ *     | rdw_addr | Read  Weights      Address  |   Input   | 9    
+ *     |          |                             |   Input   |      
+ *     | rdd_en   | Read  Data         Enable   |   Input   | 1    
+ *     | rdd_grnt | Read  Data         Grant    |   Output  | 1    
+ *     | rdd_addr | Read  Data         Address  |   Input   | 5+9  
+ *     | wrd_en   | Write Data         Enable   |   Input   | 1    
+ *     | wrd_grnt | Write Data         Grant    |   Input   | 1    
+ *     | wrd_addr | Write Data         Address  |   Input   | 5+9  
+ *     |          |                             |   Input   |      
+ *     | rdi_en   | Read  Interconnect Enable   |   Input   | 1    
+ *     | rdi_grnt | Read  Interconnect Grant    |   Input   | 1    
+ *     | rdi_addr | Read  Interconnect Address  |   Input   | 5+9  
+ *     | rdi_word | Read  Interconnect Word     |   Input   | 128  
+ *     | wri_en   | Write Interconnect Enable   |   Input   | 1    
+ *     | wri_grnt | Write Interconnect Grant    |   Input   | 1    
+ *     | wri_addr | Write Interconnect Address  |   Input   | 5+9  
+ *     | wri_word | Write Interconnect Word     |   Input   | 128  
+ *     |          |                             |   Input   |      
+ *     | rdc_en   | Read  Controller   Enable   |   Input   | 1    
+ *     | rdc_grnt | Read  Controller   Grant    |   Input   | 1    
+ *     | rdc_addr | Read  Controller   Address  |   Input   | 5+9  
+ *     | rdc_word | Read  Controller   Word     |   Input   | 128  
+ *     | wrc_en   | Write Controller   Enable   |   Input   | 1    
+ *     | wrc_grnt | Write Controller   Grant    |   Input   | 1    
+ *     | wrc_addr | Write Controller   Address  |   Input   | 5+9  
+ *     | wrc_word | Write Controller   Word     |   Input   | 128  
+ *     +----------+-----------------------------+-----------+------
+ *     | TOTAL                                                625
  */
 
 `timescale 1 ps / 1 ps
@@ -191,15 +191,36 @@ generate for(i=0;i<N;i=i+1) begin:quantarray
                                   pool_out[i*BACC +  0]};
 end endgenerate
 
+// NDBANK    = 32                       Number of 2N-bit, 512-element Data BANK. 
+// BDBANKW   = 2*N                      Bitwidth of Data    BANK Word 
+// BDBANKAWS = 9.                       Bitwidth of Data    BANK Address Word Select 
+// BDBANKABS = $clog2(NDBANK)->5        Bitwidth of Data    BANK Address Bank Select 
+// BDBANKA   = BDBANKABS+BDBANKAWS->14  Bitwidth of Data    BANK Address 
+
+// wire                rd_en;
+// wire[BDBANKA-1 : 0] rd_addr;
+// wire[1 : 0]         rd_muxcode;
+// wire                wr_en;
+// wire[BDBANKA-1 : 0] wr_addr;
+// wire[1 : 0]         wr_muxcode;
 
 generate for(i=0;i<NDBANK;i=i+1) begin:bankarray
-    bank64k #(BDBANKW, BDBANKAWS) db (clk,
-        rd_en & (rd_addr[BDBANKAWS +: BDBANKABS] == i), rd_addr[0 +: BDBANKAWS], rd_muxcode,
-        wr_en & (wr_addr[BDBANKAWS +: BDBANKABS] == i), wr_addr[0 +: BDBANKAWS], wr_muxcode,
-        rdi_words[i*BDBANKW +: BDBANKW], wri_word,
-        rdd_words[i*BDBANKW +: BDBANKW], wrd_word,
-        rdc_words[i*BDBANKW +: BDBANKW], wrc_word
-    );
+    bank64k #(BDBANKW, BDBANKAWS) db 
+                                    (
+                                        .clk       (clk                                           ),// input  clk       ;
+                                        .rd_en     (rd_en & (rd_addr[BDBANKAWS +: BDBANKABS] == i)),// input  rd_en     ;
+                                        .rd_addr   (rd_addr[0 +: BDBANKAWS]                       ),// input  rd_addr   ;
+                                        .rd_muxcode(rd_muxcode                                    ),// input  rd_muxcode;
+                                        .wr_en     (wr_en & (wr_addr[BDBANKAWS +: BDBANKABS] == i)),// input  wr_en     ;
+                                        .wr_addr   (wr_addr[0 +: BDBANKAWS]                       ),// input  wr_addr   ;
+                                        .wr_muxcode(wr_muxcode                                    ),// input  wr_muxcode;
+                                        .rdi_word  (rdi_words[i*BDBANKW +: BDBANKW]               ),// output rdi_word  ;
+                                        .wri_word  (wri_word                                      ),// input  wri_word  ;
+                                        .rdd_word  (rdd_words[i*BDBANKW +: BDBANKW]               ),// output rdd_word  ;
+                                        .wrd_word  (wrd_word                                      ),// input  wrd_word  ;
+                                        .rdc_word  (rdc_words[i*BDBANKW +: BDBANKW]               ),// output rdc_word  ;
+                                        .wrc_word  (wrc_word                                      ) // input  wrc_word  ;
+                                    );
     for(j=0;j<BDBANKW;j=j+1) begin:transposej
         assign rdd_words_t[j*NDBANK+i] = rdd_words[i*BDBANKW+j];
         assign rdi_words_t[j*NDBANK+i] = rdi_words[i*BDBANKW+j];
