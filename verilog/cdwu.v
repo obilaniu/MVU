@@ -8,7 +8,7 @@
  *  - A 2-bit mux code
  */
 
-
+`timescale 1 ps / 1 ps
 module cdwu(i_en, i_addr, i_grnt,
             d_en, d_addr, d_grnt,
             c_en, c_addr, c_grnt,

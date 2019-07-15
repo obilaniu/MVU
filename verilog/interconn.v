@@ -2,7 +2,7 @@
  * Interconnect between MVUs
  */
 
-
+`timescale 1 ps / 1 ps
 /* Module */
 module interconn (clk, clr,
                   send_en, send_word,
