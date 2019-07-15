@@ -1,1 +1,1 @@
-/home/mhossein/myRepos/lowprecision/vsrc/MVP/rtl/mvp.v
+../../MVP/rtl/mvp.v

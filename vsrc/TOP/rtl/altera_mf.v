@@ -1,1 +1,1 @@
-/home/mhossein/myRepos/lowprecision/vsrc/3RD_PARTY_IP/rtl/altera_mf.v
+../../3RD_PARTY_IP/rtl/altera_mf.v

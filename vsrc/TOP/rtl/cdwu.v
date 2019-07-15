@@ -1,1 +1,1 @@
-/home/mhossein/myRepos/lowprecision/vsrc/CDWU/rtl/cdwu.v
+../../CDWU/rtl/cdwu.v

@@ -1,1 +1,1 @@
-/home/mhossein/myRepos/lowprecision/vsrc/CDRU/rtl/cdru.v
+../../CDRU/rtl/cdru.v

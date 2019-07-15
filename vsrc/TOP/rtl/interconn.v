@@ -1,1 +1,1 @@
-/home/mhossein/myRepos/lowprecision/vsrc/INTERCON/rtl/interconn.v
+../../INTERCON/rtl/interconn.v

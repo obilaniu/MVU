@@ -1,1 +1,1 @@
-/home/mhossein/myRepos/lowprecision/vsrc/BRAM64K/rtl/bram64k.v
+../../BRAM64K/rtl/bram64k.v

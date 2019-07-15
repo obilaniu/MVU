@@ -1,1 +1,1 @@
-/home/mhossein/myRepos/lowprecision/vsrc/BANK64K/rtl/bank64k.v
+../../BANK64K/rtl/bank64k.v
