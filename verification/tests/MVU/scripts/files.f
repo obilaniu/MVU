@@ -1,0 +1,15 @@
+../../../ip/xilinx/bram64k_xilinx.v
+../../../ip/xilinx/bram2m_xilinx.v
+../../3RD_PARTY_IP/rtl/altera_mf.v
+../../../../verilog/bram64k.v
+../../../../verilog/bank64k.v
+../../../../verilog/bram2m.v
+../../../../verilog/cdru.v
+../../../../verilog/cdwu.v
+../../../../verilog/maxpool.v
+../../../../verilog/mvp.v
+../../../../verilog/mvu.v
+../../../../verilog/shacc.v
+../../../../verilog/vvp.v
+../../../lib/utils/utils.sv
+../tb/mvu_tester.sv
