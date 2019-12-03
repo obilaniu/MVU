@@ -58,7 +58,22 @@ assign rdc_word = rd_word;
 
 
 /* 64k internal BRAM */
-bram64k b (clk, wr_word, rd_addr, wr_addr, wr_en, rd_word);
+`ifdef INTEL
+    bram64k b (clk, wr_word, rd_addr, wr_addr, wr_en, rd_word);
+`elsif XILINX
+    bram64k_xilinx b (
+        .clka(clk),    // input wire clka
+        .wea(wr_en),      // input wire [0 : 0] wea
+        .addra(wr_addr),  // input wire [8 : 0] addra
+        .dina(wr_word),    // input wire [127 : 0] dina
+        .clkb(clk),    // input wire clkb
+        .enb(1'b1),      // input wire enb
+        .addrb(rd_addr),  // input wire [8 : 0] addrb
+        .doutb(rd_word)  // output wire [127 : 0] doutb
+    );
+`else
+    $display("ERROR: INTEL or XILINX macro not defined!");
+`endif
 
 
 /* Module end */
