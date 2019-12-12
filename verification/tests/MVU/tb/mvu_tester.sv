@@ -1,5 +1,8 @@
+`timescale 1 ns / 1 ps
+
 import utils::*;
 
+`define CLKPERIOD 10ns
 `define SIM_TIMEOUT 1 //ms
 
 module mvu_tester;
@@ -95,9 +98,9 @@ module mvu_tester;
 // Simulation specific Threads
     initial begin 
         clk = 0;
-        #50ns;
+        #(`CLKPERIOD/2);
         forever begin
-          #50ns clk = !clk;
+          #(`CLKPERIOD/2) clk = !clk;
         end
     end
 
@@ -105,7 +108,7 @@ module mvu_tester;
  
         // Initilize input signals
         // Hold in reset for first few clock cycles
-        assign mul_mode = 2'b1;                     // basic binary mode {0, +1]
+        assign mul_mode = 2'b01;                     // basic binary mode {0, +1]
         assign acc_clr = 1'b1;
         assign acc_sh = 1'b0;
         assign max_en = 1'b1;
@@ -126,7 +129,7 @@ module mvu_tester;
         assign wrc_en = 1'b0;
         assign wrc_addr = {BDBANKA{1'b0}};
         assign wrc_word = {BDBANKW{1'b0}};
-        #1000ns;
+        #(`CLKPERIOD*10);
 
 
         #(`SIM_TIMEOUT*1ms);
