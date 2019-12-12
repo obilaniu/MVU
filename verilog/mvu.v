@@ -42,7 +42,7 @@
  *     | TOTAL                                    625
  */
 
-
+`timescale 1 ps / 1 ps
 /**** Module mvu ****/
 module mvu(clk,
            mul_mode,
@@ -164,14 +164,35 @@ cdru    #(BDBANKABS)    read_cdu     (rdi_en, rdi_addr, rdi_grnt,
                                       rdd_en, rdd_addr, rdd_grnt,
                                       rdc_en, rdc_addr, rdc_grnt,
                                       rd_en,  rd_addr,  rd_muxcode);
+
 cdwu    #(BDBANKABS)    write_cdu    (wri_en, wri_addr, wri_grnt,
                                       wrd_en, wrd_addr, wrd_grnt,
                                       wrc_en, wrc_addr, wrc_grnt,
                                       wr_en,  wr_addr,  wr_muxcode);
-bram2m                  weights_bank (clk, {BWBANKW{1'b0}}, rdw_addr, {BWBANKA{1'b0}}, 1'b0, core_weights);
+
 mvp     #(N, 'b0010101) matrix_core  (clk, mul_mode, core_weights, core_data, core_out);
 
 
+/* Weight memory banks */
+`ifdef INTEL
+    bram2m          weights_bank (clk, {BWBANKW{1'b0}}, rdw_addr, {BWBANKA{1'b0}}, 1'b0, core_weights);
+`elsif XILINX
+    bram2m_xilinx   weights_bank (
+        .clka(clk),    // input wire clka
+        .wea(1'b0),      // input wire [0 : 0] wea
+        .addra(rdw_addr),  // input wire [8 : 0] addra
+        .dina({BWBANKW{1'b0}}),    // input wire [4095 : 0] dina
+        .clkb(clk),    // input wire clkb
+        .enb(1'b0),      // input wire enb
+        .addrb({BWBANKA{1'b0}}),  // input wire [8 : 0] addrb
+        .doutb(core_weights)  // output wire [4095 : 0] doutb        
+    );
+ `else
+    $display("ERROR: INTEL or XILINX macro not defined!");
+ `endif
+
+
+/* Shift/Accumulators */
 generate for(i=0;i<N;i=i+1) begin:shaccarray
     shacc   #(BACC, BSUM) accumulator(clk, acc_clr, acc_sh,
                                       core_out[i*BSUM +: BSUM],

@@ -1,7 +1,8 @@
 /**
  * Top-Level
  */
-
+ 
+`timescale 1 ps / 1 ps
 /**** Module ****/
 module toplevel(clk,
                 ic_clr,

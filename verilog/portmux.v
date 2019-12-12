@@ -3,6 +3,7 @@
  */
 
 
+`timescale 1 ps / 1 ps
 /**** Module portmux ****/
 module portmux(cselIC, cselMVU, cselCtrl,
                addrIC, addrMVU, addrCtrl,

@@ -1,0 +1,12 @@
+../3RD_PARTY_IP/rtl/altera_mf.v
+../BANK64K/rtl/bank64k.v
+../BRAM16K/rtl/bram16k.v
+../BRAM2M/rtl/bram2m.v
+../BRAM64K/rtl/bram64k.v
+../CDRU/rtl/cdru.v
+../CDWU/rtl/cdwu.v
+../MAXPOOL/rtl/maxpool.v
+../MVP/rtl/mvp.v
+../MVU/rtl/mvu.v
+../SHACC/rtl/shacc.v
+../VVP/rtl/vvp.v

@@ -30,16 +30,16 @@ if __name__ == "__main__":
 		B  = np.random.normal(size=(H,W)).astype("float32")
 		
 		# Skew the weights and data into lozenges
-		for i in xrange(W):
+		for i in range(W):
 			w[i,W-i-1:W-i-1+W]  = A[i]
-		for i in xrange(H):
+		for i in range(H):
 			d[H-i-1:H-i-1+H, i] = B[:, i]
 		
 		# Run time loop
-		for t in xrange(T):
+		for t in range(T):
 			#pdb.set_trace()
 			# Do accumulation
-			print "\n**** TIMESTEP", t, "****\nw:\n", np.round(8*w,0)/8, "\nd:\n", np.round(8*d,0)/8
+			print("\n**** TIMESTEP", t, "****\nw:\n", np.round(8*w,0)/8, "\nd:\n", np.round(8*d,0)/8)
 			s += w[:,-W:] * d[-H:,:]
 			
 			# Time-shift
@@ -47,10 +47,10 @@ if __name__ == "__main__":
 			w = shift(w, 1)
 			
 			# Print
-			print "\ns:\n", s
+			print("\ns:\n", s)
 		
 		# Print true
-		print "True:\n", A.dot(B)
+		print("True:\n", A.dot(B))
 	
 	
 	

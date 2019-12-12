@@ -2,7 +2,7 @@
  * Matrix-Vector Product.
  */
 
-
+`timescale 1 ps / 1 ps
 /**** Module mvp ****/
 module mvp(clk, mode, W, D, S);
 

@@ -3,6 +3,7 @@
  */
 
 
+`timescale 1 ps / 1 ps
 /**** Module ****/
 module decoder(addr, csel);
 
