@@ -86,3 +86,4 @@
 *.rlx
 *.Xil
 #
+verification/tests/BANK64K/scripts/work.bank64k_tester.wcfg
