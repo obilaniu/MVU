@@ -64,6 +64,9 @@ module bram64k_xilinx (
   doutb
 );
 
+// Added by sjw
+parameter C_DISABLE_WARN_BHV_COLL = 0;
+
 (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM_PORTA CLK" *)
 input wire clka;
 (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM_PORTA WE" *)
@@ -147,7 +150,7 @@ output wire [127 : 0] doutb;
     .C_HAS_INJECTERR(0),
     .C_SIM_COLLISION_CHECK("ALL"),
     .C_COMMON_CLK(1),
-    .C_DISABLE_WARN_BHV_COLL(0),
+    .C_DISABLE_WARN_BHV_COLL(C_DISABLE_WARN_BHV_COLL),
     .C_EN_SLEEP_PIN(0),
     .C_USE_URAM(0),
     .C_EN_RDADDRA_CHG(0),

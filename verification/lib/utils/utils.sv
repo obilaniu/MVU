@@ -29,6 +29,15 @@ typedef struct packed
 } test_stats;
 
 //==================================================================================================
+//
+//
+function automatic void resetTestStats(ref test_stats stats);
+    stats.pass_cnt = 0;
+    stats.fail_cnt = 0;
+    return;
+endfunction
+
+//==================================================================================================
 // Test print macro
 // Defines a macro to print 
 `define __print__(ID,MSG,VERBOSITY) \
