@@ -78,17 +78,17 @@ module mvu(clk,
 
 /* Parameters */
 parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
-parameter  NDBANK  = 32;   /* Number of 2N-bit, 512-element Data BANK. */
+parameter  NDBANK  = 32;   /* Number of N-bit, 1024-element Data BANK. */
 
 localparam CLOG2N      = $clog2(N);     /* clog2(N) */
 
 localparam BWBANKA     = 9;             /* Bitwidth of Weights BANK Address */
 localparam BWBANKW     = N*N;           /* Bitwidth of Weights BANK Word */
 localparam BDBANKABS   = $clog2(NDBANK);/* Bitwidth of Data    BANK Address Bank Select */
-localparam BDBANKAWS   = 9;             /* Bitwidth of Data    BANK Address Word Select */
+localparam BDBANKAWS   = 10;            /* Bitwidth of Data    BANK Address Word Select */
 localparam BDBANKA     = BDBANKABS+     /* Bitwidth of Data    BANK Address */
                          BDBANKAWS;
-localparam BDBANKW     = 2*N;           /* Bitwidth of Data    BANK Word */
+localparam BDBANKW     = N;             /* Bitwidth of Data    BANK Word */
 localparam BSUM        = CLOG2N+2;      /* Bitwidth of Sums */
 localparam BACC        = 32;            /* Bitwidth of Accumulators */
 
@@ -170,6 +170,8 @@ cdwu    #(BDBANKABS)    write_cdu    (wri_en, wri_addr, wri_grnt,
                                       wrc_en, wrc_addr, wrc_grnt,
                                       wr_en,  wr_addr,  wr_muxcode);
 
+
+/* Matrix-vector product unit */
 mvp     #(N, 'b0010101) matrix_core  (clk, mul_mode, core_weights, core_data, core_out);
 
 
@@ -200,19 +202,23 @@ generate for(i=0;i<N;i=i+1) begin:shaccarray
 end endgenerate
 
 
+/* Max poolers */
 generate for(i=0;i<N;i=i+1) begin:poolarray
     maxpool #(BACC)       pooler     (clk, max_clr, max_en, max_pool,
                                       acc_out [i*BACC +: BACC],
                                       pool_out[i*BACC +: BACC]);
 end endgenerate
 
-
+/* Quantizers */
 generate for(i=0;i<N;i=i+1) begin:quantarray
-    assign quant_out[i*2 +: 2] = {pool_out[i*BACC + 31],
-                                  pool_out[i*BACC +  0]};
+    // For now, simple quantization to binary with ReLU activation
+    // i.e. flip the sign bit
+    // TODO: implement real quantizer for arbitrary precision ReLU
+    assign quant_out[i] = ~pool_out[(i+1)*BACC - 1];
 end endgenerate
 
 
+/* Data Banks */
 generate for(i=0;i<NDBANK;i=i+1) begin:bankarray
     bank64k #(BDBANKW, BDBANKAWS) db (clk,
         rd_en & (rd_addr[BDBANKAWS +: BDBANKABS] == i), rd_addr[0 +: BDBANKAWS], rd_muxcode,

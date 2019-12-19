@@ -13,10 +13,10 @@ parameter  pr = 0;
 
 localparam a = $clog2(n);
 
-input  wire            clk;
-input  wire[    1 : 0] mode;
-input  wire[n*n-1 : 0] W;
-input  wire[2*n-1 : 0] D;
+input  wire            	clk;
+input  wire[    1 : 0] 	mode;
+input  wire[n*n-1 : 0] 	W;
+input  wire[n-1 : 0] 	D;
 
 output wire[n*(a+2)-1 : 0] S;
 

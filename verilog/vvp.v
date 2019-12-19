@@ -17,10 +17,10 @@ localparam nl = n-nr;
 localparam ar = $clog2(nr);
 localparam al = $clog2(nl);
 
-input  wire                    clk;
-input  wire       [     1 : 0] mode;
-input  wire       [   n-1 : 0] W;
-input  wire       [ 2*n-1 : 0] D;
+input  wire                     clk;
+input  wire       [     1 : 0]  mode;
+input  wire       [   n-1 : 0]  W;
+input  wire       [ n-1 : 0]    D;
 
 output wire signed[ a+2-1 : 0] S;
 
@@ -34,16 +34,19 @@ wire signed       [al+2-1 : 0] Sl;
 /* Modal Multiplier Logic */
 function signed[1:0] vvp_func(input[1:0] fmode,
                               input[0:0] fW,
-                              input[1:0] fD);
+//                              input[1:0] fD);
+                              input[0:0] fD);
+    reg signed[1:0] fD_extended;
 begin
+    fD_extended = {1'b0, fD};
     if         (fmode == 2'b00) begin /* Weights { 0, 0} */
         vvp_func = fW ? 2'b00 : 2'b00;
     end else if(fmode == 2'b01) begin /* Weights { 0,+1} */
-        vvp_func = fW ?   +fD : 2'b00;
+        vvp_func = fW ? +fD_extended : 2'b00;
     end else if(fmode == 2'b10) begin /* Weights {+1,-1} */
-        vvp_func = fW ?   -fD :   +fD;
+        vvp_func = fW ? -fD_extended : +fD_extended;
     end else                    begin /* Weights { 0,-1} */
-        vvp_func = fW ?   -fD : 2'b00;
+        vvp_func = fW ? -fD_extended : 2'b00;
     end
 end
 endfunction
@@ -63,8 +66,8 @@ end endgenerate
 generate if(n == 1) begin:base
     assign Si = vvp_func(mode, W, D);
 end else if(n >= 2) begin:redux
-    vvp #(nr, pr>>1) r (clk, mode, W[ 0 +: nr], D[  0  +: 2*nr], Sr);
-    vvp #(nl, pr>>1) l (clk, mode, W[nr +: nl], D[2*nr +: 2*nl], Sl);
+    vvp #(nr, pr>>1) r (clk, mode, W[ 0 +: nr], D[  0  +: nr], Sr);
+    vvp #(nl, pr>>1) l (clk, mode, W[nr +: nl], D[nr +: nl], Sl);
     assign Si = {{(a-al){Sl[al+1]}}, Sl} + {{(a-ar){Sr[ar+1]}}, Sr};
 end endgenerate
 

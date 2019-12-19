@@ -1,4 +1,4 @@
-../../../ip/xilinx/bram64k_xilinx.v
+../../../ip/xilinx/bram64k_64x1024_xilinx.v
 ../../../ip/xilinx/bram2m_xilinx.v
 ../../3RD_PARTY_IP/rtl/altera_mf.v
 ../../../../verilog/bram64k.v

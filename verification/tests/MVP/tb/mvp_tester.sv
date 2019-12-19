@@ -9,14 +9,14 @@ module mvp_tester();
 
 
 /* Local parameters for test */
-localparam n    = 32;
+localparam n    = 64;
 localparam a    = $clog2(n);
 
 
 /* Create input registers and output wires */
 reg                  clk = 0;
 reg [     n*n-1 : 0] W;
-reg [     2*n-1 : 0] D;
+reg [       n-1 : 0] D;
 reg [         1 : 0] mode;
 wire[ n*(a+2)-1 : 0] S;
 
@@ -55,7 +55,7 @@ initial begin
     automatic test_stats test_stat;
     assert (2**$clog2(n) == n) else begin print("n must be power of 2", "ERROR"); $finish;end
     print_banner("Testing MVP module");
-    assign D = {n{+2'b1}};
+    assign D = {n{1'b1}};
     assign mode = 2'b01;
     // assign W = {4'h1, 4'h2, 4'h3, 4'h4} ;
     for (int test_num=0; test_num<`NUM_TEST_VECS; test_num++) begin

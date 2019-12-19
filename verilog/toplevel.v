@@ -38,12 +38,12 @@ module toplevel(clk,
 /* Parameters */
 parameter  NMVU    =  8;   /* Number of MVUs. Ideally a Power-of-2. */
 parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
-parameter  NDBANK  = 32;   /* Number of 2N-bit, 512-element Data BANK. */
+parameter  NDBANK  = 32;   /* Number of N-bit, 1024-element Data BANK. */
 
 localparam BMVUA   = $clog2(NMVU);  /* Bitwidth of MVU          Address */
 localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
-localparam BDBANKA = 14;            /* Bitwidth of Data    BANK Address */
-localparam BDBANKW = 2*N;           /* Bitwidth of Data    BANK Word */
+localparam BDBANKA = 15;            /* Bitwidth of Data    BANK Address */
+localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
 
 input  wire                     clk;
 

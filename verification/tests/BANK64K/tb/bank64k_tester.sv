@@ -23,10 +23,10 @@ module bank64k_tester();
 //
 
 // Data bus width
-parameter  w = 128;
+parameter  w = 64;
 
 // Address width
-parameter  a =   9;
+parameter  a =   10;
 
 // Switch for dual-port BRAM collision warnings in simulation.
 // The warnings make the output too verbose, such that it's makes it hard to find the pass/fail counts print out

@@ -15,8 +15,8 @@ module bank64k(clk,
 
 
 /* Parameters */
-parameter  w = 128;
-parameter  a =   9;
+parameter  w = 64;
+parameter  a = 10;
 parameter C_DISABLE_WARN_BHV_COLL = 0;
 
 
@@ -71,20 +71,27 @@ assign rdi_word = rd_word;
 assign rdd_word = rd_word;
 assign rdc_word = rd_word;
 
+/* Temporary signals */
+wire[w-1 : 0] douta;
+wire[w-1 : 0] dinb;
 
 /* 64k internal BRAM */
 `ifdef INTEL
     bram64k b (clk, wr_word, rd_addr, wr_addr, wr_en, rd_word);
 `elsif XILINX
-    bram64k_xilinx #(C_DISABLE_WARN_BHV_COLL) b (
+    bram64k_64x1024_xilinx b (
         .clka(clk),    // input wire clka
+        .ena(1'b1),         // always enabled
         .wea(wr_en),      // input wire [0 : 0] wea
-        .addra(wr_addr),  // input wire [8 : 0] addra
-        .dina(wr_word),    // input wire [127 : 0] dina
+        .addra(wr_addr),  // input wire [9 : 0] addra
+        .dina(wr_word),    // input wire [63 : 0] dina
+        .douta(douta),      // output data (going nowhere, for now)
         .clkb(clk),    // input wire clkb
         .enb(1'b1),      // input wire enb
-        .addrb(rd_addr),  // input wire [8 : 0] addrb
-        .doutb(rd_word)  // output wire [127 : 0] doutb
+        .web(1'b0),         // disable writes on second port (for now)
+        .addrb(rd_addr),  // input wire [9 : 0] addrb
+        .dinb(dinb),        // input data (going nowhere, for now)
+        .doutb(rd_word)  // output wire [64 : 0] doutb
     );
 `else
     $display("ERROR: INTEL or XILINX macro not defined!");
