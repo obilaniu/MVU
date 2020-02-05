@@ -1,4 +1,4 @@
-`timescale 1 ps / 1 ps
+`timescale 1 ns / 1 ps
 
 package utils;
 //==================================================================================================
@@ -43,7 +43,7 @@ endfunction
 `define __print__(ID,MSG,VERBOSITY) \
    begin \
         if (VERBOSITY<VERB_MEDIUM) \
-            $display("[%5s]  %s ", ID, MSG); \
+            $display("[%5s][t=%10d]  %s ", ID, $time(), MSG); \
    end
 
 function void print(string MSG, string ID="INFO", print_verbosity VERBOSITY=VERB_LOW);
