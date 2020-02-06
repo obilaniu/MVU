@@ -48,9 +48,12 @@ quantser #(
 );
 
 
+reg    unsigned[       BDIN-1 : 0]  test_out;   // deserialized output
+
 /* Macro: Quantization test block*/
 `define testBlock(bd, msb, d) \
-    print($sformatf("Test: bdout=%2d,  msbidx=%2d,  din=%b", bd, msb, d)); \
+    test_out <= 0; \
+    print($sformatf("Test: bdout=%2d,  msbidx=%2d,  din=b%b", bd, msb, d)); \
     if (msb<bd-1) begin \
         print("msbidx < bd! Wacky behaviour may ensue!", "WARNING"); \
     end \
@@ -64,10 +67,11 @@ quantser #(
     #(`CLKPERIOD); \
     start <= 0; \
     for (int i=0; i < bd; i++) begin \
-        print($sformatf("%b", dout)); \
+        test_out <= test_out << 1; \
+        test_out[0] <= dout; \
         #(`CLKPERIOD); \
     end \
-    print($sformatf("%b", dout));
+    print($sformatf("  dout=b%b (%d)", test_out[bd-1:0], test_out[bd-1:0]));
 
 
 /* Clock */
