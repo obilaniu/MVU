@@ -50,6 +50,15 @@ quantser #(
 
 reg    unsigned[       BDIN-1 : 0]  test_out;   // deserialized output
 
+/* Function: predict */
+/* Predicts the expected output */
+function int predict(int x, int bd, int msb);
+    int mask = 32'hFFFFFFFF >> (32 - bd);
+    int x_pred = (x >> (msb-bd+1)) & mask;
+    return x_pred;
+endfunction;
+
+
 /* Macro: Quantization test block*/
 `define testBlock(bd, msb, d) \
     test_out <= 0; \
@@ -71,7 +80,16 @@ reg    unsigned[       BDIN-1 : 0]  test_out;   // deserialized output
         test_out[0] <= dout; \
         #(`CLKPERIOD); \
     end \
-    print($sformatf("  dout=b%b (%d)", test_out[bd-1:0], test_out[bd-1:0]));
+    dout_pred = predict(d, bd, msb); \
+    if (test_out == dout_pred) begin \
+        res_str = "PASS"; \
+        test_stat.pass_cnt+=1; \
+    end \
+    else begin \
+        res_str = "FAIL"; \
+        test_stat.fail_cnt+=1; \
+    end \
+    print($sformatf("  dout=b%32b (%d), Expected: %b [%s]", test_out[bd-1:0], test_out[bd-1:0], dout_pred, res_str));
 
 
 /* Clock */
@@ -87,6 +105,9 @@ end
 /* Run Tests */
 initial begin
     string msg;
+    string res_str;
+    int dout_pred;
+    automatic test_stats test_stat;
     print_banner("Testing quantser");
  
     // Initialize signals
@@ -118,7 +139,7 @@ initial begin
     // Random tests
     // --------------
 
-
+    print_result(test_stat, VERB_LOW);
     $finish();
 end
 
