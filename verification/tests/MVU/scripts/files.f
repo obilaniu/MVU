@@ -11,5 +11,6 @@
 ../../../../verilog/mvu.v
 ../../../../verilog/shacc.v
 ../../../../verilog/vvp.v
+../../../../verilog/quantser.v
 ../../../lib/utils/utils.sv
 ../tb/mvu_tester.sv

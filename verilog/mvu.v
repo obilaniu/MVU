@@ -44,36 +44,41 @@
 
 `timescale 1 ps / 1 ps
 /**** Module mvu ****/
-module mvu(clk,
-           mul_mode,
-           acc_clr,
-           acc_sh,
-           max_en,
-           max_clr,
-           max_pool,
-           rdw_addr,
-           rdd_en,
-           rdd_grnt,
-           rdd_addr,
-           wrd_en,
-           wrd_grnt,
-           wrd_addr,
-           rdi_en,
-           rdi_grnt,
-           rdi_addr,
-           rdi_word,
-           wri_en,
-           wri_grnt,
-           wri_addr,
-           wri_word,
-           rdc_en,
-           rdc_grnt,
-           rdc_addr,
-           rdc_word,
-           wrc_en,
-           wrc_grnt,
-           wrc_addr,
-           wrc_word);
+module mvu( clk,
+            mul_mode,
+            acc_clr,
+            acc_sh,
+            max_en,
+            max_clr,
+            max_pool,
+            quant_clr,
+            quant_msbidx,
+            quant_bdout,
+            quant_start,
+            quantarray_out,
+            rdw_addr,
+            rdd_en,
+            rdd_grnt,
+            rdd_addr,
+            wrd_en,
+            wrd_grnt,
+            wrd_addr,
+            rdi_en,
+            rdi_grnt,
+            rdi_addr,
+            rdi_word,
+            wri_en,
+            wri_grnt,
+            wri_addr,
+            wri_word,
+            rdc_en,
+            rdc_grnt,
+            rdc_addr,
+            rdc_word,
+            wrc_en,
+            wrc_grnt,
+            wrc_addr,
+            wrc_word);
 
 
 /* Parameters */
@@ -92,6 +97,10 @@ localparam BDBANKW     = N;             /* Bitwidth of Data    BANK Word */
 localparam BSUM        = CLOG2N+2;      /* Bitwidth of Sums */
 localparam BACC        = 32;            /* Bitwidth of Accumulators */
 
+// Quantizer parameters
+parameter  QMSBLOCBD  = $clog2(BACC);   // Bitwidth of the quantizer MSB location specifier
+parameter  QBDOUTBD   = $clog2(BACC);   // Bitwidth of the quantizer bit-depth out specifier
+
 
 /* Interface */
 input  wire                clk;
@@ -101,6 +110,13 @@ input  wire                acc_sh;
 input  wire                max_en;
 input  wire                max_clr;
 input  wire                max_pool;
+
+// Quantizer input signals
+input  wire                  quant_clr;
+input  wire[QMSBLOCBD-1 : 0] quant_msbidx;
+input  wire[QBDOUTBD-1  : 0] quant_bdout;
+input  wire                  quant_start;
+output wire[N-1         : 0] quantarray_out; 
 
 input  wire[BWBANKA-1 : 0] rdw_addr;
 
@@ -211,10 +227,18 @@ end endgenerate
 
 /* Quantizers */
 generate for(i=0;i<N;i=i+1) begin:quantarray
-    // For now, simple quantization to binary with ReLU activation
-    // i.e. flip the sign bit
-    // TODO: implement real quantizer for arbitrary precision ReLU
-    assign quant_out[i] = ~pool_out[(i+1)*BACC - 1];
+    quantser #(
+        .BDIN       (       BACC),
+        .BDOUTMAX   (       BACC)
+    ) quantizer (
+        .clk        (                        clk),
+        .clr        (                  quant_clr),
+        .msbidx     (               quant_msbidx),
+        .bdout      (                quant_bdout),
+        .start      (                quant_start),
+        .din        (   pool_out[i*BACC +: BACC]),
+        .dout       (          quantarray_out[i])
+    );
 end endgenerate
 
 

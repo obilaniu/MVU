@@ -8,7 +8,7 @@ import utils::*;
 `define CLKPERIOD 10
 
 /* Test paramters */
-localparam NUM_TEST_VECS = 100;
+localparam NUM_TEST_VECS = 10000;
 
 
 module quantser_tester();

@@ -13,6 +13,11 @@ module toplevel(clk,
                 max_en,
                 max_clr,
                 max_pool,
+                quant_clr,
+                quant_msbidx,
+                quant_bdout,
+                quant_start,
+                quantarray_out,
                 rdw_addr,
                 rdd_en,
                 rdd_grnt,
@@ -45,6 +50,13 @@ localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
 localparam BDBANKA = 15;            /* Bitwidth of Data    BANK Address */
 localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
 
+localparam BACC    = 32;            /* Bitwidth of Accumulators */
+
+// Quantizer parameters
+localparam QMSBLOCBD  = $clog2(BACC);   // Bitwidth of the quantizer MSB location specifier
+localparam QBDOUTBD   = $clog2(BACC);   // Bitwidth of the quantizer bit-depth out specifier
+
+
 input  wire                     clk;
 
 input  wire                     ic_clr;
@@ -56,6 +68,12 @@ input  wire[        NMVU-1 : 0] acc_sh;
 input  wire[        NMVU-1 : 0] max_en;
 input  wire[        NMVU-1 : 0] max_clr;
 input  wire[        NMVU-1 : 0] max_pool;
+
+input  wire[          NMVU-1 : 0]    quant_clr;
+input  wire[NMVU*QMSBLOCBD-1 : 0]    quant_msbidx;
+input  wire[ NMVU*QBDOUTBD-1 : 0]    quant_bdout;
+input  wire[          NMVU-1 : 0]    quant_start;
+output wire[        NMVU*N-1 : 0]    quantarray_out; 
 
 input  wire[NMVU*BWBANKA-1 : 0] rdw_addr;
 
@@ -114,6 +132,11 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
                              max_en[i],
                              max_clr[i],
                              max_pool[i],
+                             quant_clr[i],
+                             quant_msbidx[i*QMSBLOCBD +: QMSBLOCBD],
+                             quant_bdout[i*QBDOUTBD +: QBDOUTBD],
+                             quant_start[i],
+                             quantarray_out[0*N +: N],
                              rdw_addr[i*BWBANKA +: BWBANKA],
                              rdd_en[i],
                              rdd_grnt[i],

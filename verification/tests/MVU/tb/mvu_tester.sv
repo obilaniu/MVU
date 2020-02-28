@@ -16,6 +16,13 @@ module mvu_tester;
     localparam BDBANKA = 14;            /* Bitwidth of Data    BANK Address */
     localparam BDBANKW = 2*N;           /* Bitwidth of Data    BANK Word */
 
+    localparam BACC    = 32;            /* Bitwidth of Accumulators */
+
+    // Quantizer parameters
+    localparam QMSBLOCBD  = $clog2(BACC);   // Bitwidth of the quantizer MSB location specifier
+    localparam QBDOUTBD   = $clog2(BACC);   // Bitwidth of the quantizer bit-depth out specifier
+
+
     reg                      clk;
 
     reg[      2*NMVU-1 : 0] mul_mode;
@@ -24,6 +31,12 @@ module mvu_tester;
     reg[        NMVU-1 : 0] max_en;
     reg[        NMVU-1 : 0] max_clr;
     reg[        NMVU-1 : 0] max_pool;
+
+    reg[          NMVU-1 : 0]    quant_clr;
+    reg[NMVU*QMSBLOCBD-1 : 0]    quant_msbidx;
+    reg[NMVU*QBDOUTBD-1  : 0]    quant_bdout;
+    reg[          NMVU-1 : 0]    quant_start;
+    reg[        NMVU*N-1 : 0]    quantarray_out; 
 
     reg[NMVU*BWBANKA-1 : 0] rdw_addr;
 
@@ -59,43 +72,59 @@ module mvu_tester;
     wire[NMVU*BDBANKW-1 : 0] ic_recv_word;
 
 
-    mvu #(N, NDBANK) mvunit (clk,
-                             mul_mode[0*2 +: 2],
-                             acc_clr[0],
-                             acc_sh[0],
-                             max_en[0],
-                             max_clr[0],
-                             max_pool[0],
-                             rdw_addr[0*BWBANKA +: BWBANKA],
-                             rdd_en[0],
-                             rdd_grnt[0],
-                             rdd_addr[0*BDBANKA +: BDBANKA],
-                             wrd_en[0],
-                             wrd_grnt[0],
-                             wrd_addr[0*BDBANKA +: BDBANKA],
-                             rdi_en[0],
-                             rdi_grnt[0],
-                             rdi_addr[0*BDBANKA +: BDBANKA],
-                             rdi_word[0*BDBANKW +: BDBANKW],
-                             wri_en[0],
-                             wri_grnt[0],
-                             wri_addr[0*BDBANKA +: BDBANKA],
-                             wri_word[0*BDBANKW +: BDBANKW],
-                             rdc_en[0],
-                             rdc_grnt[0],
-                             rdc_addr[0*BDBANKA +: BDBANKA],
-                             rdc_word[0*BDBANKW +: BDBANKW],
-                             wrc_en[0],
-                             wrc_grnt[0],
-                             wrc_addr,
-                             wrc_word);
-    initial begin
-        print_banner("Starting Simulation");
-        // #100us;
-    end
+    mvu #(N, NDBANK) dut (  clk,
+                            mul_mode[0*2 +: 2],
+                            acc_clr[0],
+                            acc_sh[0],
+                            max_en[0],
+                            max_clr[0],
+                            max_pool[0],
+                            quant_clr[0],
+                            quant_msbidx[0*QMSBLOCBD +: QMSBLOCBD],
+                            quant_bdout[0*QBDOUTBD +: QBDOUTBD],
+                            quant_start[0],
+                            quantarray_out[0*N +: N],
+                            rdw_addr[0*BWBANKA +: BWBANKA],
+                            rdd_en[0],
+                            rdd_grnt[0],
+                            rdd_addr[0*BDBANKA +: BDBANKA],
+                            wrd_en[0],
+                            wrd_grnt[0],
+                            wrd_addr[0*BDBANKA +: BDBANKA],
+                            rdi_en[0],
+                            rdi_grnt[0],
+                            rdi_addr[0*BDBANKA +: BDBANKA],
+                            rdi_word[0*BDBANKW +: BDBANKW],
+                            wri_en[0],
+                            wri_grnt[0],
+                            wri_addr[0*BDBANKA +: BDBANKA],
+                            wri_word[0*BDBANKW +: BDBANKW],
+                            rdc_en[0],
+                            rdc_grnt[0],
+                            rdc_addr[0*BDBANKA +: BDBANKA],
+                            rdc_word[0*BDBANKW +: BDBANKW],
+                            wrc_en[0],
+                            wrc_grnt[0],
+                            wrc_addr,
+                            wrc_word);
+    
 
-//==================================================================================================
+
+// ================================================================= 
+// Helper functions/tasks
+
+/*
+task writeToWeightRAM(byte data);
+    for (int i=0; i < data.size(); i++) begin
+        dut.
+    end
+endtask
+*/
+
+//=============================================================================
 // Simulation specific Threads
+    
+    // Clock
     initial begin 
         clk = 0;
         #(`CLKPERIOD/2);
@@ -104,8 +133,10 @@ module mvu_tester;
         end
     end
 
+    // MAIN 
     initial begin
- 
+        print_banner("Starting Simulation");
+
         // Initilize input signals
         // Hold in reset for first few clock cycles
         assign mul_mode = 2'b01;                     // basic binary mode {0, +1]
