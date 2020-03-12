@@ -27,7 +27,8 @@ def parse_args():
     parser.add_argument('-g', '--gui', action='store_true', help=' gui mode supported in cadence irun only', required= False)
     parser.add_argument('-w', '--waveform', action='store_true', help=' compile with waveform information', required= False)
     parser.add_argument('-v', '--svseed', help=' sv seed supported in cadence irun and Xilinx xsim only', required= False)
-    parser.add_argument('-c', '--coverage', action='store_true', help='add coverage supported in cadence irun only', required= False)
+    parser.add_argument('-c', '--compileonly', action='store_true', help='Only compile the source files', required=False)
+    parser.add_argument('-coverage', '--coverage', action='store_true', help='add coverage supported in cadence irun only', required= False)
     parser.add_argument('-d', '--debug', action='store_true', help='create debug info supported in cadence irun only', required= False)
     parser.add_argument('-clean', '--clean', action='store_true', help='clean project', required= False)
     parser.add_argument('-silence', '--silence', action='store_true', help=' Silence mode (no log will be printed)', required= False, default=False)
@@ -97,6 +98,7 @@ if __name__ == '__main__':
     # import ipdb as pdb; pdb.set_trace()
     silence = args['silence']
     verbosity = args['verbosity']
+    compileonly = args['compileonly']
     if verbosity is None:
         verbosity = 'VERB_LOW'
     if util.get_platform(verbosity=verbosity) != "linux":
@@ -161,6 +163,9 @@ if __name__ == '__main__':
                 cmd_to_run += "> /dev/null"
             util.run_command(cmd_to_run, split=False, verbosity=verbosity)
 
+        if compileonly:
+            util.print_banner("Stoping after compile (option -c set)", verbosity=verbosity)
+            sys.exit()
 
         util.print_banner("Creating snapshot", verbosity=verbosity)
         cmd_to_run = "xelab {0} ".format(top_level)
