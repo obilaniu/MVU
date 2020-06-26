@@ -4,7 +4,7 @@
  
 `timescale 1 ps / 1 ps
 /**** Module ****/
-module toplevel(clk,
+module mvutop(  clk,
                 ic_clr,
                 ic_recv_from,
                 mul_mode,
@@ -15,9 +15,33 @@ module toplevel(clk,
                 max_pool,
                 quant_clr,
                 quant_msbidx,
-                quant_bdout,
                 quant_start,
                 quantarray_out,
+                countdown,
+                wprecision,
+                iprecision,
+                oprecision,
+                wbaseaddr,
+                ibaseaddr,
+                obaseaddr,
+                wstride_0,
+                wstride_1,
+                wstride_2,
+                istride_0,
+                istride_1,
+                istride_2,
+                ostride_0,
+                ostride_1,
+                ostride_2,
+                wlength_0,
+                wlength_1,
+                wlength_2,
+                ilength_0,
+                ilength_1,
+                ilength_2,
+                olength_0,
+                olength_1,
+                olength_2,
                 rdw_addr,
                 rdd_en,
                 rdd_grnt,
@@ -53,11 +77,23 @@ localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
 localparam BACC    = 32;            /* Bitwidth of Accumulators */
 
 // Quantizer parameters
-localparam QMSBLOCBD  = $clog2(BACC);   // Bitwidth of the quantizer MSB location specifier
-localparam QBDOUTBD   = $clog2(BACC);   // Bitwidth of the quantizer bit-depth out specifier
+localparam BQMSBIDX  = $clog2(BACC);    // Bitwidth of the quantizer MSB location specifier
+localparam BQBOUT = $clog2(BACC);       // Bitwitdh of the quantizer 
+
+// Other Parameters
+localparam BCNTDWN = 29;            // Bitwidth of the countdown ports
+localparam BPREC = 6;               // Bitwidth of the precision ports
+localparam BBWADDR = 32;            // Bitwidth of the weight base address ports
+localparam BBDADDR = 32;            // Bitwidth of the data base address ports
+localparam BSTRIDE = 32;            // Bitwidth of the stride ports
+localparam BLENGTH = 32;            // Bitwidth of the length ports
 
 
-input  wire                     clk;
+//
+// Port definitions
+//
+
+input wire                     clk;
 
 input  wire                     ic_clr;
 input  wire[  NMVU*BMVUA-1 : 0] ic_recv_from;
@@ -69,11 +105,36 @@ input  wire[        NMVU-1 : 0] max_en;
 input  wire[        NMVU-1 : 0] max_clr;
 input  wire[        NMVU-1 : 0] max_pool;
 
-input  wire[          NMVU-1 : 0]    quant_clr;
-input  wire[NMVU*QMSBLOCBD-1 : 0]    quant_msbidx;
-input  wire[ NMVU*QBDOUTBD-1 : 0]    quant_bdout;
-input  wire[          NMVU-1 : 0]    quant_start;
-output wire[        NMVU*N-1 : 0]    quantarray_out; 
+input  wire[          NMVU-1 : 0]   quant_clr;              // Quantizer: clear
+input  wire[  MVU*BQMSBIDX-1 : 0]   quant_msbidx;           // Quantizer: bit position index of the MSB
+input  wire[          NMVU-1 : 0]   quant_start;            // Quantizer: signal to start quantizing
+output wire[        NMVU*N-1 : 0]   quantarray_out;         // Quantizer: output
+
+input  wire[  NMVU*BCNTDWN-1 : 0]   countdown;              // Config: number of clocks to countdown for given task
+input  wire[    NVMU*BPREC-1 : 0]   wprecision;             // Config: weight precision
+input  wire[    NVMU*BPREC-1 : 0]   iprecision;             // Config: input precision
+input  wire[    NVMU*BPREC-1 : 0]   oprecision;             // Config: output precision
+input  wire[  NVMU*BWBADDR-1 : 0]   wbaseaddr;              // Config: weight memory base address
+input  wire[  NVMU*BDBADDR-1 : 0]   ibaseaddr;              // Config: data memory base address for input
+input  wire[  NVMU*BDBADDR-1 : 0]   obaseaddr;              // Config: data memory base address for output
+input  wire[  NVMU*BSTRIDE-1 : 0]   wstride_0;              // Config: weight stride in dimension 0 (x)
+input  wire[  NVMU*BSTRIDE-1 : 0]   wstride_1;              // Config: weight stride in dimension 1 (y)
+input  wire[  NVMU*BSTRIDE-1 : 0]   wstride_2;              // Config: weight stride in dimension 2 (z)
+input  wire[  NVMU*BSTRIDE-1 : 0]   istride_0;              // Config: input stride in dimension 0 (x)
+input  wire[  NVMU*BSTRIDE-1 : 0]   istride_1;              // Config: input stride in dimension 1 (y)
+input  wire[  NVMU*BSTRIDE-1 : 0]   istride_2;              // Config: input stride in dimension 2 (z)
+input  wire[  NVMU*BSTRIDE-1 : 0]   ostride_0;              // Config: output stride in dimension 0 (x)
+input  wire[  NVMU*BSTRIDE-1 : 0]   ostride_1;              // Config: output stride in dimension 1 (y)
+input  wire[  NVMU*BSTRIDE-1 : 0]   ostride_2;              // Config: output stride in dimension 2 (z)
+input  wire[  NVMU*BLENGTH-1 : 0]   wlength_0;              // Config: weight length in dimension 0 (x)
+input  wire[  NVMU*BLENGTH-1 : 0]   wlength_1;              // Config: weight length in dimension 1 (y)
+input  wire[  NVMU*BLENGTH-1 : 0]   wlength_2;              // Config: weight length in dimension 2 (z)
+input  wire[  NVMU*BLENGTH-1 : 0]   ilength_0;              // Config: input length in dimension 0 (x)
+input  wire[  NVMU*BLENGTH-1 : 0]   ilength_1;              // Config: input length in dimension 1 (y)
+input  wire[  NVMU*BLENGTH-1 : 0]   ilength_2;              // Config: input length in dimension 2 (z)
+input  wire[  NVMU*BLENGTH-1 : 0]   olength_0;              // Config: output length in dimension 0 (x)
+input  wire[  NVMU*BLENGTH-1 : 0]   olength_1;              // Config: output length in dimension 1 (y)
+input  wire[  NVMU*BLENGTH-1 : 0]   olength_2;              // Config: output length in dimension 2 (z)
 
 input  wire[NMVU*BWBANKA-1 : 0] rdw_addr;
 
@@ -113,6 +174,7 @@ wire[        NMVU-1 : 0] wri_en;
 wire[NMVU*BDBANKW-1 : 0] wri_word;
 
 
+
 /* Wiring */
 /*   Interconnect... */
 interconn #(NMVU, BDBANKW) ic (clk,  ic_clr, ic_send_en, ic_send_word,
@@ -133,8 +195,8 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
                              max_clr[i],
                              max_pool[i],
                              quant_clr[i],
-                             quant_msbidx[i*QMSBLOCBD +: QMSBLOCBD],
-                             quant_bdout[i*QBDOUTBD +: QBDOUTBD],
+                             quant_msbidx[i*BQMSBIDX +: BQMSBIDX],
+                             quant_bdout[i*BPREC +: BQBOUT],
                              quant_start[i],
                              quantarray_out[0*N +: N],
                              rdw_addr[i*BWBANKA +: BWBANKA],
