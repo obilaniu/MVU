@@ -28,6 +28,7 @@ def parse_args():
     parser.add_argument('-w', '--waveform', action='store_true', help=' compile with waveform information', required= False)
     parser.add_argument('-v', '--svseed', help=' sv seed supported in cadence irun and Xilinx xsim only', required= False)
     parser.add_argument('-c', '--compileonly', action='store_true', help='Only compile the source files', required=False)
+    parser.add_argument('-e', '--elabonly', action='store_true', help='Stop after elaboration step', required=False)
     parser.add_argument('-coverage', '--coverage', action='store_true', help='add coverage supported in cadence irun only', required= False)
     parser.add_argument('-d', '--debug', action='store_true', help='create debug info supported in cadence irun only', required= False)
     parser.add_argument('-clean', '--clean', action='store_true', help='clean project', required= False)
@@ -99,6 +100,7 @@ if __name__ == '__main__':
     silence = args['silence']
     verbosity = args['verbosity']
     compileonly = args['compileonly']
+    elabonly = args['elabonly']
     if verbosity is None:
         verbosity = 'VERB_LOW'
     if util.get_platform(verbosity=verbosity) != "linux":
@@ -176,6 +178,10 @@ if __name__ == '__main__':
         if silence:
             cmd_to_run += "> /dev/null"
         util.run_command(cmd_to_run, split=False, verbosity=verbosity)
+
+        if elabonly:
+            util.print_banner("Stoping after elaboration (option -e set)", verbosity=verbosity)
+            sys.exit()
 
         util.print_banner("Running simulation", verbosity=verbosity)
         if gui:
