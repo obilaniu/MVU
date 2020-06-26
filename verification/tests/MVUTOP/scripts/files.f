@@ -15,6 +15,6 @@
 ../../../../verilog/shacc.v
 ../../../../verilog/vvp.v
 ../../../../verilog/interconn.v
-../../../../verilog/toplevel.v
+../../../../verilog/mvutop.v
 ../../../lib/utils/utils.sv
-../tb/top_tester.sv
+../tb/mvutop_tester.sv

@@ -2,7 +2,7 @@
 `define SIM_TIMEOUT 1
 import utils::*;
 
-module top_tester();
+module mvutop_tester();
     /* Create input registers and output wires */
     parameter  NMVU    =  1;   /* Number of MVUs. Ideally a Power-of-2. */
     parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
@@ -43,7 +43,7 @@ module top_tester();
     logic [     BDBANKW-1 : 0] wrc_word    ;//input  wrc_word;
 
 
-    toplevel #(
+    mvutop #(
             .NMVU  (NMVU  ),
             .N     (N     ),
             .NDBANK(NDBANK)

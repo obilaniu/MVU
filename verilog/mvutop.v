@@ -42,13 +42,6 @@ module mvutop(  clk,
                 olength_0,
                 olength_1,
                 olength_2,
-                rdw_addr,
-                rdd_en,
-                rdd_grnt,
-                rdd_addr,
-                wrd_en,
-                wrd_grnt,
-                wrd_addr,
                 rdi_en,
                 rdi_grnt,
                 rdi_addr,
@@ -77,16 +70,16 @@ localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
 localparam BACC    = 32;            /* Bitwidth of Accumulators */
 
 // Quantizer parameters
-localparam BQMSBIDX  = $clog2(BACC);    // Bitwidth of the quantizer MSB location specifier
-localparam BQBOUT = $clog2(BACC);       // Bitwitdh of the quantizer 
+localparam BQMSBIDX = $clog2(BACC);     // Bitwidth of the quantizer MSB location specifier
+localparam BQBOUT   = $clog2(BACC);     // Bitwitdh of the quantizer 
 
 // Other Parameters
 localparam BCNTDWN = 29;            // Bitwidth of the countdown ports
 localparam BPREC = 6;               // Bitwidth of the precision ports
-localparam BBWADDR = 32;            // Bitwidth of the weight base address ports
-localparam BBDADDR = 32;            // Bitwidth of the data base address ports
-localparam BSTRIDE = 32;            // Bitwidth of the stride ports
-localparam BLENGTH = 32;            // Bitwidth of the length ports
+localparam BBWADDR = 9;             // Bitwidth of the weight base address ports
+localparam BBDADDR = 15;            // Bitwidth of the data base address ports
+localparam BSTRIDE = 15;            // Bitwidth of the stride ports
+localparam BLENGTH = 15;            // Bitwidth of the length ports
 
 
 //
@@ -136,15 +129,6 @@ input  wire[  NVMU*BLENGTH-1 : 0]   olength_0;              // Config: output le
 input  wire[  NVMU*BLENGTH-1 : 0]   olength_1;              // Config: output length in dimension 1 (y)
 input  wire[  NVMU*BLENGTH-1 : 0]   olength_2;              // Config: output length in dimension 2 (z)
 
-input  wire[NMVU*BWBANKA-1 : 0] rdw_addr;
-
-input  wire[        NMVU-1 : 0] rdd_en;
-output wire[        NMVU-1 : 0] rdd_grnt;
-input  wire[NMVU*BDBANKA-1 : 0] rdd_addr;
-input  wire[        NMVU-1 : 0] wrd_en;
-output wire[        NMVU-1 : 0] wrd_grnt;
-input  wire[NMVU*BDBANKA-1 : 0] wrd_addr;
-
 input  wire[        NMVU-1 : 0] rdi_en;
 output wire[        NMVU-1 : 0] rdi_grnt;
 input  wire[NMVU*BDBANKA-1 : 0] rdi_addr;
@@ -164,11 +148,23 @@ genvar i;
 
 
 /* Local Wires */
+
+// MVU Weight memory controll
+wire[NMVU*BWBANKA-1 : 0] rdw_addr;
+
+// MVU Data memory control
+wire[        NMVU-1 : 0] rdd_en;
+wire[        NMVU-1 : 0] rdd_grnt;
+wire[NMVU*BDBANKA-1 : 0] rdd_addr;
+wire[        NMVU-1 : 0] wrd_en;
+wire[        NMVU-1 : 0] wrd_grnt;
+wire[NMVU*BDBANKA-1 : 0] wrd_addr;
+
+// Interconnect
 wire[        NMVU-1 : 0] ic_send_en;
 wire[NMVU*BDBANKW-1 : 0] ic_send_word;
 wire[        NMVU-1 : 0] ic_recv_en;
 wire[NMVU*BDBANKW-1 : 0] ic_recv_word;
-
 wire[NMVU*BDBANKW-1 : 0] rdi_word;
 wire[        NMVU-1 : 0] wri_en;
 wire[NMVU*BDBANKW-1 : 0] wri_word;
@@ -183,6 +179,19 @@ assign ic_send_en   = rdi_grnt;
 assign ic_send_word = rdi_word;
 assign wri_word     = ic_recv_word;
 assign wri_en       = ic_recv_en;
+
+
+// TODO: WIRE THESE UP TO THE AGU. PULLED DOWN FOR NOW
+assign rdw_addr = 0;
+assign rdw_addr = 0;
+assign rdd_en   = 0;
+assign rdd_grnt = 0;
+assign rdd_addr = 0;
+assign wrd_en   = 0;
+assign wrd_grnt = 0;
+assign wrd_addr = 0;
+
+// TODO: INSERT AGU/ZIGZAG ARRAY HERE
 
 
 /*   Cores... */
