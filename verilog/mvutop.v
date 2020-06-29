@@ -245,8 +245,8 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .rdc_word		(rdc_word[i*BDBANKW +: BDBANKW]			),
             .wrc_en			(wrc_en[i]								),
             .wrc_grnt		(wrc_grnt[i]							),
-            .wrc_addr		(wrc_addr[i*BDBANKA +: BDBANKA]			),
-        	.wrc_word		(wrc_word[i*BDBANKW +: BDBANKW]			)
+            .wrc_addr		(wrc_addr[BDBANKA-1: 0]					),
+        	.wrc_word		(wrc_word[BDBANKW-1 : 0]				)
 		);
 end endgenerate
 
