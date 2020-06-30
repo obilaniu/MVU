@@ -183,12 +183,12 @@ wire[BDBANKW*NDBANK-1 : 0] rdc_words_t;
 
 
 /* Wiring */
-cdru    #(BDBANKABS)    read_cdu     (rdi_en, rdi_addr, rdi_grnt,
+cdru    #(BDBANKABS, BDBANKAWS)    read_cdu     (rdi_en, rdi_addr, rdi_grnt,
                                       rdd_en, rdd_addr, rdd_grnt,
                                       rdc_en, rdc_addr, rdc_grnt,
                                       rd_en,  rd_addr,  rd_muxcode);
 
-cdwu    #(BDBANKABS)    write_cdu    (wri_en, wri_addr, wri_grnt,
+cdwu    #(BDBANKABS, BDBANKAWS)    write_cdu    (wri_en, wri_addr, wri_grnt,
                                       wrd_en, wrd_addr, wrd_grnt,
                                       wrc_en, wrc_addr, wrc_grnt,
                                       wr_en,  wr_addr,  wr_muxcode);

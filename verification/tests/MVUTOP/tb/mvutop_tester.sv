@@ -10,8 +10,8 @@ module mvutop_tester();
     localparam BMVUA   = $clog2(NMVU);  /* Bitwidth of MVU          Address */
     localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
 	localparam BWBANKW = 4096;			// Bitwidth of Weights BANK Word
-    localparam BDBANKA = 14;            /* Bitwidth of Data    BANK Address */
-    localparam BDBANKW = 2*N;           /* Bitwidth of Data    BANK Word */
+    localparam BDBANKA = 15;            /* Bitwidth of Data    BANK Address */
+    localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
 	
 	// Other Parameters
     localparam BCNTDWN	= 29;			// Bitwidth of the countdown ports
@@ -45,6 +45,11 @@ module mvutop_tester();
     logic [        NMVU-1 : 0] wrc_grnt    ;//output wrc_grnt;
     logic [     BDBANKA-1 : 0] wrc_addr    ;//input  wrc_addr;
     logic [     BDBANKW-1 : 0] wrc_word    ;//input  wrc_word;
+
+	logic [         NMVU-1 : 0] quant_clr;			// Quantizer: clear
+    logic [NMVU*BQMSBIDX-1 : 0] quant_msbidx;		// Quantizer: bit position index of the MSB
+    logic [         NMVU-1 : 0] quant_start;		// Quantizer: signal to start quantizing
+    logic [       NMVU*N-1 : 0] quantarray_out;		// Quantizer: output
 
     logic[  NMVU*BCNTDWN-1 : 0] countdown;			// Config: number of clocks to countdown for given task
     logic[    NMVU*BPREC-1 : 0] wprecision;			// Config: weight precision
