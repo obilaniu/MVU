@@ -57,6 +57,9 @@ module mvu( clk,
             quant_start,
             quantarray_out,
             rdw_addr,
+			wrw_addr,
+			wrw_word,
+			wrw_en,
             rdd_en,
             rdd_grnt,
             rdd_addr,
@@ -118,7 +121,11 @@ input  wire[QBDOUTBD-1  : 0] quant_bdout;
 input  wire                  quant_start;
 output wire[N-1         : 0] quantarray_out; 
 
-input  wire[BWBANKA-1 : 0] rdw_addr;
+// Weight memory signals
+input  wire[  BWBANKA-1 : 0]	rdw_addr;
+input  wire[  BWBANKA-1 : 0]	wrw_addr;			// Weight memory: write address
+input  wire[  BWBANKW-1 : 0]	wrw_word;			// Weight memory: write word
+input  wire						wrw_en;				// Weight memory: write enable
 
 input  wire                rdd_en;
 output wire                rdd_grnt;
@@ -176,12 +183,12 @@ wire[BDBANKW*NDBANK-1 : 0] rdc_words_t;
 
 
 /* Wiring */
-cdru    #(BDBANKABS)    read_cdu     (rdi_en, rdi_addr, rdi_grnt,
+cdru    #(BDBANKABS, BDBANKAWS)    read_cdu     (rdi_en, rdi_addr, rdi_grnt,
                                       rdd_en, rdd_addr, rdd_grnt,
                                       rdc_en, rdc_addr, rdc_grnt,
                                       rd_en,  rd_addr,  rd_muxcode);
 
-cdwu    #(BDBANKABS)    write_cdu    (wri_en, wri_addr, wri_grnt,
+cdwu    #(BDBANKABS, BDBANKAWS)    write_cdu    (wri_en, wri_addr, wri_grnt,
                                       wrd_en, wrd_addr, wrd_grnt,
                                       wrc_en, wrc_addr, wrc_grnt,
                                       wr_en,  wr_addr,  wr_muxcode);
@@ -196,14 +203,14 @@ mvp     #(N, 'b0010101) matrix_core  (clk, mul_mode, core_weights, core_data, co
     bram2m          weights_bank (clk, {BWBANKW{1'b0}}, rdw_addr, {BWBANKA{1'b0}}, 1'b0, core_weights);
 `elsif XILINX
     bram2m_xilinx   weights_bank (
-        .clka(clk),    // input wire clka
-        .wea(1'b0),      // input wire [0 : 0] wea
-        .addra(rdw_addr),  // input wire [8 : 0] addra
-        .dina({BWBANKW{1'b0}}),    // input wire [4095 : 0] dina
-        .clkb(clk),    // input wire clkb
-        .enb(1'b0),      // input wire enb
-        .addrb({BWBANKA{1'b0}}),  // input wire [8 : 0] addrb
-        .doutb(core_weights)  // output wire [4095 : 0] doutb        
+        .clka	(clk),			// input wire clka
+        .wea	(wrw_en),		// write enable from outside world
+        .addra	(wrw_addr),		// write address from outside world
+        .dina	(wrw_word),		// write word from outside world
+        .clkb	(clk),			// input wire clkb
+        .enb	(1'b1),			// always enable the read port
+        .addrb	(rdw_addr),		// read address from address generator
+        .doutb	(core_weights)	// weight word to MVU core        
     );
  `else
     $display("ERROR: INTEL or XILINX macro not defined!");

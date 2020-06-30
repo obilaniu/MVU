@@ -17,7 +17,7 @@ module cdru(i_en, i_addr, i_grnt,
 
 /* Parameters */
 parameter  BANKBITS = 5;
-parameter  WORDBITS = 9;
+parameter  WORDBITS = 10;
 
 
 /* Local Parameters */
