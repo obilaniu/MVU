@@ -7,7 +7,7 @@
 
 `timescale 1 ns / 1 ps
 
-module quantser(clk, clr, msbidx, bdout, start, din, dout);
+module quantser(clk, clr, msbidx, bdout, stall, start, din, dout);
 
 /* Parameters */
 parameter BDIN        = 32;                 // Input data bit depth
@@ -22,6 +22,7 @@ input   wire                                    clr;        // Clears the state 
 input   wire            [    MAXBDIP-1 : 0]     msbidx;     // Bit position of MSB in input
 input   wire            [    MAXBDOP-1 : 0]     bdout;      // Bit depth of output
 input   wire                                    start;      // Pos-edge trigger to start serializing output
+input   wire                                    stall;		// Stall the output
 input   wire            [       BDIN-1 : 0]     din;        // Input data
 output  wire                                    dout;       // Serialized output
 
@@ -38,19 +39,21 @@ always @(posedge clk or posedge clr) begin
         sr <= 0;
         cntdwn <= 0;
     end else if (clk) begin
-        if (cntdwn != 0) begin
-            //sr <= {sr[BDIN-2:1], 1'b0};
-            sr <= sr << 1;
-            sr[0] <= 1'b0;
-            cntdwn <= cntdwn-1;
-        end else begin
-            if (start == 1) begin
-                cntdwn <= bdout;
-                sr <= din; 
-            end else begin
-                cntdwn <= 0;
-                sr <= sr; 
-            end
+		if (!stall) begin
+        	if (cntdwn != 0) begin
+            	//sr <= {sr[BDIN-2:1], 1'b0};
+            	sr <= sr << 1;
+            	sr[0] <= 1'b0;
+            	cntdwn <= cntdwn-1;
+        	end else begin
+            	if (start == 1) begin
+                	cntdwn <= bdout;
+                	sr <= din; 
+            	end else begin
+                	cntdwn <= 0;
+                	sr <= sr; 
+            	end
+			end
         end       
     end 
 end

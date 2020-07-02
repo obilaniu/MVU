@@ -16,7 +16,6 @@ module mvutop(  clk,
                 quant_clr,
                 quant_msbidx,
                 quant_start,
-                quantarray_out,
                 countdown,
                 wprecision,
                 iprecision,
@@ -100,7 +99,6 @@ input  wire[          NMVU-1 : 0] max_pool;				// Config: max pool mode
 input  wire[          NMVU-1 : 0] quant_clr;			// Quantizer: clear
 input  wire[ NMVU*BQMSBIDX-1 : 0] quant_msbidx;			// Quantizer: bit position index of the MSB
 input  wire[          NMVU-1 : 0] quant_start;			// Quantizer: signal to start quantizing
-output wire[        NMVU*N-1 : 0] quantarray_out;		// Quantizer: output
 
 input  wire[  NMVU*BCNTDWN-1 : 0] countdown;			// Config: number of clocks to countdown for given task
 input  wire[    NMVU*BPREC-1 : 0] wprecision;			// Config: weight precision
@@ -172,6 +170,13 @@ wire[NMVU*BDBANKA-1 : 0] rdi_addr;
 wire[        NMVU-1 : 0] wri_grnt;
 wire[NMVU*BDBANKA-1 : 0] wri_addr;
 
+// Quantizer
+wire[      NMVU*N-1 : 0] quantarray_out;		// Quantizer: output
+
+// Output data write back to memory
+// TODO: DO SOMETHING USEFUL WITH THESE SIGNALS
+wire[        NMVU-1 : 0] outstep;
+wire[        NMVU-1 : 0] outload;
 
 
 /* Wiring */
@@ -200,9 +205,27 @@ assign wrd_en   = 0;
 assign wrd_grnt = 0;
 assign wrd_addr = 0;
 
-// TODO: INSERT AGU/ZIGZAG ARRAY HERE
+// TODO: WIRE THESE UP TO SOMETHING USEFUL
+assign outstep = 0;
+assign outload = 0;
+
+// TODO: INSERT AGU/ZIGZAG ARRAY HERE FOR INPUT
 
 
+
+// TODO: INSERT OUTPUT ADDRESS GENERATOR
+generate for(i = 0; i < NMVU; i = i+1) begin:outaguarray
+	outagu #(
+			.BDBANKA	(BDBANKA			)
+		) outaguunit
+		(
+			.clk		(clk								),
+			.step		(outstep[i]),
+			.load		(outload[i]),
+			.baseaddr	(obaseaddr[i*BBDADDR +:	BBDADDR]	),
+			.addrout	(wrd_addr[i*BDBANKA  +: BDBANKA]	)
+		);
+end endgenerate
 
 
 /*   Cores... */
@@ -223,9 +246,8 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .quant_msbidx   (quant_msbidx[i*BQMSBIDX +: BQMSBIDX]	),
             .quant_bdout	(oprecision[i*BPREC +: BQBOUT]			),
             .quant_start	(quant_start[i]							),
-            .quantarray_out	(quantarray_out[0*N +: N]				),
             .rdw_addr		(rdw_addr[i*BWBANKA +: BWBANKA]			),
-			.wrw_addr		(wrw_addr[i*BWBANKA +: BWBANKA			]),
+			.wrw_addr		(wrw_addr[i*BWBANKA +: BWBANKA]			),
 			.wrw_word		(wrw_word[i*BWBANKW +: BWBANKW]			),
 			.wrw_en			(wrw_en[i]								),
             .rdd_en			(rdd_en[i]								),

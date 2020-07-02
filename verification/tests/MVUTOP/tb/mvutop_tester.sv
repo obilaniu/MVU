@@ -49,7 +49,6 @@ module mvutop_tester();
 	logic [         NMVU-1 : 0] quant_clr;			// Quantizer: clear
     logic [NMVU*BQMSBIDX-1 : 0] quant_msbidx;		// Quantizer: bit position index of the MSB
     logic [         NMVU-1 : 0] quant_start;		// Quantizer: signal to start quantizing
-    logic [       NMVU*N-1 : 0] quantarray_out;		// Quantizer: output
 
     logic[  NMVU*BCNTDWN-1 : 0] countdown;			// Config: number of clocks to countdown for given task
     logic[    NMVU*BPREC-1 : 0] wprecision;			// Config: weight precision
@@ -104,7 +103,6 @@ module mvutop_tester();
             .quant_clr        (quant_clr	),
     		.quant_msbidx     (quant_msbidx ),
             .quant_start      (quant_start	),
-            .quantarray_out   (quantarray_out),
             .countdown        (countdown),
             .wprecision       (wprecision),
             .iprecision       (iprecision),

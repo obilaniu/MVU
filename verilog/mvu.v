@@ -54,8 +54,8 @@ module mvu( clk,
             quant_clr,
             quant_msbidx,
             quant_bdout,
-            quant_start,
-            quantarray_out,
+			quant_start,
+			quant_stall,
             rdw_addr,
 			wrw_addr,
 			wrw_word,
@@ -119,7 +119,7 @@ input  wire                  quant_clr;
 input  wire[QMSBLOCBD-1 : 0] quant_msbidx;
 input  wire[QBDOUTBD-1  : 0] quant_bdout;
 input  wire                  quant_start;
-output wire[N-1         : 0] quantarray_out; 
+input  wire                  quant_stall;
 
 // Weight memory signals
 input  wire[  BWBANKA-1 : 0]	rdw_addr;
@@ -170,6 +170,7 @@ wire[BSUM*N-1  : 0] core_out;
 wire[BACC*N-1  : 0] acc_out;
 wire[BACC*N-1  : 0] pool_out;
 wire[BDBANKW-1 : 0] quant_out;
+wire[N-1       : 0] quantarray_out; 
 reg [BDBANKW-1 : 0] rdd_word;
 wire[BDBANKW-1 : 0] wrd_word;
 
@@ -243,6 +244,7 @@ generate for(i=0;i<N;i=i+1) begin:quantarray
         .msbidx     (               quant_msbidx),
         .bdout      (                quant_bdout),
         .start      (                quant_start),
+		.stall      (                quant_stall),
         .din        (   pool_out[i*BACC +: BACC]),
         .dout       (          quantarray_out[i])
     );

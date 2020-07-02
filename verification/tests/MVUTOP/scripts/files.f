@@ -16,6 +16,7 @@
 ../../../../verilog/vvp.v
 ../../../../verilog/interconn.v
 ../../../../verilog/quantser.v
+../../../../verilog/outagu.v
 ../../../../verilog/mvutop.v
 ../../../lib/utils/utils.sv
 ../tb/mvutop_tester.sv
