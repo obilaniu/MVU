@@ -200,8 +200,38 @@ assign wrd_en   = 0;
 assign wrd_grnt = 0;
 assign wrd_addr = 0;
 
-// TODO: INSERT AGU/ZIGZAG ARRAY HERE
 
+// TODO: INSERT AGU/ZIGZAG ARRAY HERE
+generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
+	inagu #(
+        .BPREC      (BPREC),
+        .BDBANKA    (BDBANKA),
+        .BWBANKA    (BWBANKA),
+        .BWLENGTH   (BLENGTH)
+	) inagu_unit (
+        .clk        (clk),
+        .en         (1'b1),
+        .iprecision (iprecision  [  i*BPREC +: BPREC]),
+        .istride0   (istride_0   [i*BSTRIDE +: BDBANKA]),
+        .istride1   (istride_1   [i*BSTRIDE +: BDBANKA]),
+        .istride2   (istride_2   [i*BSTRIDE +: BDBANKA]),
+	    .ilength0   (ilength_0   [i*BLENGTH +: BLENGTH]),
+        .ilength1   (ilength_1   [i*BLENGTH +: BLENGTH]),
+        .ilength2   (ilength_2   [i*BLENGTH +: BLENGTH]),
+        .ibaseaddr  (ibaseaddr   [i*BBDADDR +: BBDADDR]),
+        .wprecision (wprecision  [  i*BPREC +: BPREC]),
+        .wstride0   (wstride_0   [i*BSTRIDE +: BWBANKA]),
+        .wstride1   (wstride_1   [i*BSTRIDE +: BWBANKA]),
+        .wstride2   (wstride_2   [i*BSTRIDE +: BWBANKA]),
+        .wlength0   (wlength_0   [i*BLENGTH +: BLENGTH]),
+        .wlength1   (wlength_1   [i*BLENGTH +: BLENGTH]),
+        .wlength2   (wlength_2   [i*BLENGTH +: BLENGTH]),
+        .wbaseaddr  (wbaseaddr   [i*BBWADDR +: BBWADDR]),
+        .iaddr_out  (rdd_addr    [i*BDBANKA +: BDBANKA]),
+        .waddr_out  (rdw_addr    [i*BWBANKA +: BWBANKA]),
+        .sh_out     (acc_sh[i])
+	);
+end endgenerate
 
 
 

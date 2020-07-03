@@ -5,32 +5,33 @@
 /**** Module ****/
 module zigzagu(clk, clr, step, pw, pd, sh, offw, offd);
 
-localparam BWADDR = 21;             /* Bitwidth of Address */
+parameter BWADDR = 21;             /* Bitwidth of Address */
+parameter BPREC = 4;                // Bitwidth of the precision specifier
 
 input  wire                     clk, clr, step;
-input  wire[             3 : 0] pw;/* Precision of weights */
-input  wire[             3 : 0] pd;/* Precision of data */
+input  wire[       BPREC-1 : 0] pw;/* Precision of weights */
+input  wire[       BPREC-1 : 0] pd;/* Precision of data */
 
 output reg                      sh;/* A shift was performed. */
-output wire[             3 : 0] offw;/* Additional Offset to Weights */
-output wire[             3 : 0] offd;/* Additional Offset to Data */
+output wire[       BPREC-1 : 0] offw;/* Additional Offset to Weights */
+output wire[       BPREC-1 : 0] offd;/* Additional Offset to Data */
 
 
 /* Local wires */
-wire       [             4 : 0] sump;
+wire       [         BPREC : 0] sump;
 
 
 
 /* Local registers */
-reg        [             4 : 0] iw = 0;
-reg        [             4 : 0] id = 0;
+reg        [         BPREC : 0] iw = 0;
+reg        [         BPREC : 0] id = 0;
 
 
 
 /* Logic */
 assign sump = {1'b0, pw} + {1'b0, pd} - 1;
-assign offw = iw[3 : 0];
-assign offd = id[3 : 0];
+assign offw = iw[BPREC-1 : 0];
+assign offd = id[BPREC-1 : 0];
 
 /**
  *  123456789
