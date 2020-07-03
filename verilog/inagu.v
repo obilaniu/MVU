@@ -6,6 +6,7 @@
 
 module inagu(
 	clk,
+    clr,
 	en,
 	iprecision,
     istride0,
@@ -36,6 +37,7 @@ parameter BWLENGTH  = 8;					// Bitwidth of Length
 
 // Ports
 input  wire                 clk;			// Clock
+input  wire                 clr;            // Clear
 input  wire                 en;				// Enable
 input  wire[   BPREC-1 : 0] iprecision;		// Input Data Precision
 input  wire[   BPREC-1 : 0] wprecision;		// Weight Precision
@@ -59,18 +61,24 @@ output wire                 sh_out;         // Shift occurred
 
 
 // AGU wires
-wire  [ BDBANKA-1 : 0] dagu_addr_out;
-wire  [ BWBANKA-1 : 0] wagu_addr_out;
-wire  [ BDBANKA-1 : 0] dagu_j0;
-wire  [ BWBANKA-1 : 0] wagu_j0;
+wire  [ BDBANKA-1 : 0]  dagu_addr_out;
+wire  [ BWBANKA-1 : 0]  wagu_addr_out;
+wire  [ BDBANKA-1 : 0]  dagu_j0;
+wire  [ BWBANKA-1 : 0]  wagu_j0;
+wire                    dagu_step;
+wire                    wagu_step;
 
 // Zig-zag wires
-wire  [   BPREC-1 : 0] zigzag_offd;
-wire  [   BPREC-1 : 0] zigzag_offw;
+wire  [   BPREC-1 : 0]  zigzag_offd;
+wire  [   BPREC-1 : 0]  zigzag_offw;
+wire                    zigzag_step;
 
 // Assignments
 assign dagu_j0 = {{BDBANKA-BPREC{1'b0}}, iprecision};
 assign wagu_j0 = {{BWBANKA-BPREC{1'b0}}, wprecision};
+assign dagu_step = en;
+assign wagu_step = en;
+assign zigzagu_step = en;
 
 
 // Address generation unit for the input data
@@ -79,6 +87,8 @@ agu #(
 	.BWLENGTH   (BWLENGTH)
 ) dagu_unit (
     .clk        (clk),
+    .clr        (clr),
+    .step       (dagu_step),
     .l0         (ilength0),
 	.l1         (ilength1),
 	.l2         (ilength2),
@@ -86,7 +96,8 @@ agu #(
 	.j1         (istride0),
 	.j2         (istride1), 
 	.j3         (istride2),
-    .addr_out   (dagu_addr_out)
+    .addr_out   (dagu_addr_out),
+    .zigzag_step(zigzag_step)
 );
 
 // Address generation unit for the weights
@@ -95,6 +106,8 @@ agu #(
 	.BWLENGTH   (BWLENGTH)
 ) wagu_unit (
     .clk        (clk),
+    .clr        (clr),
+    .step       (wagu_step),
     .l0         (wlength0),
 	.l1         (wlength1),
 	.l2         (wlength2),
@@ -111,7 +124,7 @@ zigzagu #(
 ) zigzagu_unit (
     .clk        (clk), 
 	.clr        (clr), 
-	.step       (step), 
+	.step       (zigzagu_step), 
 	.pw         (wprecision), 
 	.pd         (iprecision), 
 	.sh         (sh_out), 
