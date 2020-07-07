@@ -29,6 +29,10 @@ module mvutop_tester();
 
     // I/O port wires
     logic                      clk         ;//input  clk;
+    logic                      rst_n       ;//input  reset;
+    logic [        NMVU-1 : 0] start       ;//input  start;
+    logic [        NMVU-1 : 0] done        ;//output done;
+    logic [        NMVU-1 : 0] irq         ;//output irq
     logic                      ic_clr      ;//input  ic_clr;
     logic [  NMVU*BMVUA-1 : 0] ic_recv_from;//input  ic_recv_from;
     logic [      2*NMVU-1 : 0] mul_mode    ;//input  mul_mode;
@@ -93,6 +97,10 @@ module mvutop_tester();
         ) pe_core
         (
             .clk              (clk          ),
+            .rst_n            (rst_n        ),
+            .start            (start        ),
+            .done             (done         ),
+            .irq              (irq          ),
             .ic_clr           (ic_clr       ),
             .ic_recv_from     (ic_recv_from ),
             .mul_mode         (mul_mode     ),

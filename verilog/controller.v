@@ -2,110 +2,148 @@
  * Controller
  */
 
+`timescale 1 ps / 1 ps
+
 /**** Module ****/
-module controller(clk,
-                  ic_clr,
-                  ic_recv_from,
-                  mul_mode,
-                  acc_clr,
-                  acc_sh,
-                  max_en,
-                  max_clr,
-                  max_pool,
-                  rdw_addr,
-                  rdd_en,
-                  rdd_grnt,
-                  rdd_addr,
-                  wrd_en,
-                  wrd_grnt,
-                  wrd_addr,
-                  rdi_en,
-                  rdi_grnt,
-                  rdi_addr,
-                  wri_grnt,
-                  wri_addr,
-                  rdc_en,
-                  rdc_grnt,
-                  rdc_addr,
-                  rdc_word,
-                  wrc_en,
-                  wrc_grnt,
-                  wrc_addr,
-                  wrc_word);
+module controller #(
+    parameter   BCNTDWN = 29                            // Bitwidth of the countdown port
+)
+(
+    input   wire                    clk,                // Clock signal
+    input   wire                    clr,                // Clears the internal state
+    input   wire                    start,              // Pulse to start the MVU task
+    input   wire[BCNTDWN-1 : 0]     countdown,          // Number of clock cycles for the task
+    input   wire                    step,               // Count down if 1. Used for stalling.
+    output  wire                    run,                // Indicates that the task is running
+    output  wire                    done,               // Indicates that the task is done
+    output  wire                    irq                 // Interrupt request to the embedded CPU
+);
+
+// State encoding
+localparam
+    ST_IDLE     = 3'b001,
+    ST_RUN      = 3'b010,
+    ST_DONE     = 3'b100;
 
 
-/* Parameters */
-parameter  NMVU    =  8;   /* Number of MVUs. Ideally a Power-of-2. */
-parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
-parameter  NDBANK  = 32;   /* Number of 2N-bit, 512-element Data BANK. */
-
-localparam BMVUA   = $clog2(NMVU);   /* Bitwidth of MVU          Address */
-localparam BWBANKA = 9;              /* Bitwidth of Weights BANK Address */
-localparam BDBANKA = 14;             /* Bitwidth of Data    BANK Address */
-localparam BDBANKW = 2*N;            /* Bitwidth of Data    BANK Word */
-localparam BTCR    = 24+(24*3)+(5*3);/** Bitwidth of Tensor config register:
-                                       * BASE + size0..2 + stride0..2
-                                       * Total: 111 bits
-                                       **/
-
-input  wire                     clk;
-
-output wire                     ic_clr;
-output wire[  NMVU*BMVUA-1 : 0] ic_recv_from;
-
-output wire[      2*NMVU-1 : 0] mul_mode;
-output wire[        NMVU-1 : 0] acc_clr;
-output wire[        NMVU-1 : 0] acc_sh;
-output wire[        NMVU-1 : 0] max_en;
-output wire[        NMVU-1 : 0] max_clr;
-output wire[        NMVU-1 : 0] max_pool;
-
-output wire[NMVU*BWBANKA-1 : 0] rdw_addr;
-
-output wire[        NMVU-1 : 0] rdd_en;
-input  wire[        NMVU-1 : 0] rdd_grnt;
-output wire[NMVU*BDBANKA-1 : 0] rdd_addr;
-output wire[        NMVU-1 : 0] wrd_en;
-input  wire[        NMVU-1 : 0] wrd_grnt;
-output wire[NMVU*BDBANKA-1 : 0] wrd_addr;
-
-output wire[        NMVU-1 : 0] rdi_en;
-input  wire[        NMVU-1 : 0] rdi_grnt;
-output wire[NMVU*BDBANKA-1 : 0] rdi_addr;
-input  wire[        NMVU-1 : 0] wri_grnt;
-output wire[NMVU*BDBANKA-1 : 0] wri_addr;
-
-output wire[        NMVU-1 : 0] rdc_en;
-input  wire[        NMVU-1 : 0] rdc_grnt;
-output wire[NMVU*BDBANKA-1 : 0] rdc_addr;
-input  wire[NMVU*BDBANKW-1 : 0] rdc_word;
-output wire[        NMVU-1 : 0] wrc_en;
-input  wire[        NMVU-1 : 0] wrc_grnt;
-output wire[     BDBANKA-1 : 0] wrc_addr;
-output wire[     BDBANKW-1 : 0] wrc_word;
-
-genvar i;
+// Registers and wires
+reg     [BCNTDWN-1 : 0]     counter_q;                  // Countdown counter
+reg                         done_q;                     // Done signal
+reg     [2:0]               state;                      // State
+reg     [2:0]               nextstate;                  // Next state
 
 
-/* Local Wires */
+//
+// State machine: next state
+//
+always @(state, counter_q, start) begin
 
+    // State machine transitions
+    case (state)
 
+        ST_IDLE:
+            // If the start pulse is raised, go to run state
+            if (start) begin
+                nextstate = ST_RUN;
+            end else begin
+                nextstate = ST_IDLE;
+            end
 
-/*   Per-core resources */
-generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
-    reg dtensor_cfg_reg[8*BTCR-1 : 0];
-    reg wtensor_cfg_reg[8*BTCR-1 : 0];
-    
-    always @(posedge clk) begin
-        rdw_addr <= wtensor_cfg_reg[0 +: 24] + (wtensor_cfg_reg[24 +: 24] << wtensor_cfg_reg[ 96 +: 5])
-                                             + (wtensor_cfg_reg[48 +: 24] << wtensor_cfg_reg[101 +: 5])
-                                             + (wtensor_cfg_reg[72 +: 24] << wtensor_cfg_reg[106 +: 5]);
-        rdd_addr <= dtensor_cfg_reg[0 +: 24] + (dtensor_cfg_reg[24 +: 24] << dtensor_cfg_reg[ 96 +: 5])
-                                             + (dtensor_cfg_reg[48 +: 24] << dtensor_cfg_reg[101 +: 5])
-                                             + (dtensor_cfg_reg[72 +: 24] << dtensor_cfg_reg[106 +: 5]);
+        ST_RUN:
+            // If the countdown is at 0, then move to done state
+            if (counter_q == 1) begin
+                nextstate = ST_DONE;
+            end else begin
+                nextstate = ST_RUN;
+            end
+
+        ST_DONE:
+            nextstate = ST_IDLE;
+
+        default:
+            nextstate = ST_IDLE;
+    endcase
+
+end
+
+//
+// State machine: clock in the state
+//
+always @(posedge clk) begin
+    if (clr) begin
+        state <= ST_IDLE;
+    end else begin
+        state <= nextstate;
     end
-end endgenerate
+end
 
 
-/* Module end */
+// Countdown
+always @(posedge clk) begin
+
+    if (clr) begin
+
+        // Clear registers
+        counter_q = 0;
+
+    end else begin
+
+        case (state)
+
+            ST_IDLE:
+                counter_q <= countdown;
+
+            ST_RUN:
+                if (step) begin
+                    counter_q <= counter_q - 1;
+                end
+            
+            default:
+                counter_q <= countdown;            
+
+        endcase
+    end
+end
+
+
+// Done signal
+always @(posedge clk) begin
+    
+    if (clr) begin
+
+        // Reset
+        done_q <= 0;
+
+    end else begin
+        
+        case (state)
+            
+            ST_IDLE:
+                if (start) begin
+                    done_q <= 0;
+                end
+
+            ST_RUN:
+                if (nextstate == ST_DONE) begin
+                    done_q <= 1;
+                end
+
+            default:
+                done_q <= done_q;
+
+        endcase
+
+    end
+
+end
+
+
+// Combinational signals
+assign irq = state == ST_DONE ? 1 : 0;
+assign run = state == ST_RUN ? 1 : 0;
+
+// Output port mappings
+assign done = done_q;
+
+
 endmodule
