@@ -70,12 +70,15 @@ always @(posedge clk) begin
                 id = id-iw;
             end
         end
+    end else begin
+        sh <= 0;
     end
     
     /* Clear Signal Active. Overrides other signals. */
     if(clr == 1) begin
         id = 0;
         iw = 0;
+        sh = 0;
     end
 end
 

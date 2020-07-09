@@ -26,7 +26,8 @@ module inagu(
 	wbaseaddr,
 	iaddr_out,
 	waddr_out,
-	sh_out
+	sh_out,
+    acc_done
 );
 
 // Parameters
@@ -58,6 +59,7 @@ input  wire[ BWBANKA-1 : 0] wbaseaddr;		// Weight Base address
 output wire[ BDBANKA-1 : 0] iaddr_out;		// Input Data Address generated
 output wire[ BWBANKA-1 : 0] waddr_out;		// Weight Address generated
 output wire                 sh_out;         // Shift occurred
+output wire                 acc_done;       // Accumulation done
 
 
 // AGU wires
@@ -71,14 +73,15 @@ wire                    wagu_step;
 // Zig-zag wires
 wire  [   BPREC-1 : 0]  zigzag_offd;
 wire  [   BPREC-1 : 0]  zigzag_offw;
-wire                    zigzag_step;
+wire                    wagu_z0_out;
+wire                    wagu_z1_out;
+wire                    zigzagu_step;
 
 // Assignments
 assign dagu_j0 = {{BDBANKA-BPREC{1'b0}}, iprecision};
 assign wagu_j0 = {{BWBANKA-BPREC{1'b0}}, wprecision};
 assign dagu_step = en;
 assign wagu_step = en;
-assign zigzagu_step = en;
 
 
 // Address generation unit for the input data
@@ -97,7 +100,9 @@ agu #(
 	.j2         (istride1), 
 	.j3         (istride2),
     .addr_out   (dagu_addr_out),
-    .zigzag_step(zigzag_step)
+    .z0_out     (),
+    .z1_out     (),
+    .z2_out     ()
 );
 
 // Address generation unit for the weights
@@ -115,7 +120,10 @@ agu #(
 	.j1         (wstride0),
 	.j2         (wstride1), 
 	.j3         (wstride2),
-    .addr_out   (wagu_addr_out)
+    .addr_out   (wagu_addr_out),
+    .z0_out     (wagu_z0_out),
+    .z1_out     (wagu_z1_out),
+    .z2_out     ()
 );
 
 // Zig-zag address pattern generators
@@ -135,6 +143,10 @@ zigzagu #(
 // Add up the final address
 assign iaddr_out = ibaseaddr + dagu_addr_out + zigzag_offd;
 assign waddr_out = wbaseaddr + wagu_addr_out + zigzag_offw;
+
+// Signal when to step the zigzag and when to cycle out the accumulator
+assign zigzagu_step = en & wagu_z0_out;
+assign acc_done = en & wagu_z1_out & wagu_z0_out;
 
 
 endmodule
