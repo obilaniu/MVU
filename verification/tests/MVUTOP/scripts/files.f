@@ -17,6 +17,11 @@
 ../../../../verilog/interconn.v
 ../../../../verilog/quantser.v
 ../../../../verilog/outagu.v
+../../../../verilog/inagu.v
+../../../../verilog/agu.v
+../../../../verilog/zigzagu.v
+../../../../verilog/controller.v
+../../../../verilog/shiftreg.v
 ../../../../verilog/mvutop.v
 ../../../lib/utils/utils.sv
 ../tb/mvutop_tester.sv

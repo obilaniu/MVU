@@ -1,15 +1,22 @@
-/**
- * Top-Level
- */
+//
+// MVU top level
+//
+// Notes:
+// * For wlength_X and ilength_X parameters, the value to assign is actual_length - 1.
+//
+//
  
 `timescale 1 ps / 1 ps
 /**** Module ****/
 module mvutop(  clk,
+                rst_n,
+                start,
+                done,
+                irq,
                 ic_clr,
                 ic_recv_from,
                 mul_mode,
                 acc_clr,
-                acc_sh,
                 max_en,
                 max_clr,
                 max_pool,
@@ -72,12 +79,13 @@ localparam BQMSBIDX = $clog2(BACC);     // Bitwidth of the quantizer MSB locatio
 localparam BQBOUT   = $clog2(BACC);     // Bitwitdh of the quantizer 
 
 // Other Parameters
-localparam BCNTDWN	= 29;			// Bitwidth of the countdown ports
-localparam BPREC 	= 6;			// Bitwidth of the precision ports
-localparam BBWADDR	= 9;			// Bitwidth of the weight base address ports
-localparam BBDADDR	= 15;			// Bitwidth of the data base address ports
-localparam BSTRIDE	= 15;			// Bitwidth of the stride ports
-localparam BLENGTH	= 15;			// Bitwidth of the length ports
+localparam BCNTDWN	    = 29;			// Bitwidth of the countdown ports
+localparam BPREC 	    = 6;			// Bitwidth of the precision ports
+localparam BBWADDR	    = 9;			// Bitwidth of the weight base address ports
+localparam BBDADDR	    = 15;			// Bitwidth of the data base address ports
+localparam BSTRIDE	    = 15;			// Bitwidth of the stride ports
+localparam BLENGTH	    = 15;			// Bitwidth of the length ports
+localparam VVPSTAGES    = 3;            // Number of stages in the VVP pipeline
 
 
 //
@@ -85,13 +93,17 @@ localparam BLENGTH	= 15;			// Bitwidth of the length ports
 //
 
 input wire                        clk;
+input wire                        rst_n;                // Global reset
+
+input  wire[          NMVU-1 : 0] start;                // Start the MVU job
+output wire[          NMVU-1 : 0] done;                 // Indicates if a job is done
+output wire[          NMVU-1 : 0] irq;                  // Interrupt request
 
 input  wire                       ic_clr;				// Interconnect: clear
 input  wire[    NMVU*BMVUA-1 : 0] ic_recv_from;			// Interconnect: receive from MVU number
 
 input  wire[        2*NMVU-1 : 0] mul_mode;				// Config: multiply mode
 input  wire[          NMVU-1 : 0] acc_clr;				// Control: accumulator clear
-input  wire[          NMVU-1 : 0] acc_sh;				// Control: accumulator shift
 input  wire[          NMVU-1 : 0] max_en;				// Config: max pool enable
 input  wire[          NMVU-1 : 0] max_clr;				// Config: max pool clear
 input  wire[          NMVU-1 : 0] max_pool;				// Config: max pool mode
@@ -177,6 +189,15 @@ wire[      NMVU*N-1 : 0] quantarray_out;		// Quantizer: output
 // TODO: DO SOMETHING USEFUL WITH THESE SIGNALS
 wire[        NMVU-1 : 0] outstep;
 wire[        NMVU-1 : 0] outload;
+// Other wires
+wire[        NMVU-1 : 0] inagu_clr;
+wire[        NMVU-1 : 0] controller_clr;    // Controller clear/reset
+wire[        NMVU-1 : 0] step;              // Step if 1, stall if 0
+wire[        NMVU-1 : 0] run;               // Running if 1
+wire[        NMVU-1 : 0] acc_sh;            // Accumulator shift control
+wire[        NMVU-1 : 0] agu_sh_out;        // Input AGU shift accumulator
+wire[        NMVU-1 : 0] agu_acc_done;      // AGU accumulator done indicator
+wire[        NMVU-1 : 0] acc_done;          // Accumulator done control
 
 
 /* Wiring */
@@ -196,11 +217,9 @@ assign wri_grnt = 0;
 assign wri_addr = 0;
 
 
-// TODO: WIRE THESE UP TO THE AGU. PULLED DOWN FOR NOW
-assign rdw_addr = 0;
-assign rdd_en   = 0;
-assign rdd_grnt = 0;
-assign rdd_addr = 0;
+// TODO: WIRE THESE UP TO THE AGU. PULLED UP/DOWN FOR NOW
+assign rdd_en   = 1;
+assign rdd_grnt = 1;
 assign wrd_en   = 0;
 assign wrd_grnt = 0;
 assign wrd_addr = 0;
@@ -209,9 +228,62 @@ assign wrd_addr = 0;
 assign outstep = 0;
 assign outload = 0;
 
-// TODO: INSERT AGU/ZIGZAG ARRAY HERE FOR INPUT
+assign step             = {NMVU{1'b1}};                      // No stalls for now
+assign controller_clr   = {NMVU{!rst_n}};
+assign inagu_clr        = {NMVU{!rst_n}} | start;
 
 
+
+// Controllers
+generate for(i = 0; i < NMVU; i = i + 1) begin: controllerarray
+    controller #(
+        .BCNTDWN    (BCNTDWN)
+    ) controller_unit (
+        .clk        (clk),
+        .clr        (controller_clr[i]),
+        .start      (start[i]),
+        .countdown  (countdown[i*BCNTDWN +: BCNTDWN]),
+        .step       (step[i]),
+        .run        (run[i]),
+        .done       (done[i]),
+        .irq        (irq[i])
+    );
+end endgenerate
+
+
+// Address generation modules for input and weight memory
+generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
+	inagu #(
+        .BPREC      (BPREC),
+        .BDBANKA    (BDBANKA),
+        .BWBANKA    (BWBANKA),
+        .BWLENGTH   (BLENGTH)
+	) inagu_unit (
+        .clk        (clk),
+        .clr        (inagu_clr      [i]),
+        .en         (run            [i]),
+        .iprecision (iprecision     [  i*BPREC +: BPREC]),
+        .istride0   (istride_0      [i*BSTRIDE +: BDBANKA]),
+        .istride1   (istride_1      [i*BSTRIDE +: BDBANKA]),
+        .istride2   (istride_2      [i*BSTRIDE +: BDBANKA]),
+	    .ilength0   (ilength_0      [i*BLENGTH +: BLENGTH]),
+        .ilength1   (ilength_1      [i*BLENGTH +: BLENGTH]),
+        .ilength2   (ilength_2      [i*BLENGTH +: BLENGTH]),
+        .ibaseaddr  (ibaseaddr      [i*BBDADDR +: BBDADDR]),
+        .wprecision (wprecision     [  i*BPREC +: BPREC]),
+        .wstride0   (wstride_0      [i*BSTRIDE +: BWBANKA]),
+        .wstride1   (wstride_1      [i*BSTRIDE +: BWBANKA]),
+        .wstride2   (wstride_2      [i*BSTRIDE +: BWBANKA]),
+        .wlength0   (wlength_0      [i*BLENGTH +: BLENGTH]),
+        .wlength1   (wlength_1      [i*BLENGTH +: BLENGTH]),
+        .wlength2   (wlength_2      [i*BLENGTH +: BLENGTH]),
+        .wbaseaddr  (wbaseaddr      [i*BBWADDR +: BBWADDR]),
+        .iaddr_out  (rdd_addr       [i*BDBANKA +: BDBANKA]),
+        .waddr_out  (rdw_addr       [i*BWBANKA +: BWBANKA]),
+        .sh_out     (agu_sh_out     [i]),
+        .acc_done   (agu_acc_done   [i])
+	);
+end endgenerate
 
 // TODO: INSERT OUTPUT ADDRESS GENERATOR
 generate for(i = 0; i < NMVU; i = i+1) begin:outaguarray
@@ -225,6 +297,28 @@ generate for(i = 0; i < NMVU; i = i+1) begin:outaguarray
 			.baseaddr	(obaseaddr[i*BBDADDR +:	BBDADDR]	),
 			.addrout	(wrd_addr[i*BDBANKA  +: BDBANKA]	)
 		);
+end endgenerate
+
+// Insert delay for accumulator shifter signals to account for number of VVP pipeline stages
+generate for(i=0; i < NMVU; i = i+1) begin: acc_delayarray
+    shiftreg #(
+        .N      (VVPSTAGES+1)
+    ) acc_sh_delayarrayunit (
+        .clk    (clk), 
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (agu_sh_out[i]),
+        .out    (acc_sh[i])
+    );
+    shiftreg #(
+        .N      (VVPSTAGES+1)
+    ) acc_done_delayarrayunit (
+        .clk    (clk), 
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (agu_acc_done[i]),
+        .out    (acc_done[i])
+    );
 end endgenerate
 
 
