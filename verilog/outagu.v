@@ -6,13 +6,14 @@
 //
 //
 
-module outagu(clk, step, load, baseaddr, addrout);
+module outagu(clk, clr, step, load, baseaddr, addrout);
 
 // Parameters
 parameter  BDBANKA = 15;
 
 // Ports
 input  wire                 clk;
+input  wire                 clr;
 input  wire                 step;
 input  wire					load;
 input  wire[BDBANKA-1 : 0]  baseaddr;
@@ -24,13 +25,17 @@ reg  [BDBANKA-1 : 0] addr;
 
 // Load and increment the address counter
 always @(posedge clk) begin
-	if (load) begin
-		addr <= baseaddr;
-	end else begin
-		if (step) begin
-			addr <= addr + 1;
-		end
-	end
+    if (clr) begin
+        addr <= 0;
+    end else begin
+        if (load) begin
+            addr <= baseaddr;
+        end else begin
+            if (step) begin
+                addr <= addr + 1;
+            end
+        end
+    end
 end
 
 // Assign the address counter to the output address

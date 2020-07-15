@@ -16,6 +16,7 @@
 ../../../../verilog/vvp.v
 ../../../../verilog/interconn.v
 ../../../../verilog/quantser.v
+../../../../verilog/quantser_ctrl.v
 ../../../../verilog/outagu.v
 ../../../../verilog/inagu.v
 ../../../../verilog/agu.v
