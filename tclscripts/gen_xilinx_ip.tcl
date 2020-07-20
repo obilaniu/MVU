@@ -46,6 +46,7 @@ proc genIPFiles {ipname} {
 proc cpIPSimFileToVerification {ipname} {
     global buildpath
     global verifyippath
+    file mkdir $verifyippath
     set ipsimbuildfile $buildpath/$ipname/sim/$ipname.v
     file copy -force $ipsimbuildfile $verifyippath
 }

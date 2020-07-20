@@ -160,21 +160,21 @@ module mvutop_tester();
 
 
 // =================================================================================================
-// Tasks
+// Utility Tasks
 
 task writeData(unsigned[BDBANKW-1 : 0] word, unsigned[BDBANKA-1 : 0] addr);
     wrc_addr = addr;
     wrc_word = word;
     wrc_en = 1;
     #(`CLKPERIOD);
-    wrc_en = 0;    
+    wrc_en = 0;
 endtask
 
-task writeDataRepeat(logic unsigned[BDBANKW-1 : 0] word, logic unsigned[BDBANKA-1 : 0] startaddr, int size);
+task writeDataRepeat(logic unsigned[BDBANKW-1 : 0] word, logic unsigned[BDBANKA-1 : 0] startaddr, int size, int stride=1);
 
     for (int i = 0; i < size; i++) begin
         writeData(word, startaddr);
-        startaddr++;
+        startaddr = startaddr + stride;
     end
 endtask
 
@@ -183,13 +183,14 @@ task writeWeights(unsigned[BWBANKW-1 : 0] word, unsigned[BWBANKA-1 : 0] addr);
     wrw_word = word;
     wrw_en = 1;
     #(`CLKPERIOD);
-    wrw_en = 0;    
+    wrw_en = 0;
 endtask
 
-task writeWeightsRepeat(logic unsigned[BWBANKW-1 : 0] word, logic unsigned[BWBANKA-1 : 0] startaddr, int size);
+task writeWeightsRepeat(logic unsigned[BWBANKW-1 : 0] word, logic unsigned[BWBANKA-1 : 0] startaddr, int size, int stride=1);
     for (int i = 0; i < size; i++) begin
         writeWeights(word, startaddr);
-        startaddr++;
+        #(`CLKPERIOD);
+        startaddr = startaddr + stride;
     end
 endtask
 
@@ -213,6 +214,202 @@ initial begin
     print_banner($sformatf("Simulation took more than expected ( more than %0dms)", `SIM_TIMEOUT), "ERROR");
     $finish();
 end
+
+
+// =================================================================================================
+// Testbench tasks
+
+//
+// Memory test
+//
+task memTests();
+
+endtask
+
+//
+//
+//
+task gemvTests();
+
+    print("TEST 1: matrix-vector mult: 1x1 x 1 tiles, 1x1 => 1 bit precision, , input=all 0's");
+    wprecision = 1;
+    iprecision = 1;
+    oprecision = 1;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 0;
+    wstride_0 = 0;
+    wstride_1 = 0;
+    wstride_2 = 0;
+    istride_0 = 0;
+    istride_1 = 0;
+    istride_2 = 0;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 0;
+    wlength_1 = 0;
+    wlength_2 = 0;
+    ilength_0 = 0;
+    ilength_1 = 0;
+    ilength_2 = 0;
+    olength_0 = 0;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 1;
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*10);
+
+    print("TEST 2: matrix-vector mult: 2x2 x 2 tiles, 1x1 => 1 bit precision, input=all 0's");
+    wprecision = 1;
+    iprecision = 1;
+    oprecision = 1;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 0;
+    wstride_0 = 0;
+    wstride_1 = 0;
+    wstride_2 = 0;
+    istride_0 = -1;
+    istride_1 = 0;
+    istride_2 = 0;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 3;
+    wlength_1 = 0;
+    wlength_2 = 0;
+    ilength_0 = 1;
+    ilength_1 = 1;
+    ilength_2 = 0;
+    olength_0 = 1;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 4;
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*15);
+
+    // TEST 3
+    // Expected result: accumulators get to value h480, output to data memory is b10 for each element
+    // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. d3*d3*d64*d2 = d1152 = h480)
+    print("TEST 3: matrix-vector mult: 2x2 x 2 tiles, 2x2 => 2 bit precision, , input=all 1's");
+    writeDataRepeat('hffffffffffffffff, 'h0000, 4);
+    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 8);
+    wprecision = 2;
+    iprecision = 2;
+    oprecision = 2;
+    quant_msbidx = 10;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 'h4000;
+    wstride_0 = -2;      // 1 tile back move x 2 bits
+    wstride_1 = 2;       // 1 tile ahead move x 2 bits
+    wstride_2 = 0;
+    istride_0 = -2;      // 1 tile back move x 2 bits 
+    istride_1 = 0;
+    istride_2 = -2;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 1;       // 2 tiles in width
+    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
+    wlength_2 = 1;       // 2 tiles in height
+    ilength_0 = 1;       // 2 tiles in height
+    ilength_1 = 0;       // number bit combinations
+    ilength_2 = 0;       // 2 tiles in width of matrix operand
+    olength_0 = 1;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 16;       // 2 tiles x 2 tiles x 2bit x 2bits
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*28);
+
+    // TEST 4
+    // Expected result: accumulators get to value h6c0, output to data memory is b110 for each element
+    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. d3*d3*d64*d3 = d1728 = h6c0)
+    print("TEST 4: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=all 1's");
+    writeDataRepeat('hffffffffffffffff, 'h0000, 6);
+    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 18);
+    wprecision = 2;
+    iprecision = 2;
+    oprecision = 3;
+    quant_msbidx = 10;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 'h6000;
+    wstride_0 = -4;      // 2 tile back move x 2 bits
+    wstride_1 = 2;       // 1 tile ahead move x 2 bits
+    wstride_2 = 0;
+    istride_0 = -4;      // 2 tile back move x 2 bits 
+    istride_1 = 0;
+    istride_2 = -4;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 2;       // 3 tiles in width
+    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
+    wlength_2 = 2;       // 3 tiles in height
+    ilength_0 = 2;       // 3 tiles in height
+    ilength_1 = 0;       // number bit combinations
+    ilength_2 = 0;       // 2 tiles in width of matrix operand
+    olength_0 = 2;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 36;       // 3 tiles x 3 tiles x 2bit x 2bits
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*48);
+
+    // TEST 5
+    // Expected result: accumulators get to value h180, output to data memory is b001 for each element
+    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. d2*d1*d64*d3 = d384 = h180)
+    print("TEST 5: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=b10, weights=b01");
+    writeDataRepeat('hffffffffffffffff, 'h0000, 3, 2);      // MSB=1  \
+    writeDataRepeat('h0000000000000000, 'h0001, 3, 2);      // LSB=0  - = b10
+    writeWeightsRepeat({BWBANKW{1'b0}}, 'h0, 9, 2);         // MSB=0 \
+    writeWeightsRepeat({BWBANKW{1'b1}}, 'h1, 9, 2);         // LSB=1 - = b01
+    wprecision = 2;
+    iprecision = 2;
+    oprecision = 3;
+    quant_msbidx = 10;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 'h7000;
+    wstride_0 = -4;      // 2 tile back move x 2 bits
+    wstride_1 = 2;       // 1 tile ahead move x 2 bits
+    wstride_2 = 0;
+    istride_0 = -4;      // 2 tile back move x 2 bits 
+    istride_1 = 0;
+    istride_2 = -4;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 2;       // 3 tiles in width
+    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
+    wlength_2 = 2;       // 3 tiles in height
+    ilength_0 = 2;       // 3 tiles in height
+    ilength_1 = 0;       // number bit combinations
+    ilength_2 = 0;       // 2 tiles in width of matrix operand
+    olength_0 = 2;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 36;       // 3 tiles x 3 tiles x 2bit x 2bits
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*48);
+
+endtask
 
 
 // =================================================================================================
@@ -274,145 +471,10 @@ initial begin
     // Turn some stuff on
     max_en = 1;
 
-    print("TEST 1: matrix-vector mult: 1x1 x 1 tiles, 1x1 => 1 bit precision");
-    wprecision = 1;
-    iprecision = 1;
-    oprecision = 1;
-    wbaseaddr = 0;
-    ibaseaddr = 0;
-    obaseaddr = 0;
-    wstride_0 = 0;
-    wstride_1 = 0;
-    wstride_2 = 0;
-    istride_0 = 0;
-    istride_1 = 0;
-    istride_2 = 0;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    wlength_0 = 0;
-    wlength_1 = 0;
-    wlength_2 = 0;
-    ilength_0 = 0;
-    ilength_1 = 0;
-    ilength_2 = 0;
-    olength_0 = 0;
-    olength_1 = 0;
-    olength_2 = 0;
-    countdown = 1;
-    start = 1;
-    #(`CLKPERIOD);
-    start = 0;
-    #(`CLKPERIOD*10);
+ 
+    // Run gemv tests
+    gemvTests();
 
-    print("TEST 2: matrix-vector mult: 2x2 x 2 tiles, 1x1 => 1 bit precision");
-    wprecision = 1;
-    iprecision = 1;
-    oprecision = 1;
-    wbaseaddr = 0;
-    ibaseaddr = 0;
-    obaseaddr = 0;
-    wstride_0 = 0;
-    wstride_1 = 0;
-    wstride_2 = 0;
-    istride_0 = -1;
-    istride_1 = 0;
-    istride_2 = 0;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    wlength_0 = 3;
-    wlength_1 = 0;
-    wlength_2 = 0;
-    ilength_0 = 1;
-    ilength_1 = 1;
-    ilength_2 = 0;
-    olength_0 = 1;
-    olength_1 = 0;
-    olength_2 = 0;
-    countdown = 4;
-    start = 1;
-    #(`CLKPERIOD);
-    start = 0;
-    #(`CLKPERIOD*15);
-
-    print("TEST 3: matrix-vector mult: 2x2 x 2 tiles, 2x2 => 2 bit precision");
-//    writeData('hffffffffffffffff, 'h0000);
-    writeDataRepeat('hffffffffffffffff, 'h0000, 4);
-    writeWeights({BWBANKW{1'b1}}, 'h0);
-    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 8);
-    wprecision = 2;
-    iprecision = 2;
-    oprecision = 2;
-    quant_msbidx = 10;
-    wbaseaddr = 0;
-    ibaseaddr = 0;
-    obaseaddr = 'h4000;
-    wstride_0 = -2;      // 1 tile back move x 2 bits
-    wstride_1 = 2;       // 1 tile ahead move x 2 bits
-    wstride_2 = 0;
-    istride_0 = -2;      // 1 tile back move x 2 bits 
-    istride_1 = 0;
-    istride_2 = -2;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    wlength_0 = 1;       // 2 tiles in width
-    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
-    wlength_2 = 1;       // 2 tiles in height
-    ilength_0 = 1;       // 2 tiles in height
-    ilength_1 = 0;       // number bit combinations
-    ilength_2 = 0;       // 2 tiles in width of matrix operand
-    olength_0 = 1;
-    olength_1 = 0;
-    olength_2 = 0;
-    countdown = 16;       // 2 tiles x 2 tiles x 2bit x 2bits
-    ibaseaddr = 100;
-    #(`CLKPERIOD);
-    ibaseaddr = 0;
-    start = 1;
-    #(`CLKPERIOD);
-    start = 0;
-    #(`CLKPERIOD*28);
-
-    print("TEST 4: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision");
-//    writeData('hffffffffffffffff, 'h0000);
-    writeDataRepeat('hffffffffffffffff, 'h0000, 6);
-    writeWeights({BWBANKW{1'b1}}, 'h0);
-    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 18);
-    wprecision = 2;
-    iprecision = 2;
-    oprecision = 3;
-    quant_msbidx = 10;
-    wbaseaddr = 0;
-    ibaseaddr = 0;
-    obaseaddr = 'h6000;
-    wstride_0 = -4;      // 2 tile back move x 2 bits
-    wstride_1 = 2;       // 1 tile ahead move x 2 bits
-    wstride_2 = 0;
-    istride_0 = -4;      // 2 tile back move x 2 bits 
-    istride_1 = 0;
-    istride_2 = -4;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    wlength_0 = 2;       // 3 tiles in width
-    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
-    wlength_2 = 2;       // 3 tiles in height
-    ilength_0 = 2;       // 3 tiles in height
-    ilength_1 = 0;       // number bit combinations
-    ilength_2 = 0;       // 2 tiles in width of matrix operand
-    olength_0 = 2;
-    olength_1 = 0;
-    olength_2 = 0;
-    countdown = 36;       // 3 tiles x 3 tiles x 2bit x 2bits
-    ibaseaddr = 100;
-    #(`CLKPERIOD);
-    ibaseaddr = 0;
-    start = 1;
-    #(`CLKPERIOD);
-    start = 0;
-    #(`CLKPERIOD*48);
 
     print_banner($sformatf("Simulation done."));
     $finish();

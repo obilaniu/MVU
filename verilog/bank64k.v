@@ -87,7 +87,7 @@ wire[w-1 : 0] dinb;
         .dina(wr_word),    // input wire [63 : 0] dina
         .douta(douta),      // output data (going nowhere, for now)
         .clkb(clk),    // input wire clkb
-        .enb(1'b1),      // input wire enb
+        .enb(rd_en),      // input wire enb
         .web(1'b0),         // disable writes on second port (for now)
         .addrb(rd_addr),  // input wire [9 : 0] addrb
         .dinb(dinb),        // input data (going nowhere, for now)

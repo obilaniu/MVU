@@ -206,6 +206,7 @@ wire[        NMVU-1 : 0] shacc_load;        // Accumulator load control
 wire[        NMVU-1 : 0] shacc_sh;          // Accumulator shift control
 wire[        NMVU-1 : 0] shacc_acc;         // Accumulator accumulate control
 wire[        NMVU-1 : 0] shacc_clr_int;     // Accumulator clear internal control
+wire[        NMVU-1 : 0] shacc_load_start;  // Accumulator load from start of job
 wire[        NMVU-1 : 0] agu_sh_out;        // Input AGU shift accumulator
 wire[        NMVU-1 : 0] agu_shacc_done;    // AGU accumulator done indicator
 wire[        NMVU-1 : 0] run_acc;           // Run signal for the accumulator/shifters
@@ -242,7 +243,7 @@ assign step             = {NMVU{1'b1}};                      // No stalls for no
 
 // Accumulator signals
 assign run_acc          = run;                              // No stalls for now
-assign shacc_load       = shacc_done;                       // Load accumulator with current output of MVP's
+assign shacc_load       = shacc_done | shacc_load_start;    // Load accumulator with current output of MVP's
 
 // Clear signals (just connect to global reset for now)
 assign controller_clr   = {NMVU{!rst_n}};
@@ -345,10 +346,20 @@ end endgenerate
 // Insert delays on some control signals to account for pipeline stages
 generate for(i=0; i < NMVU; i = i+1) begin: acc_delayarray
 
-    // TODO: connect the step signals on these shift regs 
+    // TODO: connect the step signals on these shift regs
     shiftreg #(
         .N      (VVPSTAGES + MEMRDLATENCY + 1)
-    ) acc_sh_delayarrayunit (
+    ) shacc_load_delayarrayunit (
+        .clk    (clk), 
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (start[i]),
+        .out    (shacc_load_start[i])
+    );
+
+    shiftreg #(
+        .N      (VVPSTAGES + MEMRDLATENCY + 0)
+    ) shacc_sh_delayarrayunit (
         .clk    (clk), 
         .clr    (~rst_n),
         .step   (1'b1),
@@ -367,7 +378,7 @@ generate for(i=0; i < NMVU; i = i+1) begin: acc_delayarray
     );
 
     shiftreg #(
-        .N      (VVPSTAGES + MEMRDLATENCY + 2)      // TODO: find a better way to re-time this
+        .N      (VVPSTAGES + MEMRDLATENCY + 1)      // TODO: find a better way to re-time this
     ) acc_done_delayarrayunit (
         .clk    (clk), 
         .clr    (~rst_n),
