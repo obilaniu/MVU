@@ -75,6 +75,9 @@ assign rdc_word = rd_word;
 wire[w-1 : 0] douta;
 wire[w-1 : 0] dinb;
 
+// Temporary assignments
+assign dinb = 0;
+
 /* 64k internal BRAM */
 `ifdef INTEL
     bram64k b (clk, wr_word, rd_addr, wr_addr, wr_en, rd_word);

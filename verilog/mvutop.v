@@ -227,9 +227,9 @@ assign wri_en       = ic_recv_en;
 
 // TODO: FIGURE OUT WHERE TO WIRE OTHER INTERCONNECT DATA ACCESS SIGNAL
 assign rdi_en           = 0;
-assign rdi_grnt         = 0;
+//assign rdi_grnt         = 0;
 assign rdi_addr         = 0;
-assign wri_grnt         = 0;
+//assign wri_grnt         = 0;
 assign wri_addr         = 0;
 
 
@@ -319,7 +319,7 @@ generate for(i = 0; i < NMVU; i = i+1) begin:outaguarray
 		) outaguunit
 		(
 			.clk		(clk								),
-            .clr        (outagu_clr                         ),
+            .clr        (outagu_clr[i]                      ),
 			.step 		(outstep[i]),
 			.load		(outagu_load[i]),
 			.baseaddr	(obaseaddr[i*BBDADDR +:	BBDADDR]	),
