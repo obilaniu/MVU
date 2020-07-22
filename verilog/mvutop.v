@@ -18,14 +18,12 @@ module mvutop(  clk,
                 mul_mode,
                 d_signed, 
                 w_signed,
-                acc_clr,
+                shacc_clr,
                 max_en,
                 max_clr,
                 max_pool,
                 quant_clr,
                 quant_msbidx,
-                quant_start,
-                quantarray_out,
                 countdown,
                 wprecision,
                 iprecision,
@@ -80,6 +78,7 @@ localparam BACC    = 32;            /* Bitwidth of Accumulators */
 // Quantizer parameters
 localparam BQMSBIDX = $clog2(BACC);     // Bitwidth of the quantizer MSB location specifier
 localparam BQBOUT   = $clog2(BACC);     // Bitwitdh of the quantizer 
+localparam QBWOUTBD = $clog2(BACC);     // Bitwidth of the quantizer bit-depth out specifier
 
 // Other Parameters
 localparam BCNTDWN	    = 29;			// Bitwidth of the countdown ports
@@ -89,6 +88,8 @@ localparam BBDADDR	    = 15;			// Bitwidth of the data base address ports
 localparam BSTRIDE	    = 15;			// Bitwidth of the stride ports
 localparam BLENGTH	    = 15;			// Bitwidth of the length ports
 localparam VVPSTAGES    = 3;            // Number of stages in the VVP pipeline
+localparam MAXPOOLSTAGES = 1;           // Number of max pool pipeline stages
+localparam MEMRDLATENCY = 2;            // Memory read latency
 
 
 //
@@ -108,15 +109,13 @@ input  wire[    NMVU*BMVUA-1 : 0] ic_recv_from;			// Interconnect: receive from 
 input  wire[        2*NMVU-1 : 0] mul_mode;				// Config: multiply mode
 input  wire[          NMVU-1 : 0] d_signed;             // Config: input data signed
 input  wire[          NMVU-1 : 0] w_signed;             // Config: weights signed
-input  wire[          NMVU-1 : 0] acc_clr;				// Control: accumulator clear
+input  wire[          NMVU-1 : 0] shacc_clr;			// Control: accumulator clear
 input  wire[          NMVU-1 : 0] max_en;				// Config: max pool enable
 input  wire[          NMVU-1 : 0] max_clr;				// Config: max pool clear
 input  wire[          NMVU-1 : 0] max_pool;				// Config: max pool mode
 
 input  wire[          NMVU-1 : 0] quant_clr;			// Quantizer: clear
 input  wire[ NMVU*BQMSBIDX-1 : 0] quant_msbidx;			// Quantizer: bit position index of the MSB
-input  wire[          NMVU-1 : 0] quant_start;			// Quantizer: signal to start quantizing
-output wire[        NMVU*N-1 : 0] quantarray_out;		// Quantizer: output
 
 input  wire[  NMVU*BCNTDWN-1 : 0] countdown;			// Config: number of clocks to countdown for given task
 input  wire[    NMVU*BPREC-1 : 0] wprecision;			// Config: weight precision
@@ -188,6 +187,20 @@ wire[NMVU*BDBANKA-1 : 0] rdi_addr;
 wire[        NMVU-1 : 0] wri_grnt;
 wire[NMVU*BDBANKA-1 : 0] wri_addr;
 
+// Quantizer
+wire[        NMVU-1 : 0] quant_start;			// Quantizer: signal to start quantizing
+wire[        NMVU-1 : 0] quant_stall;           // Quantizer: stall
+wire[      NMVU*N-1 : 0] quantarray_out;		// Quantizer: output
+wire[  BPREC*NMVU-1 : 0] quant_bwout;           // Quantizer: output bitwidth
+wire[        NMVU-1 : 0] quant_load;            // Quantizer: load base address
+wire[        NMVU-1 : 0] quant_step;            // Quantizer: step the quantizer
+wire[        NMVU-1 : 0] quant_ctrl_clr;        // Quantizer: clear/reset controller
+wire[        NMVU-1 : 0] quant_clr_int;         // Quantizer: internal clear control
+
+// Output data write back to memory
+// TODO: DO SOMETHING USEFUL WITH THESE SIGNALS
+wire[        NMVU-1 : 0] outstep;
+wire[        NMVU-1 : 0] outload;
 // Other wires
 wire[        NMVU-1 : 0] inagu_clr;
 wire[        NMVU-1 : 0] controller_clr;    // Controller clear/reset
@@ -196,10 +209,18 @@ wire[        NMVU-1 : 0] run;               // Running if 1
 wire[        NMVU-1 : 0] d_msb;             // Input data address on MSB
 wire[        NMVU-1 : 0] w_msb;             // Weight data address on MSB
 wire[        NMVU-1 : 0] neg_acc;           // Negate the input to the accumulators
-wire[        NMVU-1 : 0] acc_sh;            // Accumulator shift control
+wire[        NMVU-1 : 0] shacc_load;        // Accumulator load control
+wire[        NMVU-1 : 0] shacc_sh;          // Accumulator shift control
+wire[        NMVU-1 : 0] shacc_acc;         // Accumulator accumulate control
+wire[        NMVU-1 : 0] shacc_clr_int;     // Accumulator clear internal control
+wire[        NMVU-1 : 0] shacc_load_start;  // Accumulator load from start of job
 wire[        NMVU-1 : 0] agu_sh_out;        // Input AGU shift accumulator
-wire[        NMVU-1 : 0] agu_acc_done;      // AGU accumulator done indicator
-wire[        NMVU-1 : 0] acc_done;          // Accumulator done control
+wire[        NMVU-1 : 0] agu_shacc_done;    // AGU accumulator done indicator
+wire[        NMVU-1 : 0] run_acc;           // Run signal for the accumulator/shifters
+wire[        NMVU-1 : 0] shacc_done;        // Accumulator done control
+wire[        NMVU-1 : 0] maxpool_done;      // Max pool done control
+wire[        NMVU-1 : 0] outagu_clr;        // Clear the output AGU
+wire[        NMVU-1 : 0] outagu_load;       // Load the output AGU base address
 
 
 /* Wiring */
@@ -212,25 +233,39 @@ assign wri_word     = ic_recv_word;
 assign wri_en       = ic_recv_en;
 
 // TODO: FIGURE OUT WHERE TO WIRE OTHER INTERCONNECT DATA ACCESS SIGNAL
-assign rdi_en   = 0;
-assign rdi_grnt = 0;
-assign rdi_addr = 0;
-assign wri_grnt = 0;
-assign wri_addr = 0;
+assign rdi_en           = 0;
+//assign rdi_grnt         = 0;
+assign rdi_addr         = 0;
+//assign wri_grnt         = 0;
+assign wri_addr         = 0;
 
 
 // TODO: WIRE THESE UP TO THE AGU. PULLED UP/DOWN FOR NOW
-assign rdd_en   = 1;
-assign rdd_grnt = 1;
-assign wrd_en   = 0;
-assign wrd_grnt = 0;
-assign wrd_addr = 0;
+assign rdd_en           = 1;
 
-// TODO: SOMETHING USEFUL WITH THESE SIGNALS
+// TODO: WIRE THESE UP TO SOMETHING USEFUL
+assign outload          = 0;
+assign quant_stall      = 0;
 assign step             = {NMVU{1'b1}};                      // No stalls for now
+
+// Accumulator signals
+assign run_acc          = run;                              // No stalls for now
+assign shacc_load       = shacc_done | shacc_load_start;    // Load accumulator with current output of MVP's
+
+// Clear signals (just connect to global reset for now)
 assign controller_clr   = {NMVU{!rst_n}};
 assign inagu_clr        = {NMVU{!rst_n}} | start;
+assign outagu_clr       = {NMVU{!rst_n}};
+assign shacc_clr_int    = {NMVU{!rst_n}} | shacc_clr;       // Clear the accumulator
+assign quant_clr_int    = {NMVU{!rst_n}} | quant_clr;
 
+// Quantizer and output control signals
+assign quant_start      = maxpool_done;
+assign outstep          = quant_step;
+assign quant_ctrl_clr   = {NMVU{!rst_n}} | quant_clr;
+
+// MVU Data Memory control
+assign wrd_en           = outstep;
 
 
 // Controllers
@@ -282,10 +317,40 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .imsb       (d_msb          [i]),
         .wmsb       (w_msb          [i]),
         .sh_out     (agu_sh_out     [i]),
-        .acc_done   (agu_acc_done   [i])
+        .shacc_done (agu_shacc_done [i])
 	);
 end endgenerate
 
+// Output address generators
+generate for(i = 0; i < NMVU; i = i+1) begin:outaguarray
+	outagu #(
+			.BDBANKA	(BDBANKA			)
+		) outaguunit
+		(
+			.clk		(clk								),
+            .clr        (outagu_clr[i]                      ),
+			.step 		(outstep[i]),
+			.load		(outagu_load[i]),
+			.baseaddr	(obaseaddr[i*BBDADDR +:	BBDADDR]	),
+			.addrout	(wrd_addr[i*BDBANKA  +: BDBANKA]	)
+		);
+end endgenerate
+
+// Quantizer Controllers
+generate for(i = 0; i < NMVU; i = i+1) begin: quantser_ctrlarray
+    assign quant_bwout[i*BPREC +: BQBOUT] = oprecision[i*BPREC +: BQBOUT];
+    quantser_ctrl #(
+        .BWOUT      (BACC)
+    ) quantser_ctrl_unit (
+        .clk        (clk),
+        .clr        (quant_ctrl_clr[i]),
+        .bwout      (quant_bwout[i*BPREC +: BQBOUT]),
+        .start      (quant_start[i]),
+        .stall      (quant_stall[i]),
+        .load       (quant_load[i]),
+        .step       (quant_step[i])
+    );
+end endgenerate
 
 // Negate the input to the accumulators when one or both data/weights are signed and is on an MSB
 assign neg_acc = (d_signed & d_msb) ^ (w_signed & w_msb);
@@ -293,24 +358,68 @@ assign neg_acc = (d_signed & d_msb) ^ (w_signed & w_msb);
 
 // Insert delay for accumulator shifter signals to account for number of VVP pipeline stages
 generate for(i=0; i < NMVU; i = i+1) begin: acc_delayarray
+
+    // TODO: connect the step signals on these shift regs
     shiftreg #(
-        .N      (VVPSTAGES+1)
-    ) acc_sh_delayarrayunit (
+        .N      (VVPSTAGES + MEMRDLATENCY + 1)
+    ) shacc_load_delayarrayunit (
+        .clk    (clk), 
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (start[i]),
+        .out    (shacc_load_start[i])
+    );
+
+    shiftreg #(
+        .N      (VVPSTAGES + MEMRDLATENCY + 0)
+    ) shacc_sh_delayarrayunit (
         .clk    (clk), 
         .clr    (~rst_n),
         .step   (1'b1),
         .in     (agu_sh_out[i]),
-        .out    (acc_sh[i])
+        .out    (shacc_sh[i])
     );
+
     shiftreg #(
-        .N      (VVPSTAGES+1)
+        .N      (VVPSTAGES + MEMRDLATENCY + 1)
+    ) shacc_acc_delayarrayunit (
+        .clk    (clk), 
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (run_acc[i]),
+        .out    (shacc_acc[i])
+    );
+
+    shiftreg #(
+        .N      (VVPSTAGES + MEMRDLATENCY + 1)      // TODO: find a better way to re-time this
     ) acc_done_delayarrayunit (
         .clk    (clk), 
         .clr    (~rst_n),
         .step   (1'b1),
-        .in     (agu_acc_done[i]),
-        .out    (acc_done[i])
+        .in     (agu_shacc_done[i]),
+        .out    (shacc_done[i])
     );
+
+    shiftreg #(
+        .N      (MAXPOOLSTAGES)
+    ) maxpool_done_delayarrayunit (
+        .clk    (clk),
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (shacc_done[i]),
+        .out    (maxpool_done[i])
+    );
+
+    shiftreg #(
+        .N      (VVPSTAGES+MEMRDLATENCY+MAXPOOLSTAGES + 1)
+    ) outagu_load_delayarrayunit (
+        .clk    (clk),
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (start[i]),
+        .out    (outagu_load[i])
+    );
+
 end endgenerate
 
 
@@ -323,18 +432,20 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
         (
             .clk			(clk									),
             .mul_mode		(mul_mode[i*2 +: 2]						),
-            .acc_clr		(acc_clr[i]								),
-            .acc_sh			(acc_sh[i]								),
+            .neg_acc        (neg_acc[i]                             ),
+            .shacc_clr	    (shacc_clr_int[i]  						),
+            .shacc_load     (shacc_load[i]                          ),
+            .shacc_acc      (shacc_acc[i]                           ),
+            .shacc_sh		(shacc_sh[i]							),
             .max_en			(max_en[i]								),
             .max_clr		(max_clr[i]								),
             .max_pool		(max_pool[i]							),
-            .quant_clr		(quant_clr[i]							),
+            .quant_clr		(quant_clr_int[i]	    				),
             .quant_msbidx   (quant_msbidx[i*BQMSBIDX +: BQMSBIDX]	),
-            .quant_bdout	(oprecision[i*BPREC +: BQBOUT]			),
-            .quant_start	(quant_start[i]							),
-            .quantarray_out	(quantarray_out[0*N +: N]				),
+            .quant_load     (quant_load[i]                          ),
+            .quant_step 	(quant_step[i]							),
             .rdw_addr		(rdw_addr[i*BWBANKA +: BWBANKA]			),
-			.wrw_addr		(wrw_addr[i*BWBANKA +: BWBANKA			]),
+			.wrw_addr		(wrw_addr[i*BWBANKA +: BWBANKA]			),
 			.wrw_word		(wrw_word[i*BWBANKW +: BWBANKW]			),
 			.wrw_en			(wrw_en[i]								),
             .rdd_en			(rdd_en[i]								),

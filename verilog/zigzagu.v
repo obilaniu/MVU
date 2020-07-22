@@ -71,7 +71,7 @@ always @(posedge clk) begin
             end
         end
     end else begin
-        sh <= 0;
+        sh = 0;
     end
     
     /* Clear Signal Active. Overrides other signals. */
