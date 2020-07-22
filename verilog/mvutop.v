@@ -16,6 +16,8 @@ module mvutop(  clk,
                 ic_clr,
                 ic_recv_from,
                 mul_mode,
+                d_signed, 
+                w_signed,
                 acc_clr,
                 max_en,
                 max_clr,
@@ -104,6 +106,8 @@ input  wire                       ic_clr;				// Interconnect: clear
 input  wire[    NMVU*BMVUA-1 : 0] ic_recv_from;			// Interconnect: receive from MVU number
 
 input  wire[        2*NMVU-1 : 0] mul_mode;				// Config: multiply mode
+input  wire[          NMVU-1 : 0] d_signed;             // Config: input data signed
+input  wire[          NMVU-1 : 0] w_signed;             // Config: weights signed
 input  wire[          NMVU-1 : 0] acc_clr;				// Control: accumulator clear
 input  wire[          NMVU-1 : 0] max_en;				// Config: max pool enable
 input  wire[          NMVU-1 : 0] max_clr;				// Config: max pool clear
@@ -189,6 +193,9 @@ wire[        NMVU-1 : 0] inagu_clr;
 wire[        NMVU-1 : 0] controller_clr;    // Controller clear/reset
 wire[        NMVU-1 : 0] step;              // Step if 1, stall if 0
 wire[        NMVU-1 : 0] run;               // Running if 1
+wire[        NMVU-1 : 0] d_msb;             // Input data address on MSB
+wire[        NMVU-1 : 0] w_msb;             // Weight data address on MSB
+wire[        NMVU-1 : 0] neg_acc;           // Negate the input to the accumulators
 wire[        NMVU-1 : 0] acc_sh;            // Accumulator shift control
 wire[        NMVU-1 : 0] agu_sh_out;        // Input AGU shift accumulator
 wire[        NMVU-1 : 0] agu_acc_done;      // AGU accumulator done indicator
@@ -272,10 +279,16 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .wbaseaddr  (wbaseaddr      [i*BBWADDR +: BBWADDR]),
         .iaddr_out  (rdd_addr       [i*BDBANKA +: BDBANKA]),
         .waddr_out  (rdw_addr       [i*BWBANKA +: BWBANKA]),
+        .imsb       (d_msb          [i]),
+        .wmsb       (w_msb          [i]),
         .sh_out     (agu_sh_out     [i]),
         .acc_done   (agu_acc_done   [i])
 	);
 end endgenerate
+
+
+// Negate the input to the accumulators when one or both data/weights are signed and is on an MSB
+assign neg_acc = (d_signed & d_msb) ^ (w_signed & w_msb);
 
 
 // Insert delay for accumulator shifter signals to account for number of VVP pipeline stages
