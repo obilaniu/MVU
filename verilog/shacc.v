@@ -4,7 +4,7 @@
 
 `timescale 1 ps / 1 ps
 /**** Module shacc ****/
-module shacc(clk, clr, sh, I, O);
+module shacc(clk, clr, load, acc, sh, I, O);
 
 
 /* Parameters */
@@ -13,6 +13,8 @@ parameter  a = w;
 
 input  wire                 clk;
 input  wire                 clr;
+input  wire                 load;
+input  wire                 acc;
 input  wire                 sh;
 input  wire signed[a-1 : 0] I;
 
@@ -20,12 +22,16 @@ output reg  signed[w-1 : 0] O = 0;
 
 
 /* Logic */
-always @(posedge clk or posedge clr) begin
+always @(posedge clk) begin
 	if(clr) begin
 		O = 0;
 	end else if(clk) begin
-		if(sh) O = O+O+I; /* Shift left of accumulator */
-		else   O = O+I;   /* Plain accumulate */
+        if (load) begin
+            O = I;
+        end else if (acc) begin
+            if(sh) O = O+O+I; /* Shift left of accumulator */
+            else   O = O+I;   /* Plain accumulate */
+        end
 	end
 end
 

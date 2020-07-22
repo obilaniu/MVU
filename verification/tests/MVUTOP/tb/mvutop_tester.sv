@@ -2,7 +2,7 @@
 // Test Module mvutop_tester
 //
 // Notes:
-// * For wlength_X and ilength_X parameters, the value to assign is actual_length - 1.
+// * For wlength_X and ilength_X parameters, the value to is actual_length - 1.
 //
 
 
@@ -16,6 +16,7 @@ import utils::*;
 
 
 module mvutop_tester();
+
     /* Create input registers and output wires */
     parameter  NMVU    =  1;   /* Number of MVUs. Ideally a Power-of-2. */
     parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
@@ -41,67 +42,64 @@ module mvutop_tester();
     localparam BQBOUT   = $clog2(BACC);     // Bitwitdh of the quantizer 
 
     // I/O port wires
-    logic                      clk         ;//input  clk;
-    logic                      rst_n       ;//input  reset;
-    logic [        NMVU-1 : 0] start       ;//input  start;
-    logic [        NMVU-1 : 0] done        ;//output done;
-    logic [        NMVU-1 : 0] irq         ;//output irq
-    logic                      ic_clr      ;//input  ic_clr;
-    logic [  NMVU*BMVUA-1 : 0] ic_recv_from;//input  ic_recv_from;
-    logic [      2*NMVU-1 : 0] mul_mode    ;//input  mul_mode;
-    logic [        NMVU-1 : 0] acc_clr     ;//input  acc_clr;
-    logic [        NMVU-1 : 0] max_en      ;//input  max_en;
-    logic [        NMVU-1 : 0] max_clr     ;//input  max_clr;
-    logic [        NMVU-1 : 0] max_pool    ;//input  max_pool;
-    logic [        NMVU-1 : 0] rdc_en      ;//input  rdc_en;
-    logic [        NMVU-1 : 0] rdc_grnt    ;//output rdc_grnt;
-    logic [NMVU*BDBANKA-1 : 0] rdc_addr    ;//input  rdc_addr;
-    logic [NMVU*BDBANKW-1 : 0] rdc_word    ;//output rdc_word;
-    logic [        NMVU-1 : 0] wrc_en      ;//input  wrc_en;
-    logic [        NMVU-1 : 0] wrc_grnt    ;//output wrc_grnt;
-    logic [     BDBANKA-1 : 0] wrc_addr    ;//input  wrc_addr;
-    logic [     BDBANKW-1 : 0] wrc_word    ;//input  wrc_word;
+    reg                      clk         ;//input  clk;
+    reg                      rst_n       ;//input  reset;
+    reg [        NMVU-1 : 0] start       ;//input  start;
+    reg [        NMVU-1 : 0] done        ;//output done;
+    reg [        NMVU-1 : 0] irq         ;//output irq
+    reg                      ic_clr      ;//input  ic_clr;
+    reg [  NMVU*BMVUA-1 : 0] ic_recv_from;//input  ic_recv_from;
+    reg [      2*NMVU-1 : 0] mul_mode    ;//input  mul_mode;
+    reg [        NMVU-1 : 0] shacc_clr   ;//input  shacc_clr;
+    reg [        NMVU-1 : 0] max_en      ;//input  max_en;
+    reg [        NMVU-1 : 0] max_clr     ;//input  max_clr;
+    reg [        NMVU-1 : 0] max_pool    ;//input  max_pool;
+    reg [        NMVU-1 : 0] rdc_en      ;//input  rdc_en;
+    reg [        NMVU-1 : 0] rdc_grnt    ;//output rdc_grnt;
+    reg [NMVU*BDBANKA-1 : 0] rdc_addr    ;//input  rdc_addr;
+    reg [NMVU*BDBANKW-1 : 0] rdc_word    ;//output rdc_word;
+    reg [        NMVU-1 : 0] wrc_en      ;//input  wrc_en;
+    reg [        NMVU-1 : 0] wrc_grnt    ;//output wrc_grnt;
+    reg [     BDBANKA-1 : 0] wrc_addr    ;//input  wrc_addr;
+    reg [     BDBANKW-1 : 0] wrc_word    ;//input  wrc_word;
 
-	logic [         NMVU-1 : 0] quant_clr;			// Quantizer: clear
-    logic [NMVU*BQMSBIDX-1 : 0] quant_msbidx;		// Quantizer: bit position index of the MSB
-    logic [         NMVU-1 : 0] quant_start;		// Quantizer: signal to start quantizing
+	reg [         NMVU-1 : 0] quant_clr;        // Quantizer: clear
+    reg [NMVU*BQMSBIDX-1 : 0] quant_msbidx;     // Quantizer: bit position index of the MSB
 
-    logic[  NMVU*BCNTDWN-1 : 0] countdown;			// Config: number of clocks to countdown for given task
-    logic[    NMVU*BPREC-1 : 0] wprecision;			// Config: weight precision
-    logic[    NMVU*BPREC-1 : 0] iprecision;			// Config: input precision
-    logic[    NMVU*BPREC-1 : 0] oprecision;			// Config: output precision
-    logic[  NMVU*BBWADDR-1 : 0] wbaseaddr;			// Config: weight memory base address
-    logic[  NMVU*BBDADDR-1 : 0] ibaseaddr;			// Config: data memory base address for input
-    logic[  NMVU*BBDADDR-1 : 0] obaseaddr;			// Config: data memory base address for output
-
-
-    logic[  NMVU*BWBANKA-1 : 0] wrw_addr;			// Weight memory: write address
-    logic[  NMVU*BWBANKW-1 : 0] wrw_word;			// Weight memory: write word
-    logic[          NMVU-1 : 0] wrw_en;				// Weight memory: write enable
-    logic[  NMVU*BSTRIDE-1 : 0] wstride_0;			// Config: weight stride in dimension 0 (x)
-    logic[  NMVU*BSTRIDE-1 : 0] wstride_1;			// Config: weight stride in dimension 1 (y)
-    logic[  NMVU*BSTRIDE-1 : 0] wstride_2;			// Config: weight stride in dimension 2 (z)
-    logic[  NMVU*BSTRIDE-1 : 0] istride_0;			// Config: input stride in dimension 0 (x)
-    logic[  NMVU*BSTRIDE-1 : 0] istride_1;			// Config: input stride in dimension 1 (y)
-    logic[  NMVU*BSTRIDE-1 : 0] istride_2;			// Config: input stride in dimension 2 (z)
-    logic[  NMVU*BSTRIDE-1 : 0] ostride_0;			// Config: output stride in dimension 0 (x)
-    logic[  NMVU*BSTRIDE-1 : 0] ostride_1;			// Config: output stride in dimension 1 (y)
-    logic[  NMVU*BSTRIDE-1 : 0] ostride_2;			// Config: output stride in dimension 2 (z)
-    logic[  NMVU*BLENGTH-1 : 0] wlength_0;			// Config: weight length in dimension 0 (x)
-    logic[  NMVU*BLENGTH-1 : 0] wlength_1;			// Config: weight length in dimension 1 (y)
-    logic[  NMVU*BLENGTH-1 : 0] wlength_2;			// Config: weight length in dimension 2 (z)
-    logic[  NMVU*BLENGTH-1 : 0] ilength_0;			// Config: input length in dimension 0 (x)
-    logic[  NMVU*BLENGTH-1 : 0] ilength_1;			// Config: input length in dimension 1 (y)
-    logic[  NMVU*BLENGTH-1 : 0] ilength_2;			// Config: input length in dimension 2 (z)
-    logic[  NMVU*BLENGTH-1 : 0] olength_0;			// Config: output length in dimension 0 (x)
-    logic[  NMVU*BLENGTH-1 : 0] olength_1;			// Config: output length in dimension 1 (y)
-    logic[  NMVU*BLENGTH-1 : 0] olength_2;			// Config: output length in dimension 2 (z)
-
-	
+    reg[  NMVU*BCNTDWN-1 : 0] countdown;        // Config: number of clocks to countdown for given task
+    reg[    NMVU*BPREC-1 : 0] wprecision;       // Config: weight precision
+    reg[    NMVU*BPREC-1 : 0] iprecision;       // Config: input precision
+    reg[    NMVU*BPREC-1 : 0] oprecision;       // Config: output precision
+    reg[  NMVU*BBWADDR-1 : 0] wbaseaddr;        // Config: weight memory base address
+    reg[  NMVU*BBDADDR-1 : 0] ibaseaddr;        // Config: data memory base address for input
+    reg[  NMVU*BBDADDR-1 : 0] obaseaddr;        // Config: data memory base address for output
 
 
+    reg[  NMVU*BWBANKA-1 : 0] wrw_addr;         // Weight memory: write address
+    reg[  NMVU*BWBANKW-1 : 0] wrw_word;	        // Weight memory: write word
+    reg[          NMVU-1 : 0] wrw_en;           // Weight memory: write enable
+    reg[  NMVU*BSTRIDE-1 : 0] wstride_0;        // Config: weight stride in dimension 0 (x)
+    reg[  NMVU*BSTRIDE-1 : 0] wstride_1;        // Config: weight stride in dimension 1 (y)
+    reg[  NMVU*BSTRIDE-1 : 0] wstride_2;        // Config: weight stride in dimension 2 (z)
+    reg[  NMVU*BSTRIDE-1 : 0] istride_0;        // Config: input stride in dimension 0 (x)
+    reg[  NMVU*BSTRIDE-1 : 0] istride_1;        // Config: input stride in dimension 1 (y)
+    reg[  NMVU*BSTRIDE-1 : 0] istride_2;        // Config: input stride in dimension 2 (z)
+    reg[  NMVU*BSTRIDE-1 : 0] ostride_0;        // Config: output stride in dimension 0 (x)
+    reg[  NMVU*BSTRIDE-1 : 0] ostride_1;        // Config: output stride in dimension 1 (y)
+    reg[  NMVU*BSTRIDE-1 : 0] ostride_2;        // Config: output stride in dimension 2 (z)
+    reg[  NMVU*BLENGTH-1 : 0] wlength_0;        // Config: weight length in dimension 0 (x)
+    reg[  NMVU*BLENGTH-1 : 0] wlength_1;        // Config: weight length in dimension 1 (y)
+    reg[  NMVU*BLENGTH-1 : 0] wlength_2;        // Config: weight length in dimension 2 (z)
+    reg[  NMVU*BLENGTH-1 : 0] ilength_0;        // Config: input length in dimension 0 (x)
+    reg[  NMVU*BLENGTH-1 : 0] ilength_1;        // Config: input length in dimension 1 (y)
+    reg[  NMVU*BLENGTH-1 : 0] ilength_2;        // Config: input length in dimension 2 (z)
+    reg[  NMVU*BLENGTH-1 : 0] olength_0;        // Config: output length in dimension 0 (x)
+    reg[  NMVU*BLENGTH-1 : 0] olength_1;        // Config: output length in dimension 1 (y)
+    reg[  NMVU*BLENGTH-1 : 0] olength_2;        // Config: output length in dimension 2 (z)
 
-
+    //
+    // DUT
+    //
     mvutop #(
             .NMVU  (NMVU  ),
             .N     (N     ),
@@ -116,13 +114,12 @@ module mvutop_tester();
             .ic_clr           (ic_clr       ),
             .ic_recv_from     (ic_recv_from ),
             .mul_mode         (mul_mode     ),
-            .acc_clr          (acc_clr      ),
+            .shacc_clr        (shacc_clr    ),
             .max_en           (max_en       ),
             .max_clr          (max_clr      ),
             .max_pool         (max_pool     ),
             .quant_clr        (quant_clr	),
     		.quant_msbidx     (quant_msbidx ),
-            .quant_start      (quant_start	),
             .countdown        (countdown),
             .wprecision       (wprecision),
             .iprecision       (iprecision),
@@ -162,6 +159,42 @@ module mvutop_tester();
         );
 
 
+// =================================================================================================
+// Utility Tasks
+
+task writeData(unsigned[BDBANKW-1 : 0] word, unsigned[BDBANKA-1 : 0] addr);
+    wrc_addr = addr;
+    wrc_word = word;
+    wrc_en = 1;
+    #(`CLKPERIOD);
+    wrc_en = 0;
+endtask
+
+task writeDataRepeat(logic unsigned[BDBANKW-1 : 0] word, logic unsigned[BDBANKA-1 : 0] startaddr, int size, int stride=1);
+
+    for (int i = 0; i < size; i++) begin
+        writeData(word, startaddr);
+        startaddr = startaddr + stride;
+    end
+endtask
+
+task writeWeights(unsigned[BWBANKW-1 : 0] word, unsigned[BWBANKA-1 : 0] addr);
+    wrw_addr = addr;
+    wrw_word = word;
+    wrw_en = 1;
+    #(`CLKPERIOD);
+    wrw_en = 0;
+endtask
+
+task writeWeightsRepeat(logic unsigned[BWBANKW-1 : 0] word, logic unsigned[BWBANKA-1 : 0] startaddr, int size, int stride=1);
+    for (int i = 0; i < size; i++) begin
+        writeWeights(word, startaddr);
+        #(`CLKPERIOD);
+        startaddr = startaddr + stride;
+    end
+endtask
+
+
 //==================================================================================================
 // Simulation specific Threads
 
@@ -184,145 +217,264 @@ end
 
 
 // =================================================================================================
+// Testbench tasks
+
+//
+// Memory test
+//
+task memTests();
+
+endtask
+
+//
+//
+//
+task gemvTests();
+
+    print("TEST 1: matrix-vector mult: 1x1 x 1 tiles, 1x1 => 1 bit precision, , input=all 0's");
+    wprecision = 1;
+    iprecision = 1;
+    oprecision = 1;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 0;
+    wstride_0 = 0;
+    wstride_1 = 0;
+    wstride_2 = 0;
+    istride_0 = 0;
+    istride_1 = 0;
+    istride_2 = 0;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 0;
+    wlength_1 = 0;
+    wlength_2 = 0;
+    ilength_0 = 0;
+    ilength_1 = 0;
+    ilength_2 = 0;
+    olength_0 = 0;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 1;
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*10);
+
+    print("TEST 2: matrix-vector mult: 2x2 x 2 tiles, 1x1 => 1 bit precision, input=all 0's");
+    wprecision = 1;
+    iprecision = 1;
+    oprecision = 1;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 0;
+    wstride_0 = 0;
+    wstride_1 = 0;
+    wstride_2 = 0;
+    istride_0 = -1;
+    istride_1 = 0;
+    istride_2 = 0;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 3;
+    wlength_1 = 0;
+    wlength_2 = 0;
+    ilength_0 = 1;
+    ilength_1 = 1;
+    ilength_2 = 0;
+    olength_0 = 1;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 4;
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*15);
+
+    // TEST 3
+    // Expected result: accumulators get to value h480, output to data memory is b10 for each element
+    // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. d3*d3*d64*d2 = d1152 = h480)
+    print("TEST 3: matrix-vector mult: 2x2 x 2 tiles, 2x2 => 2 bit precision, , input=all 1's");
+    writeDataRepeat('hffffffffffffffff, 'h0000, 4);
+    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 8);
+    wprecision = 2;
+    iprecision = 2;
+    oprecision = 2;
+    quant_msbidx = 10;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 'h4000;
+    wstride_0 = -2;      // 1 tile back move x 2 bits
+    wstride_1 = 2;       // 1 tile ahead move x 2 bits
+    wstride_2 = 0;
+    istride_0 = -2;      // 1 tile back move x 2 bits 
+    istride_1 = 0;
+    istride_2 = -2;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 1;       // 2 tiles in width
+    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
+    wlength_2 = 1;       // 2 tiles in height
+    ilength_0 = 1;       // 2 tiles in height
+    ilength_1 = 0;       // number bit combinations
+    ilength_2 = 0;       // 2 tiles in width of matrix operand
+    olength_0 = 1;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 16;       // 2 tiles x 2 tiles x 2bit x 2bits
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*28);
+
+    // TEST 4
+    // Expected result: accumulators get to value h6c0, output to data memory is b110 for each element
+    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. d3*d3*d64*d3 = d1728 = h6c0)
+    print("TEST 4: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=all 1's");
+    writeDataRepeat('hffffffffffffffff, 'h0000, 6);
+    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 18);
+    wprecision = 2;
+    iprecision = 2;
+    oprecision = 3;
+    quant_msbidx = 10;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 'h6000;
+    wstride_0 = -4;      // 2 tile back move x 2 bits
+    wstride_1 = 2;       // 1 tile ahead move x 2 bits
+    wstride_2 = 0;
+    istride_0 = -4;      // 2 tile back move x 2 bits 
+    istride_1 = 0;
+    istride_2 = -4;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 2;       // 3 tiles in width
+    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
+    wlength_2 = 2;       // 3 tiles in height
+    ilength_0 = 2;       // 3 tiles in height
+    ilength_1 = 0;       // number bit combinations
+    ilength_2 = 0;       // 2 tiles in width of matrix operand
+    olength_0 = 2;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 36;       // 3 tiles x 3 tiles x 2bit x 2bits
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*48);
+
+    // TEST 5
+    // Expected result: accumulators get to value h180, output to data memory is b001 for each element
+    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. d2*d1*d64*d3 = d384 = h180)
+    print("TEST 5: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=b10, weights=b01");
+    writeDataRepeat('hffffffffffffffff, 'h0000, 3, 2);      // MSB=1  \
+    writeDataRepeat('h0000000000000000, 'h0001, 3, 2);      // LSB=0  - = b10
+    writeWeightsRepeat({BWBANKW{1'b0}}, 'h0, 9, 2);         // MSB=0 \
+    writeWeightsRepeat({BWBANKW{1'b1}}, 'h1, 9, 2);         // LSB=1 - = b01
+    wprecision = 2;
+    iprecision = 2;
+    oprecision = 3;
+    quant_msbidx = 10;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 'h7000;
+    wstride_0 = -4;      // 2 tile back move x 2 bits
+    wstride_1 = 2;       // 1 tile ahead move x 2 bits
+    wstride_2 = 0;
+    istride_0 = -4;      // 2 tile back move x 2 bits 
+    istride_1 = 0;
+    istride_2 = -4;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 2;       // 3 tiles in width
+    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
+    wlength_2 = 2;       // 3 tiles in height
+    ilength_0 = 2;       // 3 tiles in height
+    ilength_1 = 0;       // number bit combinations
+    ilength_2 = 0;       // 2 tiles in width of matrix operand
+    olength_0 = 2;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 36;       // 3 tiles x 3 tiles x 2bit x 2bits
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*48);
+
+endtask
+
+
+// =================================================================================================
 // Main test thread
 
 initial begin
 
     // Initialize signals
-    assign rst_n = 0;
-    assign start = 0;
-    assign ic_clr = 0;      
-    assign ic_recv_from = 0;
-    assign mul_mode = 0;
-    assign acc_clr = 0;
-    assign max_en = 0;
-    assign max_clr = 0;
-    assign max_pool = 0;
-    assign rdc_en = 0;
-    assign rdc_addr = 0;
-    assign wrc_en = 0;
-    assign wrc_addr = 0;
-    assign wrc_word = 0;
-	assign quant_clr = 0;
-    assign quant_msbidx = 0;
-    assign quant_start = 0;
-    assign countdown = 0;
-    assign wprecision = 0;
-    assign iprecision = 0;
-    assign oprecision = 0;
-    assign wbaseaddr = 0;
-    assign ibaseaddr = 0;
-    assign obaseaddr = 0;
-    assign wstride_0 = 0;
-    assign wstride_1 = 0;
-    assign wstride_2 = 0;
-    assign istride_0 = 0;
-    assign istride_1 = 0;
-    assign istride_2 = 0;
-    assign ostride_0 = 0;
-    assign ostride_1 = 0;
-    assign ostride_2 = 0;
-    assign wlength_0 = 0;
-    assign wlength_1 = 0;
-    assign wlength_2 = 0;
-    assign ilength_0 = 0;
-    assign ilength_1 = 0;
-    assign ilength_2 = 0;
-    assign olength_0 = 0;
-    assign olength_1 = 0;
-    assign olength_2 = 0;
-    assign wrw_addr = 0;
-    assign wrw_word = 0;
-    assign wrw_en = 0;
+    rst_n = 0;
+    start = 0;
+    ic_clr = 0;      
+    ic_recv_from = 0;
+    mul_mode = 'b01;
+    shacc_clr = 0;
+    max_en = 0;
+    max_clr = 0;
+    max_pool = 0;
+    rdc_en = 0;
+    rdc_addr = 0;
+    wrc_en = 0;
+    wrc_addr = 0;
+    wrc_word = 0;
+	quant_clr = 0;
+    quant_msbidx = 0;
+    countdown = 0;
+    wprecision = 0;
+    iprecision = 0;
+    oprecision = 0;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = 0;
+    wstride_0 = 0;
+    wstride_1 = 0;
+    wstride_2 = 0;
+    istride_0 = 0;
+    istride_1 = 0;
+    istride_2 = 0;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 0;
+    wlength_1 = 0;
+    wlength_2 = 0;
+    ilength_0 = 0;
+    ilength_1 = 0;
+    ilength_2 = 0;
+    olength_0 = 0;
+    olength_1 = 0;
+    olength_2 = 0;
+    wrw_addr = 0;
+    wrw_word = 0;
+    wrw_en = 0;
     #(`CLKPERIOD*10);
 
     // Come out of reset
-    assign rst_n = 1;
+    rst_n = 1;
     #(`CLKPERIOD*10);
 
-    print("TEST 1: matrix-vector mult: 1x1 x 1 tiles, 1x1 => 1 bit precision");
-    assign wprecision = 1;
-    assign iprecision = 1;
-    assign oprecision = 1;
-    assign wstride_0 = 0;
-    assign wstride_1 = 0;
-    assign wstride_2 = 0;
-    assign istride_0 = 0;
-    assign istride_1 = 0;
-    assign istride_2 = 0;
-    assign ostride_0 = 0;
-    assign ostride_1 = 0;
-    assign ostride_2 = 0;
-    assign wlength_0 = 0;
-    assign wlength_1 = 0;
-    assign wlength_2 = 0;
-    assign ilength_0 = 0;
-    assign ilength_1 = 0;
-    assign ilength_2 = 0;
-    assign olength_0 = 0;
-    assign olength_1 = 0;
-    assign olength_2 = 0;
-    assign countdown = 1;
-    assign start = 1;
-    #(`CLKPERIOD);
-    assign start = 0;
-    #(`CLKPERIOD*10);
+    // Turn some stuff on
+    max_en = 1;
 
-    print("TEST 2: matrix-vector mult: 2x2 x 2 tiles, 1x1 => 1 bit precision");
-    assign wprecision = 1;
-    assign iprecision = 1;
-    assign oprecision = 1;
-    assign wstride_0 = 0;
-    assign wstride_1 = 0;
-    assign wstride_2 = 0;
-    assign istride_0 = -1;
-    assign istride_1 = 0;
-    assign istride_2 = 0;
-    assign ostride_0 = 0;
-    assign ostride_1 = 0;
-    assign ostride_2 = 0;
-    assign wlength_0 = 3;
-    assign wlength_1 = 0;
-    assign wlength_2 = 0;
-    assign ilength_0 = 1;
-    assign ilength_1 = 1;
-    assign ilength_2 = 0;
-    assign olength_0 = 1;
-    assign olength_1 = 0;
-    assign olength_2 = 0;
-    assign countdown = 4;
-    assign start = 1;
-    #(`CLKPERIOD);
-    assign start = 0;
-    #(`CLKPERIOD*10);
+ 
+    // Run gemv tests
+    gemvTests();
 
-    print("TEST 3: matrix-vector mult: 2x2 x 2 tiles, 2x2 => 2 bit precision");
-    assign wprecision = 2;
-    assign iprecision = 2;
-    assign oprecision = 2;
-    assign wstride_0 = -2;      // 1 tile back move x 2 bits
-    assign wstride_1 = 2;       // 1 tile ahead move x 2 bits
-    assign wstride_2 = 0;
-    assign istride_0 = -2;      // 1 tile back move x 2 bits 
-    assign istride_1 = 0;
-    assign istride_2 = -2;
-    assign ostride_0 = 0;
-    assign ostride_1 = 0;
-    assign ostride_2 = 0;
-    assign wlength_0 = 1;       // 2 tiles in width
-    assign wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
-    assign wlength_2 = 1;       // 2 tiles in height
-    assign ilength_0 = 1;       // 2 tiles in height
-    assign ilength_1 = 0;       // number bit combinations
-    assign ilength_2 = 0;       // 2 tiles in width of matrix operand
-    assign olength_0 = 1;
-    assign olength_1 = 0;
-    assign olength_2 = 0;
-    assign countdown = 16;       // 2 tiles x 2 tiles x 2bit x 2bits
-    assign start = 1;
-    #(`CLKPERIOD);
-    assign start = 0;
-    #(`CLKPERIOD*20);
 
     print_banner($sformatf("Simulation done."));
     $finish();

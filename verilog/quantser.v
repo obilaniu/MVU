@@ -7,50 +7,35 @@
 
 `timescale 1 ns / 1 ps
 
-module quantser(clk, clr, msbidx, bdout, start, din, dout);
-
-/* Parameters */
-parameter BDIN        = 32;                 // Input data bit depth
-parameter BDOUTMAX    = 32;                 // Maximum output data precision bit length (must be < BDIN)
-localparam  MAXBDIP   = $clog2(BDIN);       // 
-localparam  MAXBDOP   = $clog2(BDOUTMAX);   // 
-
-
-/* Ports */
-input   wire                                    clk;        // Clock
-input   wire                                    clr;        // Clears the state and output reg
-input   wire            [    MAXBDIP-1 : 0]     msbidx;     // Bit position of MSB in input
-input   wire            [    MAXBDOP-1 : 0]     bdout;      // Bit depth of output
-input   wire                                    start;      // Pos-edge trigger to start serializing output
-input   wire            [       BDIN-1 : 0]     din;        // Input data
-output  wire                                    dout;       // Serialized output
+module quantser #(
+    parameter BWIN      = 32,                       // Input data bit depth
+    parameter BWMSBIDX  = $clog2(BWIN)              // Bitwidth of the MSB index position port
+)
+(
+    input   wire                        clk,        // Clock
+    input   wire                        clr,        // Clears the state and output reg
+    input   wire  [   BWMSBIDX-1 : 0]   msbidx,     // Bit position of MSB in input
+    input   wire                        load,       // Load the serializer from din
+    input   wire                        step,       // Step serializing output
+    input   wire  [       BWIN-1 : 0]   din,        // Input data
+    output  wire                        dout        // Serialized output
+);
 
 
-/* Internal registers */
-reg             [    BDIN-1 : 0]    sr;         // Shift register
-reg unsigned    [ MAXBDOP-1 : 0]    cntdwn;     // Serializer countdown
+// Internal registers
+reg             [    BWIN-1 : 0]    sr;         // Shift register
 
 
-
-/* Shift register */
-always @(posedge clk or posedge clr) begin
+// Shift register
+always @(posedge clk) begin
     if (clr) begin
         sr <= 0;
-        cntdwn <= 0;
     end else if (clk) begin
-        if (cntdwn != 0) begin
-            //sr <= {sr[BDIN-2:1], 1'b0};
+		if (load) begin
+            sr <= din;
+        end else if (step) begin
             sr <= sr << 1;
             sr[0] <= 1'b0;
-            cntdwn <= cntdwn-1;
-        end else begin
-            if (start == 1) begin
-                cntdwn <= bdout;
-                sr <= din; 
-            end else begin
-                cntdwn <= 0;
-                sr <= sr; 
-            end
         end       
     end 
 end

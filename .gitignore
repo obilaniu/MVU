@@ -88,3 +88,6 @@
 *.wcfg
 #
 .vscode/tasks.json
+
+# Specific directories
+verification/ip/xilinx/
