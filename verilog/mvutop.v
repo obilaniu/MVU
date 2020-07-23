@@ -201,6 +201,7 @@ wire[        NMVU-1 : 0] quant_clr_int;         // Quantizer: internal clear con
 // TODO: DO SOMETHING USEFUL WITH THESE SIGNALS
 wire[        NMVU-1 : 0] outstep;
 wire[        NMVU-1 : 0] outload;
+
 // Other wires
 wire[        NMVU-1 : 0] inagu_clr;
 wire[        NMVU-1 : 0] controller_clr;    // Controller clear/reset
@@ -209,6 +210,7 @@ wire[        NMVU-1 : 0] run;               // Running if 1
 wire[        NMVU-1 : 0] d_msb;             // Input data address on MSB
 wire[        NMVU-1 : 0] w_msb;             // Weight data address on MSB
 wire[        NMVU-1 : 0] neg_acc;           // Negate the input to the accumulators
+wire[        NMVU-1 : 0] neg_acc_dly;       // Negation control delayed
 wire[        NMVU-1 : 0] shacc_load;        // Accumulator load control
 wire[        NMVU-1 : 0] shacc_sh;          // Accumulator shift control
 wire[        NMVU-1 : 0] shacc_acc;         // Accumulator accumulate control
@@ -357,7 +359,7 @@ assign neg_acc = (d_signed & d_msb) ^ (w_signed & w_msb);
 
 
 // Insert delay for accumulator shifter signals to account for number of VVP pipeline stages
-generate for(i=0; i < NMVU; i = i+1) begin: acc_delayarray
+generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
 
     // TODO: connect the step signals on these shift regs
     shiftreg #(
@@ -368,6 +370,16 @@ generate for(i=0; i < NMVU; i = i+1) begin: acc_delayarray
         .step   (1'b1),
         .in     (start[i]),
         .out    (shacc_load_start[i])
+    );
+
+    shiftreg #(
+        .N      (VVPSTAGES + MEMRDLATENCY + 0)
+    ) neg_acc_delayarrayunit (
+        .clk    (clk), 
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (neg_acc[i]),
+        .out    (neg_acc_dly[i])
     );
 
     shiftreg #(
@@ -432,7 +444,7 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
         (
             .clk			(clk									),
             .mul_mode		(mul_mode[i*2 +: 2]						),
-            .neg_acc        (neg_acc[i]                             ),
+            .neg_acc        (neg_acc_dly[i]                         ),
             .shacc_clr	    (shacc_clr_int[i]  						),
             .shacc_load     (shacc_load[i]                          ),
             .shacc_acc      (shacc_acc[i]                           ),
