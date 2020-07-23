@@ -465,6 +465,131 @@ task gemvSignedTests();
     start = 0;
     #(`CLKPERIOD*28);
 
+    // Expected result: accumulators get to value hfffffffffffffd00, output to data memory is b10 for each element
+    // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. -d2*d3*d64*d2 = -d768 = 32'hfffffffffffffd00)
+    // Result output to bank 11 starting at address 0
+    print("TEST gemv signed 2: matrix-vector mult: 2x2 x 2 tiles, 2s X 2u => 2 bit precision, input: d=-2, w=3");
+    writeDataRepeat('hffffffffffffffff, 'h0000, 2, 2);      // MSB=1 \
+    writeDataRepeat('h0000000000000000, 'h0001, 2, 2);      // LSB=0 - = b10 = -d2
+    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 8);            // MSB=1, LSB=1 => b11 = d3
+    wprecision = 2;
+    iprecision = 2;
+    oprecision = 2;
+    d_signed = 1;
+    w_signed = 0;
+    quant_msbidx = 'd10;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = {5'd11, 10'd0};
+    wstride_0 = -2;      // 1 tile back move x 2 bits
+    wstride_1 = 2;       // 1 tile ahead move x 2 bits
+    wstride_2 = 0;
+    istride_0 = -2;      // 1 tile back move x 2 bits 
+    istride_1 = 0;
+    istride_2 = -2;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 1;       // 2 tiles in width
+    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
+    wlength_2 = 1;       // 2 tiles in height
+    ilength_0 = 1;       // 2 tiles in height
+    ilength_1 = 0;       // number bit combinations
+    ilength_2 = 0;       // 2 tiles in width of matrix operand
+    olength_0 = 1;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 16;       // 2 tiles x 2 tiles x 2bit x 2bits
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*28);
+
+    // Expected result: accumulators get to value h0000000000010000, output to data memory is b01 for each element
+    // (i.e. [0000000000000000, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
+    // (i.e. -d2*-d1*d64*d2 = d256 = 32'h0000000000010000)
+    // Result output to bank 12 starting at address 0
+    print("TEST gemv signed 3: matrix-vector mult: 2x2 x 2 tiles, 2s X 2s => 2 bit precision, input: d=-2, w=-1");
+    writeDataRepeat('hffffffffffffffff, 'h0000, 2, 2);      // MSB=1 \
+    writeDataRepeat('h0000000000000000, 'h0001, 2, 2);      // LSB=0 - = b10 = -d2
+    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 8);            // MSB=1, LSB=1 => b11 = d3
+    wprecision = 2;
+    iprecision = 2;
+    oprecision = 2;
+    d_signed = 1;
+    w_signed = 1;
+    quant_msbidx = 'd9;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = {5'd12, 10'd0};
+    wstride_0 = -2;      // 1 tile back move x 2 bits
+    wstride_1 = 2;       // 1 tile ahead move x 2 bits
+    wstride_2 = 0;
+    istride_0 = -2;      // 1 tile back move x 2 bits 
+    istride_1 = 0;
+    istride_2 = -2;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 1;       // 2 tiles in width
+    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
+    wlength_2 = 1;       // 2 tiles in height
+    ilength_0 = 1;       // 2 tiles in height
+    ilength_1 = 0;       // number bit combinations
+    ilength_2 = 0;       // 2 tiles in width of matrix operand
+    olength_0 = 1;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 16;       // 2 tiles x 2 tiles x 2bit x 2bits
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*28);
+
+    // Expected result: accumulators get to value hfffffffffffffd00, output to data memory is b110 for each element
+    // (i.e. [0000000000000000, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
+    // (i.e. d3*-d2*d64*d2 = -d768 = 32'hfffffffffffffd00)
+    // Result output to bank 13 starting at address 0
+    print("TEST gemv signed 3: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: d=3, w=-2");
+    writeDataRepeat('h0000000000000000, 'h0000, 2, 3);      // MSB  =0 \
+    writeDataRepeat('hffffffffffffffff, 'h0001, 2, 3);      // MSB-1=1 - = b011 = d3
+    writeDataRepeat('hffffffffffffffff, 'h0002, 2, 3);      // LSB  =1 /
+    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 4, 2);         // MSB  =1 \
+    writeWeightsRepeat({BWBANKW{1'b0}}, 'h1, 4, 2);         // LSB  =0 - = b10 = -d2
+    wprecision = 2;
+    iprecision = 3;
+    oprecision = 3;
+    d_signed = 1;
+    w_signed = 1;
+    quant_msbidx = 'd11;
+    wbaseaddr = 0;
+    ibaseaddr = 0;
+    obaseaddr = {5'd13, 10'd0};
+    wstride_0 = -2;      // 1 tile back move x 2 bits
+    wstride_1 = 2;       // 1 tile ahead move x 2 bits
+    wstride_2 = 0;
+    istride_0 = -3;      // 1 tile back move x 3 bits 
+    istride_1 = 0;
+    istride_2 = -3;
+    ostride_0 = 0;
+    ostride_1 = 0;
+    ostride_2 = 0;
+    wlength_0 = 1;       // 2 tiles in width
+    wlength_1 = 5;       // number bit combinations i.e. 3x2 bits = 6 - 1 = length 5
+    wlength_2 = 1;       // 2 tiles in height
+    ilength_0 = 1;       // 2 tiles in height
+    ilength_1 = 0;       // number bit combinations
+    ilength_2 = 0;       // 2 tiles in width of matrix operand
+    olength_0 = 1;
+    olength_1 = 0;
+    olength_2 = 0;
+    countdown = 24;       // 2 tiles x 2 tiles x 3bit x 2bits
+    start = 1;
+    #(`CLKPERIOD);
+    start = 0;
+    #(`CLKPERIOD*36);
+
 endtask
 
 
