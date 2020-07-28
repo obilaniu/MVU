@@ -4,14 +4,13 @@
 
 `timescale 1 ps / 1 ps
 /**** Module ****/
-module maxpool(clk, max_en, max_clr, max_pool, I, O);
+module maxpool(clk, max_clr, max_pool, I, O);
 
 
 /* Parameters */
 parameter N = 32;
 
 input  wire                 clk;
-input  wire                 max_en;
 input  wire                 max_clr;
 input  wire                 max_pool;
 input  wire signed[N-1 : 0] I;
@@ -19,18 +18,18 @@ output reg  signed[N-1 : 0] O = 0;
 
 
 /* Logic */
-always @(posedge clk or posedge max_clr) begin
+always @(posedge clk) begin
     if(max_clr) begin
-        O = 0;
+        O <= 0;
     end else if(clk) begin
-        if(max_en) begin
-            if(max_pool) begin
-                if(I>O) begin
-                    O = I;/* O = max(O,I) */
-                end
+        if(max_pool) begin
+            if(I>O) begin
+                O <= I;/* O = max(O,I) */
             end else begin
-                O = I;    /* Plain set */
+                O <= I;    /* Plain set */
             end
+        end else begin
+            O <= I;
         end
     end
 end

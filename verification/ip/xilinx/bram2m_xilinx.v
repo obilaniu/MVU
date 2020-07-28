@@ -1,4 +1,4 @@
-// (c) Copyright 1995-2019 Xilinx, Inc. All rights reserved.
+// (c) Copyright 1995-2020 Xilinx, Inc. All rights reserved.
 // 
 // This file contains confidential and proprietary information
 // of Xilinx, Inc. and is protected under U.S. and
@@ -55,6 +55,7 @@
 (* DowngradeIPIdentifiedWarnings = "yes" *)
 module bram2m_xilinx (
   clka,
+  ena,
   wea,
   addra,
   dina,
@@ -66,6 +67,8 @@ module bram2m_xilinx (
 
 (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM_PORTA CLK" *)
 input wire clka;
+(* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM_PORTA EN" *)
+input wire ena;
 (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM_PORTA WE" *)
 input wire [0 : 0] wea;
 (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM_PORTA ADDR" *)
@@ -99,8 +102,8 @@ output wire [4095 : 0] doutb;
     .C_BYTE_SIZE(9),
     .C_ALGORITHM(1),
     .C_PRIM_TYPE(1),
-    .C_LOAD_INIT_FILE(1),
-    .C_INIT_FILE_NAME("bram2m_xilinx.mif"),
+    .C_LOAD_INIT_FILE(0),
+    .C_INIT_FILE_NAME("no_coe_file_loaded"),
     .C_INIT_FILE("bram2m_xilinx.mem"),
     .C_USE_DEFAULT_DATA(0),
     .C_DEFAULT_DATA("0"),
@@ -108,11 +111,11 @@ output wire [4095 : 0] doutb;
     .C_RST_PRIORITY_A("CE"),
     .C_RSTRAM_A(0),
     .C_INITA_VAL("0"),
-    .C_HAS_ENA(0),
+    .C_HAS_ENA(1),
     .C_HAS_REGCEA(0),
     .C_USE_BYTE_WEA(0),
     .C_WEA_WIDTH(1),
-    .C_WRITE_MODE_A("NO_CHANGE"),
+    .C_WRITE_MODE_A("WRITE_FIRST"),
     .C_WRITE_WIDTH_A(4096),
     .C_READ_WIDTH_A(4096),
     .C_WRITE_DEPTH_A(512),
@@ -158,11 +161,11 @@ output wire [4095 : 0] doutb;
     .C_DISABLE_WARN_BHV_RANGE(0),
     .C_COUNT_36K_BRAM("57"),
     .C_COUNT_18K_BRAM("0"),
-    .C_EST_POWER_SUMMARY("Estimated Power for IP     :     274.963968 mW")
+    .C_EST_POWER_SUMMARY("Estimated Power for IP     :     277.382912 mW")
   ) inst (
     .clka(clka),
     .rsta(1'D0),
-    .ena(1'D0),
+    .ena(ena),
     .regcea(1'D0),
     .wea(wea),
     .addra(addra),
