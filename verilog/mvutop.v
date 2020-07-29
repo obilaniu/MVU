@@ -332,7 +332,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             olength_1_q[i]      <= 0;
             olength_2_q[i]      <= 0;
         end else begin
-            if (start_q[i]) begin
+            if (start[i]) begin
                 mul_mode_q[i]       <= mul_mode     [i*2 +: 2];
                 quant_msbidx_q[i]   <= quant_msbidx [i*BQMSBIDX +: BQMSBIDX];
                 countdown_q[i]      <= countdown    [i*BCNTDWN +: BCNTDWN];

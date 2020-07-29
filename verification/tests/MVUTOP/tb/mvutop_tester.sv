@@ -306,7 +306,7 @@ task gemvTests();
     quant_msbidx = 10;
     wbaseaddr = 0;
     ibaseaddr = 0;
-    obaseaddr = 'h4000;
+    obaseaddr = {5'd1, 10'd0};
     wstride_0 = -2;      // 1 tile back move x 2 bits
     wstride_1 = 2;       // 1 tile ahead move x 2 bits
     wstride_2 = 0;
@@ -344,7 +344,7 @@ task gemvTests();
     quant_msbidx = 10;
     wbaseaddr = 0;
     ibaseaddr = 0;
-    obaseaddr = 'h6000;
+    obaseaddr = {5'd2, 10'd0};
     wstride_0 = -4;      // 2 tile back move x 2 bits
     wstride_1 = 2;       // 1 tile ahead move x 2 bits
     wstride_2 = 0;
@@ -384,7 +384,7 @@ task gemvTests();
     quant_msbidx = 10;
     wbaseaddr = 0;
     ibaseaddr = 0;
-    obaseaddr = 'h7000;
+    obaseaddr = {5'd3, 10'd0};
     wstride_0 = -4;      // 2 tile back move x 2 bits
     wstride_1 = 2;       // 1 tile ahead move x 2 bits
     wstride_2 = 0;
