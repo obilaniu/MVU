@@ -317,7 +317,7 @@ task gemvTests();
     wstride_2 = 0;
     istride_0 = -2;      // 1 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -2;
+    istride_2 = -2;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -356,7 +356,7 @@ task gemvTests();
     wstride_2 = 0;
     istride_0 = -4;      // 2 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -4;
+    istride_2 = -4;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -397,7 +397,7 @@ task gemvTests();
     wstride_2 = 0;
     istride_0 = -4;      // 2 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -4;
+    istride_2 = -4;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -446,7 +446,7 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -2;      // 1 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -2;
+    istride_2 = -2;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -487,7 +487,7 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -2;      // 1 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -2;
+    istride_2 = -2;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -528,7 +528,7 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -2;      // 1 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -2;
+    istride_2 = -2;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -571,7 +571,7 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -3;      // 1 tile back move x 3 bits 
     istride_1 = 0;
-    istride_2 = -3;
+    istride_2 = -3;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -615,7 +615,7 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -3;      // 1 tile back move x 3 bits 
     istride_1 = 0;
-    istride_2 = -3;
+    istride_2 = -3;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -658,7 +658,7 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -6;      // 2 tile back move x 3 bits 
     istride_1 = 0;
-    istride_2 = -6;
+    istride_2 = -6;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -701,7 +701,7 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -6;      // 2 tile back move x 3 bits 
     istride_1 = 0;
-    istride_2 = -6;
+    istride_2 = -6;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
