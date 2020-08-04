@@ -234,7 +234,7 @@ assign wri_addr         = 0;
 
 
 // TODO: WIRE THESE UP TO THE AGU. PULLED UP/DOWN FOR NOW
-assign rdd_en           = 1;
+assign rdd_en           = {NMVU{1'b1}};                     // Always reading for now
 
 // TODO: WIRE THESE UP TO SOMETHING USEFUL
 assign outload          = 0;
