@@ -506,9 +506,9 @@ task gemvSignedTests();
     start = 0;
     #(`CLKPERIOD*28);
 
-    // Expected result: accumulators get to value h0000000000010000, output to data memory is b01 for each element
+    // Expected result: accumulators get to value h0000000000000100, output to data memory is b01 for each element
     // (i.e. [0000000000000000, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
-    // (i.e. -d2*-d1*d64*d2 = d256 = 32'h0000000000010000)
+    // (i.e. -d2*-d1*d64*d2 = d256 = 32'h0000000000000100)
     // Result output to bank 12 starting at address 0
     print("TEST gemv signed 3: matrix-vector mult: 2x2 x 2 tiles, 2s X 2s => 2 bit precision, input: d=-2, w=-1");
     writeDataRepeat('hffffffffffffffff, 'h0000, 2, 2);      // MSB=1 \
