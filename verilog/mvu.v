@@ -46,17 +46,21 @@
 /**** Module mvu ****/
 module mvu( clk,
             mul_mode,
-            acc_clr,
-            acc_sh,
+            shacc_clr,
+            shacc_load,
+            shacc_acc,
+            shacc_sh,
             max_en,
             max_clr,
             max_pool,
             quant_clr,
             quant_msbidx,
-            quant_bdout,
-            quant_start,
-            quantarray_out,
+			quant_step,
+            quant_load,
             rdw_addr,
+			wrw_addr,
+			wrw_word,
+			wrw_en,
             rdd_en,
             rdd_grnt,
             rdd_addr,
@@ -99,14 +103,14 @@ localparam BACC        = 32;            /* Bitwidth of Accumulators */
 
 // Quantizer parameters
 parameter  QMSBLOCBD  = $clog2(BACC);   // Bitwidth of the quantizer MSB location specifier
-parameter  QBDOUTBD   = $clog2(BACC);   // Bitwidth of the quantizer bit-depth out specifier
-
 
 /* Interface */
 input  wire                clk;
 input  wire[        1 : 0] mul_mode;
-input  wire                acc_clr;
-input  wire                acc_sh;
+input  wire                shacc_clr;
+input  wire                shacc_load;
+input  wire                shacc_acc;
+input  wire                shacc_sh;
 input  wire                max_en;
 input  wire                max_clr;
 input  wire                max_pool;
@@ -114,11 +118,14 @@ input  wire                max_pool;
 // Quantizer input signals
 input  wire                  quant_clr;
 input  wire[QMSBLOCBD-1 : 0] quant_msbidx;
-input  wire[QBDOUTBD-1  : 0] quant_bdout;
-input  wire                  quant_start;
-output wire[N-1         : 0] quantarray_out; 
+input  wire                  quant_load;
+input  wire                  quant_step;
 
-input  wire[BWBANKA-1 : 0] rdw_addr;
+// Weight memory signals
+input  wire[  BWBANKA-1 : 0]	rdw_addr;
+input  wire[  BWBANKA-1 : 0]	wrw_addr;			// Weight memory: write address
+input  wire[  BWBANKW-1 : 0]	wrw_word;			// Weight memory: write word
+input  wire						wrw_en;				// Weight memory: write enable
 
 input  wire                rdd_en;
 output wire                rdd_grnt;
@@ -160,7 +167,7 @@ wire[BDBANKA-1 : 0] wr_addr;
 wire[BWBANKW-1 : 0] core_weights;
 wire[BDBANKW-1 : 0] core_data;
 wire[BSUM*N-1  : 0] core_out;
-wire[BACC*N-1  : 0] acc_out;
+wire[BACC*N-1  : 0] shacc_out;
 wire[BACC*N-1  : 0] pool_out;
 wire[BDBANKW-1 : 0] quant_out;
 reg [BDBANKW-1 : 0] rdd_word;
@@ -176,12 +183,12 @@ wire[BDBANKW*NDBANK-1 : 0] rdc_words_t;
 
 
 /* Wiring */
-cdru    #(BDBANKABS)    read_cdu     (rdi_en, rdi_addr, rdi_grnt,
+cdru    #(BDBANKABS, BDBANKAWS)    read_cdu     (rdi_en, rdi_addr, rdi_grnt,
                                       rdd_en, rdd_addr, rdd_grnt,
                                       rdc_en, rdc_addr, rdc_grnt,
                                       rd_en,  rd_addr,  rd_muxcode);
 
-cdwu    #(BDBANKABS)    write_cdu    (wri_en, wri_addr, wri_grnt,
+cdwu    #(BDBANKABS, BDBANKAWS)    write_cdu    (wri_en, wri_addr, wri_grnt,
                                       wrd_en, wrd_addr, wrd_grnt,
                                       wrc_en, wrc_addr, wrc_grnt,
                                       wr_en,  wr_addr,  wr_muxcode);
@@ -196,14 +203,15 @@ mvp     #(N, 'b0010101) matrix_core  (clk, mul_mode, core_weights, core_data, co
     bram2m          weights_bank (clk, {BWBANKW{1'b0}}, rdw_addr, {BWBANKA{1'b0}}, 1'b0, core_weights);
 `elsif XILINX
     bram2m_xilinx   weights_bank (
-        .clka(clk),    // input wire clka
-        .wea(1'b0),      // input wire [0 : 0] wea
-        .addra(rdw_addr),  // input wire [8 : 0] addra
-        .dina({BWBANKW{1'b0}}),    // input wire [4095 : 0] dina
-        .clkb(clk),    // input wire clkb
-        .enb(1'b0),      // input wire enb
-        .addrb({BWBANKA{1'b0}}),  // input wire [8 : 0] addrb
-        .doutb(core_weights)  // output wire [4095 : 0] doutb        
+        .clka	(clk),			// input wire clka
+        .ena    (1'b1),         // always enable
+        .wea	(wrw_en),		// write enable from outside world
+        .addra	(wrw_addr),		// write address from outside world
+        .dina	(wrw_word),		// write word from outside world
+        .clkb	(clk),			// input wire clkb
+        .enb	(1'b1),			// always enable the read port
+        .addrb	(rdw_addr),		// read address from address generator
+        .doutb	(core_weights)	// weight word to MVU core        
     );
  `else
     $display("ERROR: INTEL or XILINX macro not defined!");
@@ -212,32 +220,32 @@ mvp     #(N, 'b0010101) matrix_core  (clk, mul_mode, core_weights, core_data, co
 
 /* Shift/Accumulators */
 generate for(i=0;i<N;i=i+1) begin:shaccarray
-    shacc   #(BACC, BSUM) accumulator(clk, acc_clr, acc_sh,
+    shacc   #(BACC, BSUM) accumulator(clk, shacc_clr, shacc_load, shacc_acc, shacc_sh,
                                       core_out[i*BSUM +: BSUM],
-                                      acc_out [i*BACC +: BACC]);
+                                      shacc_out [i*BACC +: BACC]);
 end endgenerate
 
 
 /* Max poolers */
 generate for(i=0;i<N;i=i+1) begin:poolarray
-    maxpool #(BACC)       pooler     (clk, max_clr, max_en, max_pool,
-                                      acc_out [i*BACC +: BACC],
+    maxpool #(BACC)       pooler     (clk, max_clr, max_pool,
+                                      shacc_out [i*BACC +: BACC],
                                       pool_out[i*BACC +: BACC]);
 end endgenerate
+
 
 /* Quantizers */
 generate for(i=0;i<N;i=i+1) begin:quantarray
     quantser #(
-        .BDIN       (       BACC),
-        .BDOUTMAX   (       BACC)
-    ) quantizer (
-        .clk        (                        clk),
-        .clr        (                  quant_clr),
-        .msbidx     (               quant_msbidx),
-        .bdout      (                quant_bdout),
-        .start      (                quant_start),
-        .din        (   pool_out[i*BACC +: BACC]),
-        .dout       (          quantarray_out[i])
+        .BWIN       (BACC)
+    ) quantser_unit (
+        .clk        (clk),
+        .clr        (quant_clr),
+        .msbidx     (quant_msbidx),
+        .load       (quant_load),
+        .step       (quant_step),
+        .din        (pool_out[i*BACC +: BACC]),
+        .dout       (quant_out[i])
     );
 end endgenerate
 
