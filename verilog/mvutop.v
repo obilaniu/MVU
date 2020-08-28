@@ -16,6 +16,8 @@ module mvutop(  clk,
                 ic_clr,
                 ic_recv_from,
                 mul_mode,
+                d_signed, 
+                w_signed,
                 shacc_clr,
                 max_en,
                 max_clr,
@@ -105,6 +107,8 @@ input  wire                       ic_clr;				// Interconnect: clear
 input  wire[    NMVU*BMVUA-1 : 0] ic_recv_from;			// Interconnect: receive from MVU number
 
 input  wire[        2*NMVU-1 : 0] mul_mode;				// Config: multiply mode
+input  wire[          NMVU-1 : 0] d_signed;             // Config: input data signed
+input  wire[          NMVU-1 : 0] w_signed;             // Config: weights signed
 input  wire[          NMVU-1 : 0] shacc_clr;			// Control: accumulator clear
 input  wire[          NMVU-1 : 0] max_en;				// Config: max pool enable
 input  wire[          NMVU-1 : 0] max_clr;				// Config: max pool clear
@@ -197,11 +201,16 @@ wire[        NMVU-1 : 0] quant_clr_int;         // Quantizer: internal clear con
 // TODO: DO SOMETHING USEFUL WITH THESE SIGNALS
 wire[        NMVU-1 : 0] outstep;
 wire[        NMVU-1 : 0] outload;
+
 // Other wires
 wire[        NMVU-1 : 0] inagu_clr;
 wire[        NMVU-1 : 0] controller_clr;    // Controller clear/reset
 wire[        NMVU-1 : 0] step;              // Step if 1, stall if 0
 wire[        NMVU-1 : 0] run;               // Running if 1
+wire[        NMVU-1 : 0] d_msb;             // Input data address on MSB
+wire[        NMVU-1 : 0] w_msb;             // Weight data address on MSB
+wire[        NMVU-1 : 0] neg_acc;           // Negate the input to the accumulators
+wire[        NMVU-1 : 0] neg_acc_dly;       // Negation control delayed
 wire[        NMVU-1 : 0] shacc_load;        // Accumulator load control
 wire[        NMVU-1 : 0] shacc_sh;          // Accumulator shift control
 wire[        NMVU-1 : 0] shacc_acc;         // Accumulator accumulate control
@@ -307,6 +316,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .wbaseaddr  (wbaseaddr      [i*BBWADDR +: BBWADDR]),
         .iaddr_out  (rdd_addr       [i*BDBANKA +: BDBANKA]),
         .waddr_out  (rdw_addr       [i*BWBANKA +: BWBANKA]),
+        .imsb       (d_msb          [i]),
+        .wmsb       (w_msb          [i]),
         .sh_out     (agu_sh_out     [i]),
         .shacc_done (agu_shacc_done [i])
 	);
@@ -343,8 +354,12 @@ generate for(i = 0; i < NMVU; i = i+1) begin: quantser_ctrlarray
     );
 end endgenerate
 
-// Insert delays on some control signals to account for pipeline stages
-generate for(i=0; i < NMVU; i = i+1) begin: acc_delayarray
+// Negate the input to the accumulators when one or both data/weights are signed and is on an MSB
+assign neg_acc = (d_signed & d_msb) ^ (w_signed & w_msb);
+
+
+// Insert delay for accumulator shifter signals to account for number of VVP pipeline stages
+generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
 
     // TODO: connect the step signals on these shift regs
     shiftreg #(
@@ -355,6 +370,16 @@ generate for(i=0; i < NMVU; i = i+1) begin: acc_delayarray
         .step   (1'b1),
         .in     (start[i]),
         .out    (shacc_load_start[i])
+    );
+
+    shiftreg #(
+        .N      (VVPSTAGES + MEMRDLATENCY + 0)
+    ) neg_acc_delayarrayunit (
+        .clk    (clk), 
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (neg_acc[i]),
+        .out    (neg_acc_dly[i])
     );
 
     shiftreg #(
@@ -419,6 +444,7 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
         (
             .clk			(clk									),
             .mul_mode		(mul_mode[i*2 +: 2]						),
+            .neg_acc        (neg_acc_dly[i]                         ),
             .shacc_clr	    (shacc_clr_int[i]  						),
             .shacc_load     (shacc_load[i]                          ),
             .shacc_acc      (shacc_acc[i]                           ),
