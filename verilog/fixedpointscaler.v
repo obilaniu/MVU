@@ -11,6 +11,8 @@
  */
 
 
+`timescale 1 ps / 1 ps
+
  module fixedpointscaler #(
      BA     = 27,
      BB     = 16,
@@ -30,7 +32,8 @@
 
 reg     signed      [BA-1 : 0]  a_q;
 reg     signed      [BB-1 : 0]  b_q;                   // note: must be signed in order for DSP to asborb the pre-add
-reg     signed      [BC-1 : 0]  c_q;
+reg     signed      [BC-1 : 0]  c_q0;
+reg     signed      [BC-1 : 0]  c_q1;
 reg     signed      [BD-1 : 0]  d_q;
 reg     signed      [BD-1 : 0]  preadd_q;
 reg     signed      [BP-1 : 0]  m_q;
@@ -43,7 +46,8 @@ always @(posedge clk) begin
     if (clr) begin
         a_q <= 0;
         b_q <= 0;
-        c_q <= 0;
+        c_q0 <= 0;
+        c_q1 <= 0;
         d_q <= 0;
         preadd_q <= 0;
         m_q <= 0;
@@ -51,11 +55,12 @@ always @(posedge clk) begin
     end else begin
         a_q <= a;
         b_q <= b;
-        c_q <= c;
+        c_q0 <= c;
+        c_q1 <= c_q0;
         d_q <= d;
         preadd_q <= a_q + d_q;
         m_q <= preadd_q * b_q;
-        p_q <= m_q + c_q;
+        p_q <= m_q + c_q1;
     end
 end
 
