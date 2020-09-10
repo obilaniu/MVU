@@ -34,12 +34,14 @@ module mvutop_tester();
     localparam BBDADDR	= 15;			// Bitwidth of the data base address ports
     localparam BSTRIDE	= 15;			// Bitwidth of the stride ports
     localparam BLENGTH	= 15;			// Bitwidth of the length ports
+    localparam BSCALERB = 16;           // Bitwidth of multiplicative scaler (operand 'b')
+    localparam BSCALERP = 48;           // Bitwidth of the scaler output
 
-    localparam BACC    = 32;            /* Bitwidth of Accumulators */
+    localparam BACC    = 27;            /* Bitwidth of Accumulators */
 
 	// Quantizer parameters
-    localparam BQMSBIDX = $clog2(BACC);     // Bitwidth of the quantizer MSB location specifier
-    localparam BQBOUT   = $clog2(BACC);     // Bitwitdh of the quantizer 
+    localparam BQMSBIDX = $clog2(BSCALERP); // Bitwidth of the quantizer MSB location specifier
+    localparam BQBOUT   = $clog2(BSCALERP); // Bitwitdh of the quantizer 
 
     // I/O port wires
     reg                      clk         ;//input  clk;
@@ -80,24 +82,25 @@ module mvutop_tester();
     reg[  NMVU*BWBANKA-1 : 0] wrw_addr;         // Weight memory: write address
     reg[  NMVU*BWBANKW-1 : 0] wrw_word;	        // Weight memory: write word
     reg[          NMVU-1 : 0] wrw_en;           // Weight memory: write enable
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_0;        // Config: weight stride in dimension 0 (x)
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_1;        // Config: weight stride in dimension 1 (y)
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_2;        // Config: weight stride in dimension 2 (z)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_0;        // Config: input stride in dimension 0 (x)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_1;        // Config: input stride in dimension 1 (y)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_2;        // Config: input stride in dimension 2 (z)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_0;        // Config: output stride in dimension 0 (x)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_1;        // Config: output stride in dimension 1 (y)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_2;        // Config: output stride in dimension 2 (z)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_0;        // Config: weight length in dimension 0 (x)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_1;        // Config: weight length in dimension 1 (y)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_2;        // Config: weight length in dimension 2 (z)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_0;        // Config: input length in dimension 0 (x)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_1;        // Config: input length in dimension 1 (y)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_2;        // Config: input length in dimension 2 (z)
-    reg[  NMVU*BLENGTH-1 : 0] olength_0;        // Config: output length in dimension 0 (x)
-    reg[  NMVU*BLENGTH-1 : 0] olength_1;        // Config: output length in dimension 1 (y)
-    reg[  NMVU*BLENGTH-1 : 0] olength_2;        // Config: output length in dimension 2 (z)
+    reg[  NMVU*BSTRIDE-1 : 0] wstride_0;        // Config: weight stride 0 
+    reg[  NMVU*BSTRIDE-1 : 0] wstride_1;        // Config: weight stride 1 
+    reg[  NMVU*BSTRIDE-1 : 0] wstride_2;        // Config: weight stride 2
+    reg[  NMVU*BSTRIDE-1 : 0] istride_0;        // Config: input stride 0 
+    reg[  NMVU*BSTRIDE-1 : 0] istride_1;        // Config: input stride 1 
+    reg[  NMVU*BSTRIDE-1 : 0] istride_2;        // Config: input stride 2
+    reg[  NMVU*BSTRIDE-1 : 0] ostride_0;        // Config: output stride 0 
+    reg[  NMVU*BSTRIDE-1 : 0] ostride_1;        // Config: output stride 1 
+    reg[  NMVU*BSTRIDE-1 : 0] ostride_2;        // Config: output stride 2
+    reg[  NMVU*BLENGTH-1 : 0] wlength_0;        // Config: weight length 0 
+    reg[  NMVU*BLENGTH-1 : 0] wlength_1;        // Config: weight length 1 
+    reg[  NMVU*BLENGTH-1 : 0] wlength_2;        // Config: weight length 2
+    reg[  NMVU*BLENGTH-1 : 0] ilength_0;        // Config: input length 0 
+    reg[  NMVU*BLENGTH-1 : 0] ilength_1;        // Config: input length 1 
+    reg[  NMVU*BLENGTH-1 : 0] ilength_2;        // Config: input length 2
+    reg[  NMVU*BLENGTH-1 : 0] olength_0;        // Config: output length 0 
+    reg[  NMVU*BLENGTH-1 : 0] olength_1;        // Config: output length 1 
+    reg[  NMVU*BLENGTH-1 : 0] olength_2;        // Config: output length 2
+    reg[ NMVU*BSCALERB-1 : 0] scaler_b;         // Config: multiplicative scaler (operand 'b')
 
     //
     // DUT
@@ -149,6 +152,7 @@ module mvutop_tester();
             .olength_0        (olength_0),
             .olength_1        (olength_1),
             .olength_2        (olength_2),
+            .scaler_b         (scaler_b),
 			.wrw_addr         (wrw_addr),
 			.wrw_word         (wrw_word),
 			.wrw_en           (wrw_en),
@@ -260,6 +264,7 @@ task gemvTests();
     olength_0 = 0;
     olength_1 = 0;
     olength_2 = 0;
+    scaler_b = 1;
     countdown = 1;
     start = 1;
     #(`CLKPERIOD);
@@ -772,6 +777,7 @@ initial begin
     olength_0 = 0;
     olength_1 = 0;
     olength_2 = 0;
+    scaler_b = 1;
     wrw_addr = 0;
     wrw_word = 0;
     wrw_en = 0;
