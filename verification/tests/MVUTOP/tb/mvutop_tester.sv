@@ -815,6 +815,10 @@ initial begin
     // Run signed gemv tests
     gemvSignedTests();
 
+    // Repeat signed gemv tests, but with scaler set to 2
+    scaler_b = 2;
+    gemvSignedTests();
+
 
     print_banner($sformatf("Simulation done."));
     $finish();
