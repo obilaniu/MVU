@@ -16,7 +16,7 @@ module mvutop(  clk,
                 ic_clr,
                 ic_recv_from,
                 mul_mode,
-                d_signed, 
+                d_signed,
                 w_signed,
                 shacc_clr,
                 max_en,
@@ -34,24 +34,30 @@ module mvutop(  clk,
                 wstride_0,
                 wstride_1,
                 wstride_2,
+                wstride_3,
                 istride_0,
                 istride_1,
                 istride_2,
+                istride_3,
                 ostride_0,
                 ostride_1,
                 ostride_2,
+                ostride_3,
                 wlength_0,
                 wlength_1,
                 wlength_2,
+                wlength_3,
                 ilength_0,
                 ilength_1,
                 ilength_2,
+                ilength_3,
                 olength_0,
                 olength_1,
                 olength_2,
-				wrw_addr,
-				wrw_word,
-				wrw_en,
+                olength_3,
+                wrw_addr,
+                wrw_word,
+                wrw_en,
                 rdc_en,
                 rdc_grnt,
                 rdc_addr,
@@ -69,7 +75,7 @@ parameter  NDBANK  = 32;   /* Number of N-bit, 1024-element Data BANK. */
 
 localparam BMVUA   = $clog2(NMVU);  /* Bitwidth of MVU          Address */
 localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
-localparam BWBANKW = 4096;			// Bitwidth of Weights BANK Word
+localparam BWBANKW = 4096;          // Bitwidth of Weights BANK Word
 localparam BDBANKA = 15;            /* Bitwidth of Data    BANK Address */
 localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
 
@@ -81,12 +87,12 @@ localparam BQBOUT   = $clog2(BACC);     // Bitwitdh of the quantizer
 localparam QBWOUTBD = $clog2(BACC);     // Bitwidth of the quantizer bit-depth out specifier
 
 // Other Parameters
-localparam BCNTDWN	    = 29;			// Bitwidth of the countdown ports
-localparam BPREC 	    = 6;			// Bitwidth of the precision ports
-localparam BBWADDR	    = 9;			// Bitwidth of the weight base address ports
-localparam BBDADDR	    = 15;			// Bitwidth of the data base address ports
-localparam BSTRIDE	    = 15;			// Bitwidth of the stride ports
-localparam BLENGTH	    = 15;			// Bitwidth of the length ports
+localparam BCNTDWN      = 29;           // Bitwidth of the countdown ports
+localparam BPREC        = 6;            // Bitwidth of the precision ports
+localparam BBWADDR      = 9;            // Bitwidth of the weight base address ports
+localparam BBDADDR      = 15;           // Bitwidth of the data base address ports
+localparam BSTRIDE      = 15;           // Bitwidth of the stride ports
+localparam BLENGTH      = 15;           // Bitwidth of the length ports
 localparam VVPSTAGES    = 3;            // Number of stages in the VVP pipeline
 localparam MAXPOOLSTAGES = 1;           // Number of max pool pipeline stages
 localparam MEMRDLATENCY = 2;            // Memory read latency
@@ -103,91 +109,103 @@ input  wire[          NMVU-1 : 0] start;                // Start the MVU job
 output wire[          NMVU-1 : 0] done;                 // Indicates if a job is done
 output wire[          NMVU-1 : 0] irq;                  // Interrupt request
 
-input  wire                       ic_clr;				// Interconnect: clear
-input  wire[    NMVU*BMVUA-1 : 0] ic_recv_from;			// Interconnect: receive from MVU number
+input  wire                       ic_clr;               // Interconnect: clear
+input  wire[    NMVU*BMVUA-1 : 0] ic_recv_from;         // Interconnect: receive from MVU number
 
-input  wire[        2*NMVU-1 : 0] mul_mode;				// Config: multiply mode
+input  wire[        2*NMVU-1 : 0] mul_mode;             // Config: multiply mode
 input  wire[          NMVU-1 : 0] d_signed;             // Config: input data signed
 input  wire[          NMVU-1 : 0] w_signed;             // Config: weights signed
-input  wire[          NMVU-1 : 0] shacc_clr;			// Control: accumulator clear
-input  wire[          NMVU-1 : 0] max_en;				// Config: max pool enable
-input  wire[          NMVU-1 : 0] max_clr;				// Config: max pool clear
-input  wire[          NMVU-1 : 0] max_pool;				// Config: max pool mode
+input  wire[          NMVU-1 : 0] shacc_clr;            // Control: accumulator clear
+input  wire[          NMVU-1 : 0] max_en;               // Config: max pool enable
+input  wire[          NMVU-1 : 0] max_clr;              // Config: max pool clear
+input  wire[          NMVU-1 : 0] max_pool;	            // Config: max pool mode
 
-input  wire[          NMVU-1 : 0] quant_clr;			// Quantizer: clear
-input  wire[ NMVU*BQMSBIDX-1 : 0] quant_msbidx;			// Quantizer: bit position index of the MSB
+input  wire[          NMVU-1 : 0] quant_clr;            // Quantizer: clear
+input  wire[ NMVU*BQMSBIDX-1 : 0] quant_msbidx;         // Quantizer: bit position index of the MSB
 
-input  wire[  NMVU*BCNTDWN-1 : 0] countdown;			// Config: number of clocks to countdown for given task
-input  wire[    NMVU*BPREC-1 : 0] wprecision;			// Config: weight precision
-input  wire[    NMVU*BPREC-1 : 0] iprecision;			// Config: input precision
-input  wire[    NMVU*BPREC-1 : 0] oprecision;			// Config: output precision
-input  wire[  NMVU*BBWADDR-1 : 0] wbaseaddr;			// Config: weight memory base address
-input  wire[  NMVU*BBDADDR-1 : 0] ibaseaddr;			// Config: data memory base address for input
-input  wire[  NMVU*BBDADDR-1 : 0] obaseaddr;			// Config: data memory base address for output
-input  wire[  NMVU*BSTRIDE-1 : 0] wstride_0;			// Config: weight stride in dimension 0 (x)
-input  wire[  NMVU*BSTRIDE-1 : 0] wstride_1;			// Config: weight stride in dimension 1 (y)
-input  wire[  NMVU*BSTRIDE-1 : 0] wstride_2;			// Config: weight stride in dimension 2 (z)
-input  wire[  NMVU*BSTRIDE-1 : 0] istride_0;			// Config: input stride in dimension 0 (x)
-input  wire[  NMVU*BSTRIDE-1 : 0] istride_1;			// Config: input stride in dimension 1 (y)
-input  wire[  NMVU*BSTRIDE-1 : 0] istride_2;			// Config: input stride in dimension 2 (z)
-input  wire[  NMVU*BSTRIDE-1 : 0] ostride_0;			// Config: output stride in dimension 0 (x)
-input  wire[  NMVU*BSTRIDE-1 : 0] ostride_1;			// Config: output stride in dimension 1 (y)
-input  wire[  NMVU*BSTRIDE-1 : 0] ostride_2;			// Config: output stride in dimension 2 (z)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_0;			// Config: weight length in dimension 0 (x)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_1;			// Config: weight length in dimension 1 (y)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_2;			// Config: weight length in dimension 2 (z)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_0;			// Config: input length in dimension 0 (x)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_1;			// Config: input length in dimension 1 (y)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_2;			// Config: input length in dimension 2 (z)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_0;			// Config: output length in dimension 0 (x)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_1;			// Config: output length in dimension 1 (y)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_2;			// Config: output length in dimension 2 (z)
+input  wire[  NMVU*BCNTDWN-1 : 0] countdown;            // Config: number of clocks to countdown for given task
+input  wire[    NMVU*BPREC-1 : 0] wprecision;           // Config: weight precision
+input  wire[    NMVU*BPREC-1 : 0] iprecision;           // Config: input precision
+input  wire[    NMVU*BPREC-1 : 0] oprecision;           // Config: output precision
+input  wire[  NMVU*BBWADDR-1 : 0] wbaseaddr;            // Config: weight memory base address
+input  wire[  NMVU*BBDADDR-1 : 0] ibaseaddr;            // Config: data memory base address for input
+input  wire[  NMVU*BBDADDR-1 : 0] obaseaddr;            // Config: data memory base address for output
+input  wire[  NMVU*BSTRIDE-1 : 0] wstride_0;            // Config: weight stride in dimension 0 (x)
+input  wire[  NMVU*BSTRIDE-1 : 0] wstride_1;            // Config: weight stride in dimension 1 (y)
+input  wire[  NMVU*BSTRIDE-1 : 0] wstride_2;            // Config: weight stride in dimension 2 (z)
+input  wire[  NMVU*BSTRIDE-1 : 0] wstride_3;            // Config: weight stride in dimension 3 (w)
+input  wire[  NMVU*BSTRIDE-1 : 0] istride_0;            // Config: input stride in dimension 0 (x)
+input  wire[  NMVU*BSTRIDE-1 : 0] istride_1;            // Config: input stride in dimension 1 (y)
+input  wire[  NMVU*BSTRIDE-1 : 0] istride_2;            // Config: input stride in dimension 2 (z)
+input  wire[  NMVU*BSTRIDE-1 : 0] istride_3;            // Config: input stride in dimension 3 (w)
+input  wire[  NMVU*BSTRIDE-1 : 0] ostride_0;            // Config: output stride in dimension 0 (x)
+input  wire[  NMVU*BSTRIDE-1 : 0] ostride_1;            // Config: output stride in dimension 1 (y)
+input  wire[  NMVU*BSTRIDE-1 : 0] ostride_2;            // Config: output stride in dimension 2 (z)
+input  wire[  NMVU*BSTRIDE-1 : 0] ostride_3;            // Config: output stride in dimension 3 (w)
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_0;            // Config: weight length in dimension 0 (x)
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_1;            // Config: weight length in dimension 1 (y)
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_2;            // Config: weight length in dimension 2 (z)
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_3;            // Config: weight length in dimension 3 (w)
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_0;            // Config: input length in dimension 0 (x)
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_1;            // Config: input length in dimension 1 (y)
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_2;            // Config: input length in dimension 2 (z)
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_3;            // Config: input length in dimension 3 (w)
+input  wire[  NMVU*BLENGTH-1 : 0] olength_0;            // Config: output length in dimension 0 (x)
+input  wire[  NMVU*BLENGTH-1 : 0] olength_1;            // Config: output length in dimension 1 (y)
+input  wire[  NMVU*BLENGTH-1 : 0] olength_2;            // Config: output length in dimension 2 (z)
+input  wire[  NMVU*BLENGTH-1 : 0] olength_3;            // Config: output length in dimension 3 (w)
 
-input  wire[  NMVU*BWBANKA-1 : 0] wrw_addr;				// Weight memory: write address
-input  wire[  NMVU*BWBANKW-1 : 0] wrw_word;				// Weight memory: write word
-input  wire[          NMVU-1 : 0] wrw_en;				// Weight memory: write enable
+input  wire[  NMVU*BWBANKA-1 : 0] wrw_addr;             // Weight memory: write address
+input  wire[  NMVU*BWBANKW-1 : 0] wrw_word;             // Weight memory: write word
+input  wire[          NMVU-1 : 0] wrw_en;               // Weight memory: write enable
 
-input  wire[          NMVU-1 : 0] rdc_en;				// Data memory: controller read enable
-output wire[          NMVU-1 : 0] rdc_grnt;				// Data memory: controller read grant
-input  wire[  NMVU*BDBANKA-1 : 0] rdc_addr;				// Data memory: controller read address
-output wire[  NMVU*BDBANKW-1 : 0] rdc_word;				// Data memory: controller read word
-input  wire[          NMVU-1 : 0] wrc_en;				// Data memory: controller write enable
-output wire[          NMVU-1 : 0] wrc_grnt;				// Data memory: controller write grant
-input  wire[       BDBANKA-1 : 0] wrc_addr;				// Data memory: controller write address
-input  wire[       BDBANKW-1 : 0] wrc_word;				// Data memory: controller write word
+input  wire[          NMVU-1 : 0] rdc_en;               // Data memory: controller read enable
+output wire[          NMVU-1 : 0] rdc_grnt;             // Data memory: controller read grant
+input  wire[  NMVU*BDBANKA-1 : 0] rdc_addr;             // Data memory: controller read address
+output wire[  NMVU*BDBANKW-1 : 0] rdc_word;             // Data memory: controller read word
+input  wire[          NMVU-1 : 0] wrc_en;               // Data memory: controller write enable
+output wire[          NMVU-1 : 0] wrc_grnt;             // Data memory: controller write grant
+input  wire[       BDBANKA-1 : 0] wrc_addr;             // Data memory: controller write address
+input  wire[       BDBANKW-1 : 0] wrc_word;             // Data memory: controller write word
 
 genvar i;
 
 
 // Local registers
 reg[      NMVU-1 : 0] start_q;                                  // Delayed start signal
-reg[           1 : 0] mul_mode_q        [NMVU-1 : 0];			// Config: multiply mode
+reg[           1 : 0] mul_mode_q        [NMVU-1 : 0];           // Config: multiply mode
 reg[  BQMSBIDX-1 : 0] quant_msbidx_q    [NMVU-1 : 0];           // Quantizer: bit position index of the MSB
 reg[   BCNTDWN-1 : 0] countdown_q       [NMVU-1 : 0];           // Config: number of clocks to countdown for given task
-reg[     BPREC-1 : 0] wprecision_q      [NMVU-1 : 0];			// Config: weight precision
-reg[     BPREC-1 : 0] iprecision_q      [NMVU-1 : 0];			// Config: input precision
-reg[     BPREC-1 : 0] oprecision_q      [NMVU-1 : 0];			// Config: output precision
-reg[   BBWADDR-1 : 0] wbaseaddr_q       [NMVU-1 : 0];			// Config: weight memory base address
-reg[   BBDADDR-1 : 0] ibaseaddr_q       [NMVU-1 : 0];			// Config: data memory base address for input
-reg[   BBDADDR-1 : 0] obaseaddr_q       [NMVU-1 : 0];			// Config: data memory base address for output
-reg[   BWBANKA-1 : 0] wstride_0_q       [NMVU-1 : 0];			// Config: weight stride in dimension 0 (x)
-reg[   BWBANKA-1 : 0] wstride_1_q       [NMVU-1 : 0];			// Config: weight stride in dimension 1 (y)
-reg[   BWBANKA-1 : 0] wstride_2_q       [NMVU-1 : 0];			// Config: weight stride in dimension 2 (z)
-reg[   BDBANKA-1 : 0] istride_0_q       [NMVU-1 : 0];			// Config: input stride in dimension 0 (x)
-reg[   BDBANKA-1 : 0] istride_1_q       [NMVU-1 : 0];			// Config: input stride in dimension 1 (y)
-reg[   BDBANKA-1 : 0] istride_2_q       [NMVU-1 : 0];			// Config: input stride in dimension 2 (z)
-reg[   BDBANKA-1 : 0] ostride_0_q       [NMVU-1 : 0];			// Config: output stride in dimension 0 (x)
-reg[   BDBANKA-1 : 0] ostride_1_q       [NMVU-1 : 0];			// Config: output stride in dimension 1 (y)
-reg[   BDBANKA-1 : 0] ostride_2_q       [NMVU-1 : 0];			// Config: output stride in dimension 2 (z)
-reg[   BLENGTH-1 : 0] wlength_0_q       [NMVU-1 : 0];			// Config: weight length in dimension 0 (x)
-reg[   BLENGTH-1 : 0] wlength_1_q       [NMVU-1 : 0];			// Config: weight length in dimension 1 (y)
-reg[   BLENGTH-1 : 0] wlength_2_q       [NMVU-1 : 0];			// Config: weight length in dimension 2 (z)
-reg[   BLENGTH-1 : 0] ilength_0_q       [NMVU-1 : 0];			// Config: input length in dimension 0 (x)
-reg[   BLENGTH-1 : 0] ilength_1_q       [NMVU-1 : 0];			// Config: input length in dimension 1 (y)
-reg[   BLENGTH-1 : 0] ilength_2_q       [NMVU-1 : 0];			// Config: input length in dimension 2 (z)
-reg[   BLENGTH-1 : 0] olength_0_q       [NMVU-1 : 0];			// Config: output length in dimension 0 (x)
-reg[   BLENGTH-1 : 0] olength_1_q       [NMVU-1 : 0];			// Config: output length in dimension 1 (y)
-reg[   BLENGTH-1 : 0] olength_2_q       [NMVU-1 : 0];			// Config: output length in dimension 2 (z)
+reg[     BPREC-1 : 0] wprecision_q      [NMVU-1 : 0];           // Config: weight precision
+reg[     BPREC-1 : 0] iprecision_q      [NMVU-1 : 0];           // Config: input precision
+reg[     BPREC-1 : 0] oprecision_q      [NMVU-1 : 0];           // Config: output precision
+reg[   BBWADDR-1 : 0] wbaseaddr_q       [NMVU-1 : 0];           // Config: weight memory base address
+reg[   BBDADDR-1 : 0] ibaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for input
+reg[   BBDADDR-1 : 0] obaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for output
+reg[   BWBANKA-1 : 0] wstride_0_q       [NMVU-1 : 0];           // Config: weight stride in dimension 0 (x)
+reg[   BWBANKA-1 : 0] wstride_1_q       [NMVU-1 : 0];           // Config: weight stride in dimension 1 (y)
+reg[   BWBANKA-1 : 0] wstride_2_q       [NMVU-1 : 0];           // Config: weight stride in dimension 2 (z)
+reg[   BWBANKA-1 : 0] wstride_3_q       [NMVU-1 : 0];           // Config: weight stride in dimension 3 (w)
+reg[   BDBANKA-1 : 0] istride_0_q       [NMVU-1 : 0];           // Config: input stride in dimension 0 (x)
+reg[   BDBANKA-1 : 0] istride_1_q       [NMVU-1 : 0];           // Config: input stride in dimension 1 (y)
+reg[   BDBANKA-1 : 0] istride_2_q       [NMVU-1 : 0];           // Config: input stride in dimension 2 (z)
+reg[   BDBANKA-1 : 0] istride_3_q       [NMVU-1 : 0];           // Config: input stride in dimension 3 (w)
+reg[   BDBANKA-1 : 0] ostride_0_q       [NMVU-1 : 0];           // Config: output stride in dimension 0 (x)
+reg[   BDBANKA-1 : 0] ostride_1_q       [NMVU-1 : 0];           // Config: output stride in dimension 1 (y)
+reg[   BDBANKA-1 : 0] ostride_2_q       [NMVU-1 : 0];           // Config: output stride in dimension 2 (z)
+reg[   BDBANKA-1 : 0] ostride_3_q       [NMVU-1 : 0];           // Config: output stride in dimension 3 (w)
+reg[   BLENGTH-1 : 0] wlength_0_q       [NMVU-1 : 0];           // Config: weight length in dimension 0 (x)
+reg[   BLENGTH-1 : 0] wlength_1_q       [NMVU-1 : 0];           // Config: weight length in dimension 1 (y)
+reg[   BLENGTH-1 : 0] wlength_2_q       [NMVU-1 : 0];           // Config: weight length in dimension 2 (z)
+reg[   BLENGTH-1 : 0] wlength_3_q       [NMVU-1 : 0];           // Config: weight length in dimension 3 (w)
+reg[   BLENGTH-1 : 0] ilength_0_q       [NMVU-1 : 0];           // Config: input length in dimension 0 (x)
+reg[   BLENGTH-1 : 0] ilength_1_q       [NMVU-1 : 0];           // Config: input length in dimension 1 (y)
+reg[   BLENGTH-1 : 0] ilength_2_q       [NMVU-1 : 0];           // Config: input length in dimension 2 (z)
+reg[   BLENGTH-1 : 0] ilength_3_q       [NMVU-1 : 0];           // Config: input length in dimension 3 (w)
+reg[   BLENGTH-1 : 0] olength_0_q       [NMVU-1 : 0];           // Config: output length in dimension 0 (x)
+reg[   BLENGTH-1 : 0] olength_1_q       [NMVU-1 : 0];           // Config: output length in dimension 1 (y)
+reg[   BLENGTH-1 : 0] olength_2_q       [NMVU-1 : 0];           // Config: output length in dimension 2 (z)
+reg[   BLENGTH-1 : 0] olength_3_q       [NMVU-1 : 0];           // Config: output length in dimension 3 (w)
 
 /* Local Wires */
 
@@ -218,9 +236,9 @@ wire[        NMVU-1 : 0] wri_grnt;
 wire[NMVU*BDBANKA-1 : 0] wri_addr;
 
 // Quantizer
-wire[        NMVU-1 : 0] quant_start;			// Quantizer: signal to start quantizing
+wire[        NMVU-1 : 0] quant_start;           // Quantizer: signal to start quantizing
 wire[        NMVU-1 : 0] quant_stall;           // Quantizer: stall
-wire[      NMVU*N-1 : 0] quantarray_out;		// Quantizer: output
+wire[      NMVU*N-1 : 0] quantarray_out;        // Quantizer: output
 wire[  BPREC*NMVU-1 : 0] quant_bwout;           // Quantizer: output bitwidth
 wire[        NMVU-1 : 0] quant_load;            // Quantizer: load base address
 wire[        NMVU-1 : 0] quant_step;            // Quantizer: step the quantizer
@@ -325,21 +343,27 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             wstride_0_q[i]      <= 0;
             wstride_1_q[i]      <= 0;
             wstride_2_q[i]      <= 0;
+            wstride_3_q[i]      <= 0;
             istride_0_q[i]      <= 0;
             istride_1_q[i]      <= 0;
             istride_2_q[i]      <= 0;
+            istride_3_q[i]      <= 0;
             ostride_0_q[i]      <= 0;
             ostride_1_q[i]      <= 0;
             ostride_2_q[i]      <= 0;
+            ostride_3_q[i]      <= 0;
             wlength_0_q[i]      <= 0;
             wlength_1_q[i]      <= 0;
             wlength_2_q[i]      <= 0;
+            wlength_3_q[i]      <= 0;
             ilength_0_q[i]      <= 0;
             ilength_1_q[i]      <= 0;
             ilength_2_q[i]      <= 0;
+            ilength_3_q[i]      <= 0;
             olength_0_q[i]      <= 0;
             olength_1_q[i]      <= 0;
             olength_2_q[i]      <= 0;
+            olength_3_q[i]      <= 0;
         end else begin
             if (start[i]) begin
                 mul_mode_q[i]       <= mul_mode     [i*2 +: 2];
@@ -354,21 +378,27 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 wstride_0_q[i]      <= wstride_0    [i*BSTRIDE +: BWBANKA];
                 wstride_1_q[i]      <= wstride_1    [i*BSTRIDE +: BWBANKA];
                 wstride_2_q[i]      <= wstride_2    [i*BSTRIDE +: BWBANKA];
+                wstride_3_q[i]      <= wstride_3    [i*BSTRIDE +: BWBANKA];
                 istride_0_q[i]      <= istride_0    [i*BSTRIDE +: BDBANKA];
                 istride_1_q[i]      <= istride_1    [i*BSTRIDE +: BDBANKA];
                 istride_2_q[i]      <= istride_2    [i*BSTRIDE +: BDBANKA];
+                istride_3_q[i]      <= istride_3    [i*BSTRIDE +: BDBANKA];
                 ostride_0_q[i]      <= ostride_0    [i*BSTRIDE +: BDBANKA];
                 ostride_1_q[i]      <= ostride_1    [i*BSTRIDE +: BDBANKA];
                 ostride_2_q[i]      <= ostride_2    [i*BSTRIDE +: BDBANKA];
+                ostride_3_q[i]      <= ostride_3    [i*BSTRIDE +: BDBANKA];
                 wlength_0_q[i]      <= wlength_0    [i*BLENGTH +: BLENGTH];
                 wlength_1_q[i]      <= wlength_1    [i*BLENGTH +: BLENGTH];
                 wlength_2_q[i]      <= wlength_2    [i*BLENGTH +: BLENGTH];
+                wlength_3_q[i]      <= wlength_3    [i*BLENGTH +: BLENGTH];
                 ilength_0_q[i]      <= ilength_0    [i*BLENGTH +: BLENGTH];
                 ilength_1_q[i]      <= ilength_1    [i*BLENGTH +: BLENGTH];
                 ilength_2_q[i]      <= ilength_2    [i*BLENGTH +: BLENGTH];
+                ilength_3_q[i]      <= ilength_3    [i*BLENGTH +: BLENGTH];
                 olength_0_q[i]      <= olength_0    [i*BLENGTH +: BLENGTH];
                 olength_1_q[i]      <= olength_1    [i*BLENGTH +: BLENGTH];
                 olength_2_q[i]      <= olength_2    [i*BLENGTH +: BLENGTH];
+                olength_3_q[i]      <= olength_3    [i*BLENGTH +: BLENGTH];
             end
         end
     end
@@ -394,12 +424,12 @@ end endgenerate
 
 // Address generation modules for input and weight memory
 generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
-	inagu #(
+    inagu #(
         .BPREC      (BPREC),
         .BDBANKA    (BDBANKA),
         .BWBANKA    (BWBANKA),
         .BWLENGTH   (BLENGTH)
-	) inagu_unit (
+    ) inagu_unit (
         .clk        (clk),
         .clr        (inagu_clr[i]),
         .en         (run[i]),
@@ -407,17 +437,21 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .istride0   (istride_0_q[i]),
         .istride1   (istride_1_q[i]),
         .istride2   (istride_2_q[i]),
-	    .ilength0   (ilength_0_q[i]),
+        .istride3   (istride_3_q[i]),
+        .ilength0   (ilength_0_q[i]),
         .ilength1   (ilength_1_q[i]),
         .ilength2   (ilength_2_q[i]),
+        .ilength3   (ilength_3_q[i]),
         .ibaseaddr  (ibaseaddr_q[i]),
         .wprecision (wprecision_q[i]),
         .wstride0   (wstride_0_q[i]),
         .wstride1   (wstride_1_q[i]),
         .wstride2   (wstride_2_q[i]),
+        .wstride3   (wstride_3_q[i]),
         .wlength0   (wlength_0_q[i]),
         .wlength1   (wlength_1_q[i]),
         .wlength2   (wlength_2_q[i]),
+        .wlength3   (wlength_3_q[i]),
         .wbaseaddr  (wbaseaddr_q[i]),
         .iaddr_out  (rdd_addr[i*BDBANKA +: BDBANKA]),
         .waddr_out  (rdw_addr[i*BDBANKA +: BDBANKA]),
@@ -425,22 +459,22 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .wmsb       (w_msb[i]),
         .sh_out     (agu_sh_out[i]),
         .shacc_done (agu_shacc_done[i])
-	);
+    );
 end endgenerate
 
 // Output address generators
 generate for(i = 0; i < NMVU; i = i+1) begin:outaguarray
-	outagu #(
-			.BDBANKA	(BDBANKA			)
-		) outaguunit
-		(
-			.clk		(clk								),
+    outagu #(
+            .BDBANKA    (BDBANKA)
+        ) outaguunit
+        (
+            .clk        (clk                                ),
             .clr        (outagu_clr[i]                      ),
-			.step 		(outstep[i]),
-			.load		(outagu_load[i]),
-			.baseaddr	(obaseaddr[i*BBDADDR +:	BBDADDR]	),
-			.addrout	(wrd_addr[i*BDBANKA  +: BDBANKA]	)
-		);
+            .step       (outstep[i]),
+            .load       (outagu_load[i]),
+            .baseaddr   (obaseaddr[i*BBDADDR +:	BBDADDR]    ),
+            .addrout    (wrd_addr[i*BDBANKA  +: BDBANKA]    )
+        );
 end endgenerate
 
 // Quantizer Controllers
@@ -543,51 +577,51 @@ end endgenerate
 /*   Cores... */
 generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
     mvu #(
-            .N				(N				),
-            .NDBANK			(NDBANK			)
-        ) mvunit 
+            .N              (N),
+            .NDBANK         (NDBANK)
+        ) mvunit
         (
-            .clk			(clk									),
-            .mul_mode		(mul_mode_q[i]						    ),
+            .clk            (clk                                    ),
+            .mul_mode       (mul_mode_q[i]                          ),
             .neg_acc        (neg_acc_dly[i]                         ),
-            .shacc_clr	    (shacc_clr_int[i]  						),
+            .shacc_clr      (shacc_clr_int[i]                       ),
             .shacc_load     (shacc_load[i]                          ),
             .shacc_acc      (shacc_acc[i]                           ),
-            .shacc_sh		(shacc_sh[i]							),
-            .max_en			(max_en[i]								),
-            .max_clr		(max_clr[i]								),
-            .max_pool		(max_pool[i]							),
-            .quant_clr		(quant_clr_int[i]	    				),
-            .quant_msbidx   (quant_msbidx_q[i]	                    ),
+            .shacc_sh       (shacc_sh[i]                            ),
+            .max_en         (max_en[i]                              ),
+            .max_clr        (max_clr[i]	                            ),
+            .max_pool       (max_pool[i]                            ),
+            .quant_clr      (quant_clr_int[i]                       ),
+            .quant_msbidx   (quant_msbidx_q[i]                      ),
             .quant_load     (quant_load[i]                          ),
-            .quant_step 	(quant_step[i]							),
-            .rdw_addr		(rdw_addr[i*BWBANKA +: BWBANKA]			),
-			.wrw_addr		(wrw_addr[i*BWBANKA +: BWBANKA]			),
-			.wrw_word		(wrw_word[i*BWBANKW +: BWBANKW]			),
-			.wrw_en			(wrw_en[i]								),
-            .rdd_en			(rdd_en[i]								),
-            .rdd_grnt		(rdd_grnt[i]							),
-            .rdd_addr		(rdd_addr[i*BDBANKA +: BDBANKA]			),
-            .wrd_en			(wrd_en[i]								),
-            .wrd_grnt		(wrd_grnt[i]							),
-            .wrd_addr		(wrd_addr[i*BDBANKA +: BDBANKA]			),
-            .rdi_en			(rdi_en[i]								),
-            .rdi_grnt		(rdi_grnt[i]							),
-            .rdi_addr		(rdi_addr[i*BDBANKA +: BDBANKA]			),
-            .rdi_word		(rdi_word[i*BDBANKW +: BDBANKW]			),
-            .wri_en			(wri_en[i]								),
-            .wri_grnt		(wri_grnt[i]							),
-            .wri_addr		(wri_addr[i*BDBANKA +: BDBANKA]			),
-            .wri_word		(wri_word[i*BDBANKW +: BDBANKW]			),
-            .rdc_en			(rdc_en[i]								),
-            .rdc_grnt		(rdc_grnt[i]							),
-            .rdc_addr		(rdc_addr[i*BDBANKA +: BDBANKA]			),
-            .rdc_word		(rdc_word[i*BDBANKW +: BDBANKW]			),
-            .wrc_en			(wrc_en[i]								),
-            .wrc_grnt		(wrc_grnt[i]							),
-            .wrc_addr		(wrc_addr[BDBANKA-1: 0]					),
-        	.wrc_word		(wrc_word[BDBANKW-1 : 0]				)
-		);
+            .quant_step     (quant_step[i]                          ),
+            .rdw_addr       (rdw_addr[i*BWBANKA +: BWBANKA]         ),
+            .wrw_addr       (wrw_addr[i*BWBANKA +: BWBANKA]         ),
+            .wrw_word       (wrw_word[i*BWBANKW +: BWBANKW]         ),
+            .wrw_en         (wrw_en[i]                              ),
+            .rdd_en         (rdd_en[i]                              ),
+            .rdd_grnt       (rdd_grnt[i]                            ),
+            .rdd_addr       (rdd_addr[i*BDBANKA +: BDBANKA]         ),
+            .wrd_en         (wrd_en[i]                              ),
+            .wrd_grnt       (wrd_grnt[i]                            ),
+            .wrd_addr       (wrd_addr[i*BDBANKA +: BDBANKA]         ),
+            .rdi_en         (rdi_en[i]                              ),
+            .rdi_grnt       (rdi_grnt[i]                            ),
+            .rdi_addr       (rdi_addr[i*BDBANKA +: BDBANKA]         ),
+            .rdi_word       (rdi_word[i*BDBANKW +: BDBANKW]         ),
+            .wri_en         (wri_en[i]                              ),
+            .wri_grnt       (wri_grnt[i]                            ),
+            .wri_addr       (wri_addr[i*BDBANKA +: BDBANKA]         ),
+            .wri_word       (wri_word[i*BDBANKW +: BDBANKW]         ),
+            .rdc_en         (rdc_en[i]                              ),
+            .rdc_grnt       (rdc_grnt[i]                            ),
+            .rdc_addr       (rdc_addr[i*BDBANKA +: BDBANKA]         ),
+            .rdc_word       (rdc_word[i*BDBANKW +: BDBANKW]         ),
+            .wrc_en         (wrc_en[i]                              ),
+            .wrc_grnt       (wrc_grnt[i]                            ),
+            .wrc_addr       (wrc_addr[BDBANKA-1: 0]                 ),
+            .wrc_word       (wrc_word[BDBANKW-1 : 0]                )
+        );
 end endgenerate
 
 
