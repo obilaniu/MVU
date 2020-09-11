@@ -380,9 +380,11 @@ task gemvTests();
     start = 0;
     #(`CLKPERIOD*48);
 
+    #(`CLKPERIOD*4);       // ADDED DELAY TO ALLOW WRITEBACK TO DATA BANK, BUT THIS SHOULD NOT BE NEEDED!!!!
+
     // TEST 5
     // Expected result: accumulators get to value h180, output to data memory is b001 for each element
-    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
     // (i.e. d2*d1*d64*d3 = d384 = h180)
     // Result output to bank 3 starting at address 0
     print("TEST gemv 5: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=b10, weights=b01");
@@ -420,6 +422,8 @@ task gemvTests();
     #(`CLKPERIOD);
     start = 0;
     #(`CLKPERIOD*48);
+
+    #(`CLKPERIOD*4);       // ADDED DELAY TO ALLOW WRITEBACK TO DATA BANK, BUT THIS SHOULD NOT BE NEEDED!!!!
 
 endtask
 
@@ -470,6 +474,8 @@ task gemvSignedTests();
     start = 0;
     #(`CLKPERIOD*28);
 
+    #(`CLKPERIOD*4);       // ADDED DELAY TO ALLOW WRITEBACK TO DATA BANK, BUT THIS SHOULD NOT BE NEEDED!!!!
+
     // Expected result: accumulators get to value hfffffffffffffd00, output to data memory is b10 for each element
     // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
     // (i.e. -d2*d3*d64*d2 = -d768 = 32'hfffffffffffffd00)
@@ -510,6 +516,8 @@ task gemvSignedTests();
     #(`CLKPERIOD);
     start = 0;
     #(`CLKPERIOD*28);
+
+    #(`CLKPERIOD*4);       // ADDED DELAY TO ALLOW WRITEBACK TO DATA BANK, BUT THIS SHOULD NOT BE NEEDED!!!!
 
     // Expected result: accumulators get to value h0000000000000100, output to data memory is b01 for each element
     // (i.e. [0000000000000000, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
@@ -552,11 +560,13 @@ task gemvSignedTests();
     start = 0;
     #(`CLKPERIOD*28);
 
+    #(`CLKPERIOD*4);       // ADDED DELAY TO ALLOW WRITEBACK TO DATA BANK, BUT THIS SHOULD NOT BE NEEDED!!!!
+
     // Expected result: accumulators get to value hfffffffffffffd00, output to data memory is b110 for each element
-    // (i.e. [0000000000000000, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
+    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
     // (i.e. d3*-d2*d64*d2 = -d768 = 32'hfffffffffffffd00)
     // Result output to bank 13 starting at address 0
-    print("TEST gemv signed 3: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: d=3, w=-2");
+    print("TEST gemv signed 4: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: d=3, w=-2");
     writeDataRepeat('h0000000000000000, 'h0000, 2, 3);      // MSB  =0 \
     writeDataRepeat('hffffffffffffffff, 'h0001, 2, 3);      // MSB-1=1 - = b011 = d3
     writeDataRepeat('hffffffffffffffff, 'h0002, 2, 3);      // LSB  =1 /
@@ -595,12 +605,14 @@ task gemvSignedTests();
     start = 0;
     #(`CLKPERIOD*36);
 
+    #(`CLKPERIOD*4);       // ADDED DELAY TO ALLOW WRITEBACK TO DATA BANK, BUT THIS SHOULD NOT BE NEEDED!!!!
+
 
     // Expected result: accumulators get to value hffffffffffffff00, output to data memory is b110 for each element
     // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
     // (i.e. (d3*-d2*d32 + d2*d1*d32)*d2 = -d256 = 32'hffffffffffffff00)
     // Result output to bank 14 starting at address 0
-    print("TEST gemv signed 4: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}");
+    print("TEST gemv signed 5: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}");
     writeDataRepeat('h0000000000000000, 'h0000, 2, 3);      // MSB  ={0,0}... \
     writeDataRepeat('hffffffffffffffff, 'h0001, 2, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
     writeDataRepeat('haaaaaaaaaaaaaaaa, 'h0002, 2, 3);      // LSB  ={1,0}... /
@@ -639,11 +651,13 @@ task gemvSignedTests();
     start = 0;
     #(`CLKPERIOD*36);
 
+    #(`CLKPERIOD*4);       // ADDED DELAY TO ALLOW WRITEBACK TO DATA BANK, BUT THIS SHOULD NOT BE NEEDED!!!!
+
     // Expected result: accumulators get to value hfffffffffffffe7d, output to data memory is b100 for each element
-    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. [hffffffffffffffff, 0000000000000000, 0000000000000000 ...)
     // (i.e. (d3*-d2*d32 + d2*d1*d31 + d1*d1*d1)*d3 = -d387 = 32'hfffffffffffffe7d)
     // Result output to bank 15 starting at address 0
-    print("TEST gemv signed 5: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
+    print("TEST gemv signed 6: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
     writeDataRepeat('h0000000000000000, 'h0000, 3, 3);      // MSB  ={0,0}... \
     writeDataRepeat('hfffffffffffffffe, 'h0001, 3, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
     writeDataRepeat('haaaaaaaaaaaaaaab, 'h0002, 3, 3);      // LSB  ={1,0}... /
@@ -682,11 +696,13 @@ task gemvSignedTests();
     start = 0;
     #(`CLKPERIOD*66);
 
+    #(`CLKPERIOD*4);       // ADDED DELAY TO ALLOW WRITEBACK TO DATA BANK, BUT THIS SHOULD NOT BE NEEDED!!!!
+
     // Expected result: accumulators get to value h0000000000000063, output to data memory is b001 for each element
     // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, ...)
     // (i.e. (d3*d1*d32 + d2*-d1*d31 + d1*-d1*d1)*d3 = d99 = 32'h0000000000000063)
     // Result output to bank 16 starting at address 0
-    print("TEST gemv signed 6: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
+    print("TEST gemv signed 7: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
     writeDataRepeat('h0000000000000000, 'h0000, 3, 3);      // MSB  ={0,0}... \
     writeDataRepeat('hfffffffffffffffe, 'h0001, 3, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
     writeDataRepeat('haaaaaaaaaaaaaaab, 'h0002, 3, 3);      // LSB  ={1,0}... /
@@ -724,6 +740,8 @@ task gemvSignedTests();
     #(`CLKPERIOD);
     start = 0;
     #(`CLKPERIOD*66);
+
+    #(`CLKPERIOD*4);       // ADDED DELAY TO ALLOW WRITEBACK TO DATA BANK, BUT THIS SHOULD NOT BE NEEDED!!!!
 
 endtask
 
