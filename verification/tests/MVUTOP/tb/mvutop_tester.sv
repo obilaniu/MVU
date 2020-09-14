@@ -819,6 +819,18 @@ initial begin
     scaler_b = 2;
     gemvSignedTests();
 
+    // Repeat signed gemv tests, but with scaler set to 5
+    // Expected outcomes:
+    // Test 1 -> -d640, b10 in bank 10
+    // Test 2 -> -d3840, b00 in bank 11
+    // Test 3 -> d1280, b01 in bank 12
+    // Test 4 -> -d3840, b000 in bank 13
+    // Test 5 -> -d1280, b110 in bank 14
+    // Test 6 -> -d1935, b000 in bank 15
+    // Test 7 -> d495, b111 in bank 16
+    scaler_b = 5;
+    gemvSignedTests();
+
 
     print_banner($sformatf("Simulation done."));
     $finish();
