@@ -454,7 +454,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .wlength3   (wlength_3_q[i]),
         .wbaseaddr  (wbaseaddr_q[i]),
         .iaddr_out  (rdd_addr[i*BDBANKA +: BDBANKA]),
-        .waddr_out  (rdw_addr[i*BDBANKA +: BDBANKA]),
+        .waddr_out  (rdw_addr[i*BWBANKA +: BWBANKA]),
         .imsb       (d_msb[i]),
         .wmsb       (w_msb[i]),
         .sh_out     (agu_sh_out[i]),
