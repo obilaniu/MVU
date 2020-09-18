@@ -7,43 +7,50 @@ module agu( clk,
             clr,
             step,
             l0,
-			l1,
-			l2,
-			j0,
-			j1,
-			j2,
-			j3,
+            l1,
+            l2,
+            l3,
+            j0,
+            j1,
+            j2,
+            j3,
+            j4,
             addr_out,
             z0_out,
             z1_out,
-            z2_out
+            z2_out,
+            z3_out
 );
-           
+
 parameter BWADDR    = 21;             /* Bitwidth of Address */
 parameter BWLENGTH  = 8;
 
 
 // Ports
-input  wire                         clk;			    // Clock
+input  wire                         clk;                // Clock
 input  wire                         clr;                // Clear
 input  wire                         step;               // Step
-input  wire [      BWADDR-1 : 0]    j0;					// Address jump: dimension 0
-input  wire [      BWADDR-1 : 0]    j1;					// Address jump: dimension 1
-input  wire [      BWADDR-1 : 0]    j2;					// Address jump: dimension 2
-input  wire [      BWADDR-1 : 0]    j3;					// Address jump: dimension 3
-input  wire [    BWLENGTH-1 : 0]    l0;					// Length: dimension 0
-input  wire [    BWLENGTH-1 : 0]    l1;					// Length: dimension 1
-input  wire [    BWLENGTH-1 : 0]    l2;					// Length: dimension 2
-output reg  [      BWADDR-1 : 0]    addr_out;   		// Address generated
+input  wire [      BWADDR-1 : 0]    j0;                 // Address jump: dimension 0
+input  wire [      BWADDR-1 : 0]    j1;                 // Address jump: dimension 1
+input  wire [      BWADDR-1 : 0]    j2;                 // Address jump: dimension 2
+input  wire [      BWADDR-1 : 0]    j3;                 // Address jump: dimension 3
+input  wire [      BWADDR-1 : 0]    j4;                 // Address jump: dimension 4
+input  wire [    BWLENGTH-1 : 0]    l0;                 // Length: dimension 0
+input  wire [    BWLENGTH-1 : 0]    l1;                 // Length: dimension 1
+input  wire [    BWLENGTH-1 : 0]    l2;                 // Length: dimension 2
+input  wire [    BWLENGTH-1 : 0]    l3;                 // Length: dimension 3
+output reg  [      BWADDR-1 : 0]    addr_out;           // Address generated
 output wire                         z0_out;             // Signals when jump length 0 counter is 0
 output wire                         z1_out;             // Signals when jump length 1 counter is 0
 output wire                         z2_out;             // Signals when jump length 2 counter is 0
+output wire                         z3_out;             // Signals when jump length 3 counter is 0
 
 
 /* Local wires */
 wire                            z0;
 wire                            z1;
 wire                            z2;
+wire                            z3;
 
 
 
@@ -51,6 +58,7 @@ wire                            z2;
 reg        [    BWLENGTH-1 : 0] i0 = 0;
 reg        [    BWLENGTH-1 : 0] i1 = 0;
 reg        [    BWLENGTH-1 : 0] i2 = 0;
+reg        [    BWLENGTH-1 : 0] i3 = 0;
 
 
 
@@ -62,11 +70,13 @@ reg        [    BWLENGTH-1 : 0] i2 = 0;
 assign z0 = i0 == 0;
 assign z1 = i1 == 0;
 assign z2 = i2 == 0;
+assign z3 = i3 == 0;
 
 // jumpedN signals indicate when jumps happen
 assign z0_out = step & z0;
 assign z1_out = step & z1;
 assign z2_out = step & z2;
+assign z3_out = step & z3;
 
 
 // Index decrement & Address Bump logic
@@ -75,13 +85,21 @@ always @(posedge clk) begin
         i0 <= l0;
         i1 <= l1;
         i2 <= l2;
+        i3 <= l3;
         addr_out <= 0;
     end else if (step) begin
-        if (z0 && z1 && z2) begin
+        if (z0 && z1 && z2 && z3) begin
+            addr_out <= addr_out+j4;
+            i0       <= l0;
+            i1       <= l1;
+            i2       <= l2;
+            i3       <= l3;
+        end else if(z0 && z1 && z2) begin
             addr_out <= addr_out+j3;
             i0       <= l0;
             i1       <= l1;
             i2       <= l2;
+            i3       <= i3 - 1;
         end else if(z0 && z1) begin
             addr_out <= addr_out+j2;
             i0       <= l0;

@@ -83,21 +83,27 @@ module mvutop_tester();
     reg[  NMVU*BSTRIDE-1 : 0] wstride_0;        // Config: weight stride in dimension 0 (x)
     reg[  NMVU*BSTRIDE-1 : 0] wstride_1;        // Config: weight stride in dimension 1 (y)
     reg[  NMVU*BSTRIDE-1 : 0] wstride_2;        // Config: weight stride in dimension 2 (z)
+    reg[  NMVU*BSTRIDE-1 : 0] wstride_3;        // Config: weight stride in dimension 3 (w)
     reg[  NMVU*BSTRIDE-1 : 0] istride_0;        // Config: input stride in dimension 0 (x)
     reg[  NMVU*BSTRIDE-1 : 0] istride_1;        // Config: input stride in dimension 1 (y)
     reg[  NMVU*BSTRIDE-1 : 0] istride_2;        // Config: input stride in dimension 2 (z)
+    reg[  NMVU*BSTRIDE-1 : 0] istride_3;        // Config: input stride in dimension 3 (w)
     reg[  NMVU*BSTRIDE-1 : 0] ostride_0;        // Config: output stride in dimension 0 (x)
     reg[  NMVU*BSTRIDE-1 : 0] ostride_1;        // Config: output stride in dimension 1 (y)
     reg[  NMVU*BSTRIDE-1 : 0] ostride_2;        // Config: output stride in dimension 2 (z)
+    reg[  NMVU*BSTRIDE-1 : 0] ostride_3;        // Config: output stride in dimension 2 (w)
     reg[  NMVU*BLENGTH-1 : 0] wlength_0;        // Config: weight length in dimension 0 (x)
     reg[  NMVU*BLENGTH-1 : 0] wlength_1;        // Config: weight length in dimension 1 (y)
     reg[  NMVU*BLENGTH-1 : 0] wlength_2;        // Config: weight length in dimension 2 (z)
+    reg[  NMVU*BLENGTH-1 : 0] wlength_3;        // Config: weight length in dimension 2 (w)
     reg[  NMVU*BLENGTH-1 : 0] ilength_0;        // Config: input length in dimension 0 (x)
     reg[  NMVU*BLENGTH-1 : 0] ilength_1;        // Config: input length in dimension 1 (y)
     reg[  NMVU*BLENGTH-1 : 0] ilength_2;        // Config: input length in dimension 2 (z)
+    reg[  NMVU*BLENGTH-1 : 0] ilength_3;        // Config: input length in dimension 2 (w)
     reg[  NMVU*BLENGTH-1 : 0] olength_0;        // Config: output length in dimension 0 (x)
     reg[  NMVU*BLENGTH-1 : 0] olength_1;        // Config: output length in dimension 1 (y)
     reg[  NMVU*BLENGTH-1 : 0] olength_2;        // Config: output length in dimension 2 (z)
+    reg[  NMVU*BLENGTH-1 : 0] olength_3;        // Config: output length in dimension 2 (w)
 
     //
     // DUT
@@ -134,21 +140,27 @@ module mvutop_tester();
             .wstride_0        (wstride_0),
             .wstride_1        (wstride_1),
             .wstride_2        (wstride_2),
+            .wstride_3        (wstride_3),
             .istride_0        (istride_0),
             .istride_1        (istride_1),
             .istride_2        (istride_2),
+            .istride_3        (istride_3),
             .ostride_0        (ostride_0),
             .ostride_1        (ostride_1),
             .ostride_2        (ostride_2),
+            .ostride_3        (ostride_3),
             .wlength_0        (wlength_0),
             .wlength_1        (wlength_1),
             .wlength_2        (wlength_2),
+            .wlength_3        (wlength_3),
             .ilength_0        (ilength_0),
             .ilength_1        (ilength_1),
             .ilength_2        (ilength_2),
+            .ilength_3        (ilength_3),
             .olength_0        (olength_0),
             .olength_1        (olength_1),
             .olength_2        (olength_2),
+            .olength_3        (olength_3),
 			.wrw_addr         (wrw_addr),
 			.wrw_word         (wrw_word),
 			.wrw_en           (wrw_en),
@@ -317,7 +329,8 @@ task gemvTests();
     wstride_2 = 0;
     istride_0 = -2;      // 1 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -2;      // Set the same as istride_0
+    istride_2 = 0;
+    istride_3 = -2;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -356,7 +369,8 @@ task gemvTests();
     wstride_2 = 0;
     istride_0 = -4;      // 2 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -4;      // Set the same as istride_0
+    istride_2 = 0;
+    istride_3 = -4;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -377,7 +391,7 @@ task gemvTests();
 
     // TEST 5
     // Expected result: accumulators get to value h180, output to data memory is b001 for each element
-    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
     // (i.e. d2*d1*d64*d3 = d384 = h180)
     // Result output to bank 3 starting at address 0
     print("TEST gemv 5: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=b10, weights=b01");
@@ -397,7 +411,8 @@ task gemvTests();
     wstride_2 = 0;
     istride_0 = -4;      // 2 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -4;      // Set the same as istride_0
+    istride_2 = 0;
+    istride_3 = -4;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -446,7 +461,8 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -2;      // 1 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -2;      // Set the same as istride_0
+    istride_2 = 0;
+    istride_3 = -2;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -487,7 +503,8 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -2;      // 1 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -2;      // Set the same as istride_0
+    istride_2 = 0;
+    istride_3 = -2;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -528,7 +545,8 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -2;      // 1 tile back move x 2 bits 
     istride_1 = 0;
-    istride_2 = -2;      // Set the same as istride_0
+    istride_2 = 0;
+    istride_3 = -2;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -548,7 +566,7 @@ task gemvSignedTests();
     #(`CLKPERIOD*28);
 
     // Expected result: accumulators get to value hfffffffffffffd00, output to data memory is b110 for each element
-    // (i.e. [0000000000000000, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
+    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
     // (i.e. d3*-d2*d64*d2 = -d768 = 32'hfffffffffffffd00)
     // Result output to bank 13 starting at address 0
     print("TEST gemv signed 3: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: d=3, w=-2");
@@ -571,7 +589,8 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -3;      // 1 tile back move x 3 bits 
     istride_1 = 0;
-    istride_2 = -3;      // Set the same as istride_0
+    istride_2 = 0;
+    istride_3 = -3;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -615,7 +634,8 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -3;      // 1 tile back move x 3 bits 
     istride_1 = 0;
-    istride_2 = -3;      // Set the same as istride_0
+    istride_2 = 0;
+    istride_3 = -3;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -638,7 +658,7 @@ task gemvSignedTests();
     // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
     // (i.e. (d3*-d2*d32 + d2*d1*d31 + d1*d1*d1)*d3 = -d387 = 32'hfffffffffffffe7d)
     // Result output to bank 15 starting at address 0
-    print("TEST gemv signed 5: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
+    print("TEST gemv signed 5: matrix-vector mult: 3x3 x 3 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
     writeDataRepeat('h0000000000000000, 'h0000, 3, 3);      // MSB  ={0,0}... \
     writeDataRepeat('hfffffffffffffffe, 'h0001, 3, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
     writeDataRepeat('haaaaaaaaaaaaaaab, 'h0002, 3, 3);      // LSB  ={1,0}... /
@@ -658,7 +678,8 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -6;      // 2 tile back move x 3 bits 
     istride_1 = 0;
-    istride_2 = -6;      // Set the same as istride_0
+    istride_2 = 0;
+    istride_3 = -6;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -681,7 +702,7 @@ task gemvSignedTests();
     // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, ...)
     // (i.e. (d3*d1*d32 + d2*-d1*d31 + d1*-d1*d1)*d3 = d99 = 32'h0000000000000063)
     // Result output to bank 16 starting at address 0
-    print("TEST gemv signed 6: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
+    print("TEST gemv signed 6: matrix-vector mult: 3x3 x 3 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
     writeDataRepeat('h0000000000000000, 'h0000, 3, 3);      // MSB  ={0,0}... \
     writeDataRepeat('hfffffffffffffffe, 'h0001, 3, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
     writeDataRepeat('haaaaaaaaaaaaaaab, 'h0002, 3, 3);      // LSB  ={1,0}... /
@@ -701,7 +722,8 @@ task gemvSignedTests();
     wstride_2 = 0;
     istride_0 = -6;      // 2 tile back move x 3 bits 
     istride_1 = 0;
-    istride_2 = -6;      // Set the same as istride_0
+    istride_2 = 0;
+    istride_3 = -6;      // Set the same as istride_0
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
@@ -757,21 +779,27 @@ initial begin
     wstride_0 = 0;
     wstride_1 = 0;
     wstride_2 = 0;
+    wstride_3 = 0;
     istride_0 = 0;
     istride_1 = 0;
     istride_2 = 0;
+    istride_3 = 0;
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
+    ostride_3 = 0;
     wlength_0 = 0;
     wlength_1 = 0;
     wlength_2 = 0;
+    wlength_3 = 0;
     ilength_0 = 0;
     ilength_1 = 0;
     ilength_2 = 0;
+    ilength_3 = 0;
     olength_0 = 0;
     olength_1 = 0;
     olength_2 = 0;
+    olength_3 = 0;
     wrw_addr = 0;
     wrw_word = 0;
     wrw_en = 0;
