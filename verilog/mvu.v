@@ -258,8 +258,8 @@ generate for (i=0; i < N; i=i+1) begin: scalerarray
         .clr(scaler_clr),
         .a(shacc_out[i]),
         .b(scaler_b),
-        .c(0),
-        .d(0),
+        .c({BSCALERC{1'b0}}),
+        .d({BSCALERD{1'b0}}),
         .p(scaler_out[i])
     );
 end endgenerate

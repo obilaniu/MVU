@@ -15,7 +15,7 @@ parameter  BDBANKA = 15;
 input  wire                 clk;
 input  wire                 clr;
 input  wire                 step;
-input  wire					load;
+input  wire                 load;
 input  wire[BDBANKA-1 : 0]  baseaddr;
 output wire[BDBANKA-1 : 0]  addrout;
 
