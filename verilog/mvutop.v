@@ -55,9 +55,10 @@ module mvutop(  clk,
                 olength_1,
                 olength_2,
                 olength_3,
-                wrw_addr,
-                wrw_word,
-                wrw_en,
+                scaler_b,
+				wrw_addr,
+				wrw_word,
+				wrw_en,
                 rdc_en,
                 rdc_grnt,
                 rdc_addr,
@@ -79,21 +80,24 @@ localparam BWBANKW = 4096;          // Bitwidth of Weights BANK Word
 localparam BDBANKA = 15;            /* Bitwidth of Data    BANK Address */
 localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
 
-localparam BACC    = 32;            /* Bitwidth of Accumulators */
+localparam BACC    = 27;            /* Bitwidth of Accumulators */
+localparam BSCALERP = 48;               // Bitwidth of the scaler output
 
 // Quantizer parameters
-localparam BQMSBIDX = $clog2(BACC);     // Bitwidth of the quantizer MSB location specifier
-localparam BQBOUT   = $clog2(BACC);     // Bitwitdh of the quantizer 
-localparam QBWOUTBD = $clog2(BACC);     // Bitwidth of the quantizer bit-depth out specifier
+localparam BQMSBIDX = $clog2(BSCALERP); // Bitwidth of the quantizer MSB location specifier
+localparam BQBOUT   = $clog2(BSCALERP); // Bitwidth of the quantizer 
+localparam QBWOUTBD = $clog2(BSCALERP); // Bitwidth of the quantizer bit-depth out specifier
 
 // Other Parameters
-localparam BCNTDWN      = 29;           // Bitwidth of the countdown ports
-localparam BPREC        = 6;            // Bitwidth of the precision ports
-localparam BBWADDR      = 9;            // Bitwidth of the weight base address ports
-localparam BBDADDR      = 15;           // Bitwidth of the data base address ports
-localparam BSTRIDE      = 15;           // Bitwidth of the stride ports
-localparam BLENGTH      = 15;           // Bitwidth of the length ports
+localparam BCNTDWN	    = 29;			// Bitwidth of the countdown ports
+localparam BPREC 	    = 6;			// Bitwidth of the precision ports
+localparam BBWADDR	    = 9;			// Bitwidth of the weight base address ports
+localparam BBDADDR	    = 15;			// Bitwidth of the data base address ports
+localparam BSTRIDE	    = 15;			// Bitwidth of the stride ports
+localparam BLENGTH	    = 15;			// Bitwidth of the length ports
+localparam BSCALERB     = 16;           // Bitwidth of the scaler parameter
 localparam VVPSTAGES    = 3;            // Number of stages in the VVP pipeline
+localparam SCALERLATENCY = 3;           // Number of stages in the scaler pipeline
 localparam MAXPOOLSTAGES = 1;           // Number of max pool pipeline stages
 localparam MEMRDLATENCY = 2;            // Memory read latency
 
@@ -154,6 +158,7 @@ input  wire[  NMVU*BLENGTH-1 : 0] olength_0;            // Config: output length
 input  wire[  NMVU*BLENGTH-1 : 0] olength_1;            // Config: output length in dimension 1 (y)
 input  wire[  NMVU*BLENGTH-1 : 0] olength_2;            // Config: output length in dimension 2 (z)
 input  wire[  NMVU*BLENGTH-1 : 0] olength_3;            // Config: output length in dimension 3 (w)
+input  wire[ NMVU*BSCALERB-1 : 0] scaler_b;             // Config: multiplicative scaler (operand 'b')
 
 input  wire[  NMVU*BWBANKA-1 : 0] wrw_addr;             // Weight memory: write address
 input  wire[  NMVU*BWBANKW-1 : 0] wrw_word;             // Weight memory: write word
@@ -206,6 +211,7 @@ reg[   BLENGTH-1 : 0] olength_0_q       [NMVU-1 : 0];           // Config: outpu
 reg[   BLENGTH-1 : 0] olength_1_q       [NMVU-1 : 0];           // Config: output length in dimension 1 (y)
 reg[   BLENGTH-1 : 0] olength_2_q       [NMVU-1 : 0];           // Config: output length in dimension 2 (z)
 reg[   BLENGTH-1 : 0] olength_3_q       [NMVU-1 : 0];           // Config: output length in dimension 3 (w)
+reg[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];           // Config: multiplicative scaler (operand 'b')
 
 /* Local Wires */
 
@@ -234,6 +240,9 @@ wire[        NMVU-1 : 0] rdi_grnt;
 wire[NMVU*BDBANKA-1 : 0] rdi_addr;
 wire[        NMVU-1 : 0] wri_grnt;
 wire[NMVU*BDBANKA-1 : 0] wri_addr;
+
+// Scaler
+wire[        NMVU-1 : 0] scaler_clr;            // Scaler: clear/reset
 
 // Quantizer
 wire[        NMVU-1 : 0] quant_start;           // Quantizer: signal to start quantizing
@@ -307,6 +316,7 @@ assign controller_clr   = {NMVU{!rst_n}};
 assign inagu_clr        = {NMVU{!rst_n}} | start_q;
 assign outagu_clr       = {NMVU{!rst_n}};
 assign shacc_clr_int    = {NMVU{!rst_n}} | shacc_clr;       // Clear the accumulator
+assign scaler_clr       = {NMVU{!rst_n}};
 assign quant_clr_int    = {NMVU{!rst_n}} | quant_clr;
 
 // Quantizer and output control signals
@@ -363,6 +373,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             olength_0_q[i]      <= 0;
             olength_1_q[i]      <= 0;
             olength_2_q[i]      <= 0;
+            scaler_b_q[i]       <= 0;
             olength_3_q[i]      <= 0;
         end else begin
             if (start[i]) begin
@@ -398,6 +409,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 olength_0_q[i]      <= olength_0    [i*BLENGTH +: BLENGTH];
                 olength_1_q[i]      <= olength_1    [i*BLENGTH +: BLENGTH];
                 olength_2_q[i]      <= olength_2    [i*BLENGTH +: BLENGTH];
+                scaler_b_q[i]       <= scaler_b     [i*BSCALERB +: BSCALERB];
                 olength_3_q[i]      <= olength_3    [i*BLENGTH +: BLENGTH];
             end
         end
@@ -481,7 +493,7 @@ end endgenerate
 generate for(i = 0; i < NMVU; i = i+1) begin: quantser_ctrlarray
     assign quant_bwout[i*BPREC +: BQBOUT] = oprecision[i*BPREC +: BQBOUT];
     quantser_ctrl #(
-        .BWOUT      (BACC)
+        .BWOUT      (BSCALERP)
     ) quantser_ctrl_unit (
         .clk        (clk),
         .clr        (quant_ctrl_clr[i]),
@@ -552,7 +564,7 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     );
 
     shiftreg #(
-        .N      (MAXPOOLSTAGES)
+        .N      (SCALERLATENCY+MAXPOOLSTAGES)
     ) maxpool_done_delayarrayunit (
         .clk    (clk),
         .clr    (~rst_n),
@@ -562,7 +574,7 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     );
 
     shiftreg #(
-        .N      (VVPSTAGES+MEMRDLATENCY+MAXPOOLSTAGES + 1)
+        .N      (VVPSTAGES+MEMRDLATENCY+SCALERLATENCY+MAXPOOLSTAGES + 1)
     ) outagu_load_delayarrayunit (
         .clk    (clk),
         .clr    (~rst_n),
@@ -587,12 +599,14 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .shacc_clr      (shacc_clr_int[i]                       ),
             .shacc_load     (shacc_load[i]                          ),
             .shacc_acc      (shacc_acc[i]                           ),
-            .shacc_sh       (shacc_sh[i]                            ),
-            .max_en         (max_en[i]                              ),
-            .max_clr        (max_clr[i]	                            ),
-            .max_pool       (max_pool[i]                            ),
-            .quant_clr      (quant_clr_int[i]                       ),
-            .quant_msbidx   (quant_msbidx_q[i]                      ),
+            .shacc_sh		(shacc_sh[i]							),
+            .scaler_clr     (scaler_clr[i]                          ),
+            .scaler_b       (scaler_b_q[i]                          ),
+            .max_en			(max_en[i]								),
+            .max_clr		(max_clr[i]								),
+            .max_pool		(max_pool[i]							),
+            .quant_clr		(quant_clr_int[i]	    				),
+            .quant_msbidx   (quant_msbidx_q[i]	                    ),
             .quant_load     (quant_load[i]                          ),
             .quant_step     (quant_step[i]                          ),
             .rdw_addr       (rdw_addr[i*BWBANKA +: BWBANKA]         ),
