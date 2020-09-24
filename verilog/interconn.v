@@ -5,41 +5,56 @@
 `timescale 1 ps / 1 ps
 /* Module */
 module interconn (clk, clr,
-                  send_en, send_word,
+                  send_to, send_en, send_addr, send_word, 
                   recv_from,
-                  recv_en, recv_word);
+                  recv_en, recv_addr, recv_word);
 
 /* Parameters */
-parameter   N = 8;
-parameter   W = 128;
+parameter   N = 8;              // Number of MVUs
+parameter   W = 64;             // Biwidth of the data words
+parameter   BADDR = 15;         // Biwidth of the address words
 
-localparam  A = $clog2(N);
+input  wire                     clk;
+input  wire                     clr;
+input  wire [N*N-1   : 0]       send_to;        // MVUs to send to (selectors bits)
+input  wire [N-1   : 0]         send_en;
+input  wire [N*BADDR-1   : 0]   send_addr;      // Memory address to write to
+input  wire [N*W-1 : 0]         send_word;      // Data to send
 
-input  wire             clk;
-input  wire             clr;
-input  wire [N-1   : 0] send_en;
-input  wire [N*W-1 : 0] send_word;
+output reg  [N*N-1 : 0]         recv_from;      // Receive from MVU ID
+output reg  [N-1   : 0]         recv_en;        // 
+output reg  [N*BADDR-1   : 0]   recv_addr;      // Memory address to write to
+output reg  [N*W-1 : 0]         recv_word;      // Data received
 
-input  wire [N*A-1 : 0] recv_from;
-output reg  [N-1   : 0] recv_en;
-output reg  [N*W-1 : 0] recv_word;
+genvar i, j;
 
-genvar i;
 
 
 /* Logic */
 generate if(N > 1) begin:multiple
     for(i=0;i<N;i=i+1) begin:xbarloop
-        wire [A-1:0] addr;
-        assign addr = recv_from[i*A +: A];
-        
-        always @(posedge clk or posedge clr) begin
-            if(clr) begin
-                recv_en  [i]        = 1'b0;
-                recv_word[i*W +: W] = {W{1'b0}};
-            end else if(clk) begin
-                recv_en  [i]        = send_en  [addr];
-                recv_word[i*W +: W] = send_word[addr*W +: W];
+
+        // Signal assignments
+        //wire [A-1:0] addr;
+        //assign addr = recv_from[i*A +: A];
+
+        for (j=0; j < N; j=j+1) begin: recvloop
+
+            wire sel = send_to[j*N+i] & send_en[j];
+
+            always @(posedge clk or posedge clr) begin
+                if(clr) begin
+                    recv_en  [i]        = 1'b0;
+                    recv_addr[i*BADDR +: BADDR] = {BADDR{1'b0}};
+                    recv_from[i*N +: N] = {N{1'b0}};
+                    recv_word[i*W +: W] = {W{1'b0}};
+                end else if(clk) begin
+                    // TODO: do some arbitration; for now, just OR the selectors
+                    recv_from[i*N + j] = sel ? send_to[j*N + i] : 0;
+                    recv_en[i] = recv_en[i] | sel;
+                    recv_addr[i*BADDR +: BADDR] = recv_addr[i*BADDR +: BADDR] | (sel ? send_addr[j*BADDR +: BADDR] : 0);
+                    recv_word[i*W +: W] = recv_word[i*W +: W] | (sel ? send_word[j*W +: W] : 0);
+                end
             end
         end
     end
@@ -47,9 +62,13 @@ end else begin:single
     always @(posedge clk or posedge clr) begin
         if(clr) begin
             recv_en   = 1'b0;
+            recv_from = 1'b0;
+            recv_addr = {BADDR{1'b0}};
             recv_word = {W{1'b0}};
         end else if(clk) begin
+            recv_from = send_to;
             recv_en   = send_en;
+            recv_addr = send_addr;
             recv_word = send_word;
         end
     end
