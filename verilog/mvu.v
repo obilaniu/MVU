@@ -51,6 +51,8 @@ module mvu( clk,
             shacc_load,
             shacc_acc,
             shacc_sh,
+            scaler_clr,
+            scaler_b,
             max_en,
             max_clr,
             max_pool,
@@ -101,22 +103,30 @@ localparam BDBANKA     = BDBANKABS+     /* Bitwidth of Data    BANK Address */
                          BDBANKAWS;
 localparam BDBANKW     = N;             /* Bitwidth of Data    BANK Word */
 localparam BSUM        = CLOG2N+2;      /* Bitwidth of Sums */
-localparam BACC        = 32;            /* Bitwidth of Accumulators */
+localparam BACC        = 27;            /* Bitwidth of Accumulators */
+
+localparam BSCALERA    = BACC;
+localparam BSCALERB    = 16;
+localparam BSCALERC    = 27;
+localparam BSCALERD    = 27;
+localparam BSCALERP    = 48;
 
 // Quantizer parameters
-parameter  QMSBLOCBD  = $clog2(BACC);   // Bitwidth of the quantizer MSB location specifier
+parameter  QMSBLOCBD  = $clog2(BSCALERP);   // Bitwidth of the quantizer MSB location specifier
 
 /* Interface */
-input  wire                clk;
-input  wire[        1 : 0] mul_mode;
-input  wire                neg_acc;                 // Negate the inputs to the accumulators
-input  wire                shacc_clr;
-input  wire                shacc_load;
-input  wire                shacc_acc;
-input  wire                shacc_sh;
-input  wire                max_en;
-input  wire                max_clr;
-input  wire                max_pool;
+input  wire                 clk;
+input  wire[        1 : 0]  mul_mode;
+input  wire                 neg_acc;                 // Negate the inputs to the accumulators
+input  wire                 shacc_clr;
+input  wire                 shacc_load;
+input  wire                 shacc_acc;
+input  wire                 shacc_sh;
+input  wire                 scaler_clr;             // Scaler: clear/reset
+input  wire[BSCALERB-1 : 0] scaler_b;               // Scaler: multiplier operand
+input  wire                 max_en;
+input  wire                 max_clr;
+input  wire                 max_pool;
 
 // Quantizer input signals
 input  wire                  quant_clr;
@@ -169,16 +179,17 @@ wire                wr_en;
 wire[1 : 0]         wr_muxcode;
 wire[BDBANKA-1 : 0] wr_addr;
 
-wire[BWBANKW-1 : 0] core_weights;
-wire[BDBANKW-1 : 0] core_data;
-wire[BSUM*N-1  : 0] core_out;
+wire[BWBANKW-1 : 0]     core_weights;
+wire[BDBANKW-1 : 0]     core_data;
+wire[BSUM*N-1  : 0]     core_out;
 wire signed[BSUM-1 : 0] core_out_signed [N-1 : 0];
-wire signed[BSUM-1 : 0] shacc_in [N-1 : 0];
-wire[BACC*N-1  : 0] shacc_out;
-wire[BACC*N-1  : 0] pool_out;
-wire[BDBANKW-1 : 0] quant_out;
-reg [BDBANKW-1 : 0] rdd_word;
-wire[BDBANKW-1 : 0] wrd_word;
+wire signed[BSUM-1 : 0] shacc_in        [N-1 : 0];
+wire[BACC-1  : 0]       shacc_out       [N-1 : 0];
+wire[BSCALERP-1 : 0]    scaler_out      [N-1 : 0];
+wire[BSCALERP-1 : 0]    pool_out        [N-1 : 0];
+wire[BDBANKW-1 : 0]     quant_out;
+reg [BDBANKW-1 : 0]     rdd_word;
+wire[BDBANKW-1 : 0]     wrd_word;
 
 wire[NDBANK*BDBANKW-1 : 0] rdd_words;
 wire[NDBANK*BDBANKW-1 : 0] rdi_words;
@@ -234,29 +245,48 @@ end endgenerate
 generate for(i=0;i<N;i=i+1) begin:shaccarray
     shacc   #(BACC, BSUM) accumulator(clk, shacc_clr, shacc_load, shacc_acc, shacc_sh,
                                       shacc_in[i],
-                                      shacc_out [i*BACC +: BACC]);
+                                      shacc_out[i]);
+end endgenerate
+
+/* Scalers */
+generate for (i=0; i < N; i=i+1) begin: scalerarray
+    fixedpointscaler #(
+        .BA(BSCALERA),
+        .BB(BSCALERB),
+        .BC(BSCALERC),
+        .BD(BSCALERD),
+        .BP(BSCALERP)
+    ) scaler (
+        .clk(clk),
+        .clr(scaler_clr),
+        .a(shacc_out[i]),
+        .b(scaler_b),
+        .c({BSCALERC{1'b0}}),
+        .d({BSCALERD{1'b0}}),
+        .p(scaler_out[i])
+    );
 end endgenerate
 
 
 /* Max poolers */
 generate for(i=0;i<N;i=i+1) begin:poolarray
-    maxpool #(BACC)       pooler     (clk, max_clr, max_pool,
-                                      shacc_out [i*BACC +: BACC],
-                                      pool_out[i*BACC +: BACC]);
+    maxpool #(BSCALERP)       pooler     (clk, max_clr, max_pool,
+                                      scaler_out [i],
+                                      pool_out[i]);
 end endgenerate
 
 
 /* Quantizers */
 generate for(i=0;i<N;i=i+1) begin:quantarray
     quantser #(
-        .BWIN       (BACC)
+        .BWIN       (BSCALERP)
     ) quantser_unit (
         .clk        (clk),
         .clr        (quant_clr),
         .msbidx     (quant_msbidx),
         .load       (quant_load),
         .step       (quant_step),
-        .din        (pool_out[i*BACC +: BACC]),
+        .din        (pool_out[i]),
         .dout       (quant_out[i])
     );
 end endgenerate
