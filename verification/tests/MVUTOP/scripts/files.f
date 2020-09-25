@@ -27,3 +27,4 @@
 ../../../../verilog/mvutop.v
 ../../../lib/utils/utils.sv
 ../tb/mvutop_tester.sv
+../tb/mvutop_ic_tester.sv
