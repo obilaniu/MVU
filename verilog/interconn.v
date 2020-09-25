@@ -50,10 +50,12 @@ generate if(N > 1) begin:multiple
                     recv_word[i*W +: W] = {W{1'b0}};
                 end else if(clk) begin
                     // TODO: do some arbitration; for now, just OR the selectors
-                    recv_from[i*N + j] = sel ? send_to[j*N + i] : 0;
-                    recv_en[i] = recv_en[i] | sel;
-                    recv_addr[i*BADDR +: BADDR] = recv_addr[i*BADDR +: BADDR] | (sel ? send_addr[j*BADDR +: BADDR] : 0);
-                    recv_word[i*W +: W] = recv_word[i*W +: W] | (sel ? send_word[j*W +: W] : 0);
+                    if (i != j) begin
+                        recv_from[i*N + j] = sel ? send_to[j*N + i] : 0;
+                        recv_en[i] = recv_en[i] | sel;
+                        recv_addr[i*BADDR +: BADDR] = recv_addr[i*BADDR +: BADDR] | (sel ? send_addr[j*BADDR +: BADDR] : 0);
+                        recv_word[i*W +: W] = recv_word[i*W +: W] | (sel ? send_word[j*W +: W] : 0);
+                    end
                 end
             end
         end

@@ -48,7 +48,6 @@ module mvutop_tester();
     reg [        NMVU-1 : 0] done        ;//output done;
     reg [        NMVU-1 : 0] irq         ;//output irq
     reg                      ic_clr      ;//input  ic_clr;
-    reg [  NMVU*BMVUA-1 : 0] ic_recv_from;//input  ic_recv_from;
     reg [      2*NMVU-1 : 0] mul_mode    ;//input  mul_mode;
     reg [        NMVU-1 : 0] d_signed    ;//input  d_signed
     reg [        NMVU-1 : 0] w_signed    ;//input  w_signed
@@ -75,7 +74,7 @@ module mvutop_tester();
     reg[  NMVU*BBWADDR-1 : 0] wbaseaddr;        // Config: weight memory base address
     reg[  NMVU*BBDADDR-1 : 0] ibaseaddr;        // Config: data memory base address for input
     reg[  NMVU*BBDADDR-1 : 0] obaseaddr;        // Config: data memory base address for output
-
+    reg[     NMVU*NMVU-1 : 0] omvusel;	 		// Config: MVU selector bits for output
 
     reg[  NMVU*BWBANKA-1 : 0] wrw_addr;         // Weight memory: write address
     reg[  NMVU*BWBANKW-1 : 0] wrw_word;	        // Weight memory: write word
@@ -114,7 +113,6 @@ module mvutop_tester();
             .done             (done         ),
             .irq              (irq          ),
             .ic_clr           (ic_clr       ),
-            .ic_recv_from     (ic_recv_from ),
             .mul_mode         (mul_mode     ),
             .d_signed         (d_signed     ),
             .w_signed         (w_signed     ),
@@ -131,6 +129,7 @@ module mvutop_tester();
             .wbaseaddr        (wbaseaddr),
             .ibaseaddr        (ibaseaddr),
             .obaseaddr        (obaseaddr),
+            .omvusel          (omvusel),
             .wstride_0        (wstride_0),
             .wstride_1        (wstride_1),
             .wstride_2        (wstride_2),
@@ -377,7 +376,7 @@ task gemvTests();
 
     // TEST 5
     // Expected result: accumulators get to value h180, output to data memory is b001 for each element
-    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
     // (i.e. d2*d1*d64*d3 = d384 = h180)
     // Result output to bank 3 starting at address 0
     print("TEST gemv 5: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=b10, weights=b01");
@@ -548,7 +547,7 @@ task gemvSignedTests();
     #(`CLKPERIOD*28);
 
     // Expected result: accumulators get to value hfffffffffffffd00, output to data memory is b110 for each element
-    // (i.e. [0000000000000000, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
+    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
     // (i.e. d3*-d2*d64*d2 = -d768 = 32'hfffffffffffffd00)
     // Result output to bank 13 starting at address 0
     print("TEST gemv signed 3: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: d=3, w=-2");
@@ -635,7 +634,7 @@ task gemvSignedTests();
     #(`CLKPERIOD*36);
 
     // Expected result: accumulators get to value hfffffffffffffe7d, output to data memory is b100 for each element
-    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. [hffffffffffffffff, 0000000000000000, 0000000000000000, ...)
     // (i.e. (d3*-d2*d32 + d2*d1*d31 + d1*d1*d1)*d3 = -d387 = 32'hfffffffffffffe7d)
     // Result output to bank 15 starting at address 0
     print("TEST gemv signed 5: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
@@ -732,7 +731,6 @@ initial begin
     rst_n = 0;
     start = 0;
     ic_clr = 0;      
-    ic_recv_from = 0;
     mul_mode = 'b01;
     d_signed = 0;
     w_signed = 0;
@@ -754,6 +752,7 @@ initial begin
     wbaseaddr = 0;
     ibaseaddr = 0;
     obaseaddr = 0;
+    omvusel = 0;  
     wstride_0 = 0;
     wstride_1 = 0;
     wstride_2 = 0;
@@ -784,6 +783,10 @@ initial begin
     // Turn some stuff on
     max_en = 1;
 
+    // Set the omvusel signals so that they write to themselves
+    for (int i=0; i < NMVU; i++) begin
+        omvusel[i*NMVU + i] = 1'b1;
+    end
  
     // Run gemv tests
     gemvTests();
