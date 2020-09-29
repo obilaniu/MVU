@@ -228,6 +228,7 @@ wire[        NMVU-1 : 0] wrd_grnt;
 wire[NMVU*BDBANKA-1 : 0] wrd_addr;
 
 // Interconnect
+wire                     ic_clr_int;
 wire[   NMVU*NMVU-1 : 0] ic_send_to;
 wire[        NMVU-1 : 0] ic_send_en;
 wire[NMVU*BDBANKA-1 : 0] ic_send_addr;
@@ -303,7 +304,7 @@ interconn #(
     .BADDR(BDBANKA)
 ) ic (
     .clk(clk),
-    .clr(ic_clr),
+    .clr(ic_clr_int),
     .send_to(ic_send_to),
     .send_en(ic_send_en),
     .send_addr(ic_send_addr),
@@ -346,6 +347,7 @@ assign run_acc          = run;                              // No stalls for now
 assign shacc_load       = shacc_done | shacc_load_start;    // Load accumulator with current output of MVP's
 
 // Clear signals (just connect to global reset for now)
+assign ic_clr_int       = !rst_n | ic_clr;
 assign controller_clr   = {NMVU{!rst_n}};
 assign inagu_clr        = {NMVU{!rst_n}} | start_q;
 assign outagu_clr       = {NMVU{!rst_n}};
