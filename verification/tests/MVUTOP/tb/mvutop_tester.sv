@@ -214,6 +214,18 @@ task writeWeightsRepeat(logic unsigned[BWBANKW-1 : 0] word, logic unsigned[BWBAN
     end
 endtask
 
+task automatic readData(logic unsigned [BDBANKA-1 : 0] addr, ref logic unsigned [BDBANKW-1 : 0] word, ref logic unsigned [NMVU-1 : 0] grnt);
+    
+    rdc_addr = addr;
+    rdc_en = 1;
+    #(`CLKPERIOD);
+    grnt = rdc_grnt;
+    rdc_en = 0;
+    #(`CLKPERIOD*2);
+    word = rdc_word;
+
+endtask
+
 
 //==================================================================================================
 // Simulation specific Threads
@@ -240,16 +252,32 @@ end
 // Testbench tasks
 
 //
-// Memory test
+// Controller memory access test
 //
-task memTests();
+task controllerMemTest();
+
+    logic unsigned [BDBANKW-1 : 0] word;
+    logic unsigned [NMVU-1 : 0] grnt;
+
+    print_banner("Controller memory access test");
+
+    // Read/Write tests
+    writeData('hdeadbeefdeadbeef, 0);
+    readData(0, word, grnt);
+    print($sformatf("word=%x, grnt=%b", word, grnt));
+    writeData('hbeefdeadbeefdead, 1);
+    readData(1, word, grnt);
+    print($sformatf("word=%x, grnt=%b", word, grnt));
+
 
 endtask
 
 //
-// Matric-vector multiplication (GEMV) test
+// Matrix-vector multiplication (GEMV) test
 //
 task gemvTests();
+
+    print_banner("Matrix-vector multiplication (GEMV) test");
 
     print("TEST gemv 1: matrix-vector mult: 1x1 x 1 tiles, 1x1 => 1 bit precision, , input=all 0's");
     wprecision = 1;
@@ -447,6 +475,8 @@ endtask
 // Test signed Matrix-Vector multiplication (gemv signed)
 //
 task gemvSignedTests();
+
+    print_banner("Matrix-vector signed multiplication (GEMV) test");
 
     // Expected result: accumulators get to value hffffffffffffff80, output to data memory is b10 for each element
     // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
@@ -836,6 +866,8 @@ initial begin
     // Turn some stuff on
     max_en = 1;
 
+    // Test memory access
+    controllerMemTest();
  
     // Run gemv tests
     gemvTests();
@@ -852,7 +884,7 @@ initial begin
     // Test 6 -> -d774, b001 in bank 15
     // Test 7 -> d198, b011 in bank 16
     scaler_b = 2;
-    gemvSignedTests();
+    //gemvSignedTests();
 
     // Repeat signed gemv tests, but with scaler set to 5
     // Expected outcomes:
@@ -864,7 +896,7 @@ initial begin
     // Test 6 -> -d1935, b000 in bank 15
     // Test 7 -> d495, b111 in bank 16
     scaler_b = 5;
-    gemvSignedTests();
+    //gemvSignedTests();
 
 
     print_banner($sformatf("Simulation done."));
