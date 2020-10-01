@@ -298,9 +298,7 @@ assign rdi_addr         = 0;
 //assign wri_grnt         = 0;
 assign wri_addr         = 0;
 
-
-// TODO: WIRE THESE UP TO THE AGU. PULLED UP/DOWN FOR NOW
-assign rdd_en           = {NMVU{1'b1}};                     // Always reading for now
+assign rdd_en           = run;                              // MVU reads when running
 
 // TODO: WIRE THESE UP TO SOMETHING USEFUL
 assign outload          = 0;
