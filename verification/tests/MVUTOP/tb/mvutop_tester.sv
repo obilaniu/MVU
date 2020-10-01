@@ -192,8 +192,8 @@ endtask
 
 task writeData(int mvu, unsigned[BDBANKW-1 : 0] word, unsigned[BDBANKA-1 : 0] addr);
     checkmvu(mvu);
-    wrc_addr[mvu*BDBANKA +: BDBANKA] = addr;
-    wrc_word[mvu*BDBANKW +: BDBANKW] = word;
+    wrc_addr = addr;
+    wrc_word = word;
     wrc_en[mvu] = 1'b1;
     #(`CLKPERIOD);
     wrc_en[mvu] = 1'b0;
@@ -511,7 +511,7 @@ initial begin
     rst_n = 0;
     start = 0;
     ic_clr = 0;      
-    mul_mode = 'b01;
+    mul_mode = {NMVU{2'b01}};
     d_signed = 0;
     w_signed = 0;
     shacc_clr = 0;
@@ -596,7 +596,7 @@ initial begin
     // Test 5 -> -d1280, b110 in bank 14
     // Test 6 -> -d1935, b000 in bank 15
     // Test 7 -> d495, b111 in bank 16
-    gemvSignedTests(.mvu(0), .omvu(0), .scaler(5));
+    //gemvSignedTests(.mvu(0), .omvu(0), .scaler(5));
 
     //
     // Interconnect tests
@@ -605,6 +605,8 @@ initial begin
     // Repeat the unsigned gemv tests, mvu0 -> mvu1
     gemvTests(.mvu(0), .omvu(1), .scaler(1));
 
+    // Repeat the unsigned gemv tests, mvu0 -> mvu1
+    gemvTests(.mvu(2), .omvu(3), .scaler(1));
 
     print_banner($sformatf("Simulation done."));
     $finish();
