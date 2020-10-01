@@ -570,17 +570,11 @@ initial begin
     // Turn some stuff on
     max_en = 1;
 
-    // Set the omvusel signals so that they write to themselves
-    /*
-    for (int i=0; i < NMVU; i++) begin
-        omvusel[i*NMVU + i] = 1'b1;
-    end
-    */
  
     // Run gemv tests, mvu0 -> mvu0
     gemvTests(.mvu(0), .omvu(0), .scaler(1));
 
-    // Run signed gemv tests
+    // Run signed gemv tests, mvu0 -> mvu0
     gemvSignedTests(.mvu(0), .omvu(0), .scaler(1));
 
     // Repeat signed gemv tests, but with scaler set to 2
@@ -591,10 +585,9 @@ initial begin
     // Test 5 -> -d512, b100 in bank 14
     // Test 6 -> -d774, b001 in bank 15
     // Test 7 -> d198, b011 in bank 16
-    //scaler_b = 2;
-    //gemvSignedTests();
+    //gemvSignedTests(.mvu(0), .omvu(0), .scaler(2));
 
-    // Repeat signed gemv tests, but with scaler set to 5
+    // Repeat signed gemv tests, but with scaler set to 5, mvu0 -> mvu0
     // Expected outcomes:
     // Test 1 -> -d640, b10 in bank 10
     // Test 2 -> -d3840, b00 in bank 11
@@ -603,8 +596,14 @@ initial begin
     // Test 5 -> -d1280, b110 in bank 14
     // Test 6 -> -d1935, b000 in bank 15
     // Test 7 -> d495, b111 in bank 16
-    //scaler_b = 5;
-    //gemvSignedTests();
+    gemvSignedTests(.mvu(0), .omvu(0), .scaler(5));
+
+    //
+    // Interconnect tests
+    // 
+
+    // Repeat the unsigned gemv tests, mvu0 -> mvu1
+    gemvTests(.mvu(0), .omvu(1), .scaler(1));
 
 
     print_banner($sformatf("Simulation done."));

@@ -118,6 +118,8 @@ task sendDataAndCheck(int from, int to, logic[BADDR-1 : 0] addr, logic[W-1 : 0] 
     end
 
     print($sformatf("from=%d, to=%d, addr=%x, word=%x %s", from, to, addr, word, res_str));
+    print($sformatf("from_out=%b, en_out=%b, addr_out=%x, word_out=%x", from_out, en_out, addr_out, word_out));
+    print($sformatf("recv_from=%b, recv_en=%b, recv_addr=%x, recv_word=%x", recv_from, recv_en, recv_addr, recv_word));
 
 endtask;
 
