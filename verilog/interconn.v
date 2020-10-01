@@ -104,56 +104,18 @@ generate if(N > 1) begin: multiple
         assign recv_en_c[i] = |switch_t[i];
     end
 
-
-/*
-
-    for(i=0; i < BADDR; i=i+1) begin: transpose_send_addr_i
-        for (j=0; i < N; j=j+1) begin: transpose_send_addr_j
-            assign send_addr_t[i][j] = send_addr[j*BADDR + i];
-        end
-    end
-
-    for(i=0; i < N; i=i+1) begin: redux_recv_addr_i
-        for (j=0; j < BADDR; j=j+1) begin reduc_recv_addr_j
-            assign recv_addr_c[i][j] = sel[i][j] ? |send_addr_t[j] : 0;
-        end
-    end
-
-    for(i=0;i<N;i=i+1) begin:xbarloop
-
-        // Breakouts
-        assign send_to_bo[i] = send_to[i*N +: N];
-
-        for (j=0; j < N; j=j+1) begin: recvloop
-
-            // Only implement connections between different MVUs
-            if (i != j) begin
-
-                assign sel[i][j] = send_to_bo[j][i] & send_en[j];
-
-                // TODO: do some arbitration; for now, just OR the selectors
-                assign recv_from_c[i][j] = sel[i][j];
-//                assign recv_word_c[i*W +: W] = recv_word_c[i*W +: W] | (sel ? send_word[j*W +: W] : 0);
-            end else begin
-                assign recv_from_c[i][j] = 0;
-                assign sel[i][j] = 0;
-            end
-        end
-
-        assign recv_en_c[i] = |sel[i];
-*/
     for (i=0; i < N; i=i+1) begin: loop_output_regs
         always @(posedge clk or posedge clr) begin
             if(clr) begin
-                recv_en[i] = 0;
-                recv_addr[i*BADDR +: BADDR] = 0;
-                recv_from[i*N +: N] = 0;
-                recv_word[i*W +: W] = 0;
+                recv_en[i] <= 0;
+                recv_addr[i*BADDR +: BADDR] <= 0;
+                recv_from[i*N +: N] <= 0;
+                recv_word[i*W +: W] <= 0;
             end else if(clk) begin
-                recv_from[i*N +: N] = recv_from_c[i];
-                recv_en[i] = recv_en_c[i];
-                recv_addr[i*BADDR +: BADDR] = recv_addr_c[i];
-                recv_word[i*W +: W] = recv_word_c[i];
+                recv_from[i*N +: N] <= recv_from_c[i];
+                recv_en[i] <= recv_en_c[i];
+                recv_addr[i*BADDR +: BADDR] <= recv_addr_c[i];
+                recv_word[i*W +: W] <= recv_word_c[i];
             end
         end
     end
@@ -163,15 +125,15 @@ generate if(N > 1) begin: multiple
 end else begin:single
     always @(posedge clk or posedge clr) begin
         if(clr) begin
-            recv_en = 0;
-            recv_addr = 0;
-            recv_from = 0;
-            recv_word = 0;
+            recv_en <= 0;
+            recv_addr <= 0;
+            recv_from <= 0;
+            recv_word <= 0;
         end else if(clk) begin
-            recv_from = send_to;
-            recv_en = send_en;
-            recv_addr = send_addr;
-            recv_word = send_word;
+            recv_from <= send_to;
+            recv_en <= send_en;
+            recv_addr <= send_addr;
+            recv_word <= send_word;
         end
     end
 end endgenerate
