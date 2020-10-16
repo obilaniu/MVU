@@ -225,6 +225,18 @@ task writeWeightsRepeat(int mvu, logic unsigned[BWBANKW-1 : 0] word, logic unsig
     end
 endtask
 
+task automatic readData(int mvu, logic unsigned [BDBANKA-1 : 0] addr, ref logic unsigned [BDBANKW-1 : 0] word, ref logic unsigned [NMVU-1 : 0] grnt);
+    checkmvu(mvu);
+    rdc_addr[mvu*BDBANKA +: BDBANKA] = addr;
+    rdc_en[mvu] = 1;
+    #(`CLKPERIOD);
+    grnt[mvu] = rdc_grnt[mvu];
+    rdc_en[mvu] = 0;
+    #(`CLKPERIOD*2);
+    word = rdc_word[mvu*BDBANKW +: BDBANKW];
+
+endtask
+
 
 // Executes a GMEV
 task automatic runGEMV(
@@ -328,16 +340,32 @@ end
 // Testbench tasks
 
 //
-// Memory test
+// Controller memory access test
 //
-task memTests();
+task controllerMemTest();
+
+    logic unsigned [BDBANKW-1 : 0] word;
+    logic unsigned [NMVU-1 : 0] grnt;
+
+    print_banner("Controller memory access test");
+
+    // Read/Write tests
+    writeData(0, 'hdeadbeefdeadbeef, 0);
+    readData(0, 0, word, grnt);
+    print($sformatf("word=%x, grnt=%b", word, grnt));
+    writeData(0, 'hbeefdeadbeefdead, 1);
+    readData(0, 1, word, grnt);
+    print($sformatf("word=%x, grnt=%b", word, grnt));
+
 
 endtask
 
 //
-// Matric-vector multiplication (GEMV) test
+// Matrix-vector multiplication (GEMV) test
 //
 task gemvTests(int mvu, int omvu, int scaler);
+
+    print_banner("Matrix-vector multiplication (GEMV) test");
 
     print("TEST gemv 1: matrix-vector mult: 1x1 x 1 tiles, 1x1 => 1 bit precision, , input=all 0's");
     runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
@@ -400,6 +428,8 @@ endtask
 // Test signed Matrix-Vector multiplication (gemv signed)
 //
 task gemvSignedTests(int mvu, int omvu, int scaler);
+
+    print_banner("Matrix-vector signed multiplication (GEMV) test");
 
     // Expected result: accumulators get to value hffffffffffffff80, output to data memory is b10 for each element
     // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
@@ -570,6 +600,8 @@ initial begin
     // Turn some stuff on
     max_en = 1;
 
+    // Test memory access
+    controllerMemTest();
  
     // Run gemv tests, mvu0 -> mvu0
     print_banner("GEMV tests: mvu0 -> mvu0");
