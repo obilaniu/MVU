@@ -235,7 +235,7 @@ task automatic runGEMV(
     int omsb,
     int iaddr,
     int waddr,
-    int omvu,           // output mvu
+    byte omvu,          // output mvus
     int obank,
     int oaddr,
     int m_w,            // Matrix width / vector length
@@ -264,7 +264,7 @@ task automatic runGEMV(
     wbaseaddr[mvu*BWBANKA +: BWBANKA] = waddr;
     ibaseaddr[mvu*BDBANKA +: BDBANKA] = iaddr;
     obaseaddr[mvu*BDBANKA +: BDBANKA] = {obank_sel, oword_sel};
-    omvusel[mvu*NMVU +: NMVU] = 1 << omvu;                      // Set the output MVU; only single destination (TODO: support broadcast)
+    omvusel[mvu*NMVU +: NMVU] = omvu;                           // Set the output MVUs
     wstride_0[mvu*BSTRIDE +: BSTRIDE] = -wprec*(m_w-1);         // Move back to tile 0 of current tile row
     wstride_1[mvu*BSTRIDE +: BSTRIDE] = wprec;                  // move 1 tile ahead to next tile row
     wstride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
@@ -572,10 +572,12 @@ initial begin
 
  
     // Run gemv tests, mvu0 -> mvu0
-    gemvTests(.mvu(0), .omvu(0), .scaler(1));
+    print_banner("GEMV tests: mvu0 -> mvu0");
+    gemvTests(.mvu(0), .omvu('b00000001), .scaler(1));
 
     // Run signed gemv tests, mvu0 -> mvu0
-    gemvSignedTests(.mvu(0), .omvu(0), .scaler(1));
+    print_banner("Signed GEMV tests: mvu0 -> mvu0");
+    gemvSignedTests(.mvu(0), .omvu('b00000001), .scaler(1));
 
     // Repeat signed gemv tests, but with scaler set to 2
     // Test 1 -> -d256, b00 in bank 10
@@ -603,10 +605,35 @@ initial begin
     // 
 
     // Repeat the unsigned gemv tests, mvu0 -> mvu1
-    gemvTests(.mvu(0), .omvu(1), .scaler(1));
+    print_banner("GEMV tests: mvu0 -> mvu1");
+    gemvTests(.mvu(0), .omvu('b00000010), .scaler(1));
 
-    // Repeat the unsigned gemv tests, mvu0 -> mvu1
-    gemvTests(.mvu(2), .omvu(3), .scaler(1));
+    // Repeat the unsigned gemv tests, mvu2 -> mvu3
+    print_banner("GEMV tests: mvu2 -> mvu3");
+    gemvTests(.mvu(2), .omvu('b00001000), .scaler(1));
+
+    // Repeat the unsigned gemv tests, mvu3-> mvu2
+    print_banner("GEMV tests: mvu3 -> mvu2");
+    gemvTests(.mvu(3), .omvu('b00000100), .scaler(1));
+
+    // Repeat the unsigned gemv tests, mvu7-> mvu0
+    // Blank out mvu0's memory banks first
+    print_banner("GEMV tests: mvu7 -> mvu0");
+    writeDataRepeat(0, 'h0000000000000000, 'h0000, 9, 1);
+    writeDataRepeat(0, 'h0000000000000000, {5'b00001, 10'b0000000000}, 9, 1);
+    writeDataRepeat(0, 'h0000000000000000, {5'b00010, 10'b0000000000}, 9, 1);
+    writeDataRepeat(0, 'h0000000000000000, {5'b00011, 10'b0000000000}, 9, 1);
+    gemvTests(.mvu(7), .omvu('b00000001), .scaler(1));
+
+    //
+    // Broadcast tests
+    //
+
+    // Repeat the unsigned gemv tests, mvu4-> mvu5, mvu6
+    print_banner("GEMV tests: mvu4 -> mvu5,6");
+    gemvTests(.mvu(4), .omvu('b01100000), .scaler(1));
+
+    
 
     print_banner($sformatf("Simulation done."));
     $finish();
