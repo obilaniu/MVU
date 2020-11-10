@@ -33,7 +33,12 @@ module inagu(
     imsb,
     wmsb,
     sh_out,
-    shacc_done
+    wagu_on_j0,
+    wagu_on_j1,
+    wagu_on_j2,
+    wagu_on_j3,
+    wagu_on_j4
+    //shacc_done
 );
 
 // Parameters
@@ -71,7 +76,12 @@ output wire[ BWBANKA-1 : 0] waddr_out;      // Weight Address generated
 output wire                 imsb;           // Input data is address currently on MSB
 output wire                 wmsb;           // Weight address is currently on MSB
 output wire                 sh_out;         // Shift occurred
-output wire                 shacc_done;     // Accumulation done
+output wire                 wagu_on_j0;     // Weight address jump 0 happened
+output wire                 wagu_on_j1;     // Weight address jump 1 happened
+output wire                 wagu_on_j2;     // Weight address jump 2 happened
+output wire                 wagu_on_j3;     // Weight address jump 3 happened
+output wire                 wagu_on_j4;     // Weight address jump 4 happened
+//output wire                 shacc_done;     // Accumulation done
 
 
 // AGU wires
@@ -87,11 +97,6 @@ wire  [   BPREC-1 : 0]  zigzag_offd;
 wire  [   BPREC-1 : 0]  zigzag_offw;
 wire                    wagu_z0_out;
 wire                    wagu_z1_out;
-wire                    wagu_on_j0;
-wire                    wagu_on_j1;
-wire                    wagu_on_j2;
-wire                    wagu_on_j3;
-wire                    wagu_on_j4;
 wire                    zigzagu_step;
 
 // Assignments
@@ -180,7 +185,7 @@ assign waddr_out = wbaseaddr + wagu_addr_out + zigzag_offw;
 // Signal when to step the zigzag and when to cycle out the accumulator
 assign zigzagu_step = en & wagu_z0_out;
 //assign shacc_done = en & wagu_z1_out & wagu_z0_out;
-assign shacc_done = en & wagu_on_j2;
+//assign shacc_done = en & wagu_on_j2;
 
 // Indicate when address is an MSB
 assign imsb = zigzag_offd == 0;

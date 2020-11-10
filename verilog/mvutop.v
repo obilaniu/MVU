@@ -56,6 +56,7 @@ module mvutop(  clk,
                 olength_2,
                 olength_3,
                 scaler_b,
+                shacc_load_sel,
 				wrw_addr,
 				wrw_word,
 				wrw_en,
@@ -100,6 +101,7 @@ localparam VVPSTAGES    = 3;            // Number of stages in the VVP pipeline
 localparam SCALERLATENCY = 3;           // Number of stages in the scaler pipeline
 localparam MAXPOOLSTAGES = 1;           // Number of max pool pipeline stages
 localparam MEMRDLATENCY = 2;            // Memory read latency
+localparam NJUMPS       = 5;            // Number of address jump parameters available
 
 
 //
@@ -159,6 +161,7 @@ input  wire[  NMVU*BLENGTH-1 : 0] olength_1;            // Config: output length
 input  wire[  NMVU*BLENGTH-1 : 0] olength_2;            // Config: output length in dimension 2 (z)
 input  wire[  NMVU*BLENGTH-1 : 0] olength_3;            // Config: output length in dimension 3 (w)
 input  wire[ NMVU*BSCALERB-1 : 0] scaler_b;             // Config: multiplicative scaler (operand 'b')
+input  wire[   NMVU*NJUMPS-1 : 0] shacc_load_sel;       // Config: select jump trigger for shift/accumultor load
 
 input  wire[  NMVU*BWBANKA-1 : 0] wrw_addr;             // Weight memory: write address
 input  wire[  NMVU*BWBANKW-1 : 0] wrw_word;             // Weight memory: write word
@@ -213,6 +216,7 @@ reg[   BLENGTH-1 : 0] olength_1_q       [NMVU-1 : 0];           // Config: outpu
 reg[   BLENGTH-1 : 0] olength_2_q       [NMVU-1 : 0];           // Config: output length in dimension 2 (z)
 reg[   BLENGTH-1 : 0] olength_3_q       [NMVU-1 : 0];           // Config: output length in dimension 3 (w)
 reg[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];           // Config: multiplicative scaler (operand 'b')
+reg[    NJUMPS-1 : 0] shacc_load_sel_q  [NMVU-1 : 0];           // Config: select jump trigger for shift/accumultor load
 
 /* Local Wires */
 
@@ -282,12 +286,17 @@ wire[        NMVU-1 : 0] shacc_acc;         // Accumulator accumulate control
 wire[        NMVU-1 : 0] shacc_clr_int;     // Accumulator clear internal control
 wire[        NMVU-1 : 0] shacc_load_start;  // Accumulator load from start of job
 wire[        NMVU-1 : 0] agu_sh_out;        // Input AGU shift accumulator
-wire[        NMVU-1 : 0] agu_shacc_done;    // AGU accumulator done indicator
+reg [        NMVU-1 : 0] agu_shacc_done;    // AGU accumulator done indicator
 wire[        NMVU-1 : 0] run_acc;           // Run signal for the accumulator/shifters
 wire[        NMVU-1 : 0] shacc_done;        // Accumulator done control
 wire[        NMVU-1 : 0] maxpool_done;      // Max pool done control
 wire[        NMVU-1 : 0] outagu_clr;        // Clear the output AGU
 wire[        NMVU-1 : 0] outagu_load;       // Load the output AGU base address
+wire[        NMVU-1 : 0] wagu_on_j0;        // Indicates when a weight address jump 0 happens
+wire[        NMVU-1 : 0] wagu_on_j1;        // Indicates when a weight address jump 1 happens
+wire[        NMVU-1 : 0] wagu_on_j2;        // Indicates when a weight address jump 2 happens
+wire[        NMVU-1 : 0] wagu_on_j3;        // Indicates when a weight address jump 3 happens
+wire[        NMVU-1 : 0] wagu_on_j4;        // Indicates when a weight address jump 4 happens
 
 
 /*
@@ -412,6 +421,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             olength_2_q[i]      <= 0;
             scaler_b_q[i]       <= 0;
             olength_3_q[i]      <= 0;
+            shacc_load_sel_q[i] <= 5'b00100;                // For 5 jumps, select the j2 by default
         end else begin
             if (start[i]) begin
                 mul_mode_q[i]       <= mul_mode     [i*2 +: 2];
@@ -449,6 +459,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 olength_2_q[i]      <= olength_2    [i*BLENGTH +: BLENGTH];
                 scaler_b_q[i]       <= scaler_b     [i*BSCALERB +: BSCALERB];
                 olength_3_q[i]      <= olength_3    [i*BLENGTH +: BLENGTH];
+                shacc_load_sel_q[i] <= shacc_load_sel[i*NJUMPS +: NJUMPS];
             end
         end
     end
@@ -508,7 +519,12 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .imsb       (d_msb[i]),
         .wmsb       (w_msb[i]),
         .sh_out     (agu_sh_out[i]),
-        .shacc_done (agu_shacc_done[i])
+        .wagu_on_j0 (wagu_on_j0[i]),
+        .wagu_on_j1 (wagu_on_j1[i]),
+        .wagu_on_j2 (wagu_on_j2[i]),
+        .wagu_on_j3 (wagu_on_j3[i]),
+        .wagu_on_j4 (wagu_on_j4[i])
+        //.shacc_done (agu_shacc_done[i])
     );
 end endgenerate
 
@@ -545,6 +561,30 @@ end endgenerate
 
 // Negate the input to the accumulators when one or both data/weights are signed and is on an MSB
 assign neg_acc = (d_signed & d_msb) ^ (w_signed & w_msb);
+
+// Trigger when the shacc should load
+generate for(i = 0; i < NMVU; i = i+1) begin: triggers
+    always @(shacc_load_sel_q, wagu_on_j0, wagu_on_j1, wagu_on_j2, wagu_on_j3, wagu_on_j4) begin
+        if (run[i]) begin
+            case (shacc_load_sel_q[i])
+                5'b00001:
+                    agu_shacc_done[i] = wagu_on_j0[i];
+                5'b00010:
+                    agu_shacc_done[i] = wagu_on_j1[i];
+                5'b00100:
+                    agu_shacc_done[i] = wagu_on_j2[i];
+                5'b01000:
+                    agu_shacc_done[i] = wagu_on_j3[i];
+                5'b10000:
+                    agu_shacc_done[i] = wagu_on_j4[i];
+                default:
+                    agu_shacc_done[i] = 1'b0;
+            endcase
+        end else begin
+            agu_shacc_done[i] = 1'b0;
+        end
+    end
+end endgenerate
 
 
 // Insert delay for accumulator shifter signals to account for number of VVP pipeline stages

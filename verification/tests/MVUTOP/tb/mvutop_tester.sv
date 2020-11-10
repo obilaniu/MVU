@@ -38,6 +38,7 @@ module mvutop_tester();
     localparam BLENGTH	= 15;			// Bitwidth of the length ports
     localparam BSCALERB = 16;           // Bitwidth of multiplicative scaler (operand 'b')
     localparam BSCALERP = 48;           // Bitwidth of the scaler output
+    localparam NJUMPS   = 5;            // Number of address jumps supported
 
     localparam BACC    = 27;            /* Bitwidth of Accumulators */
 
@@ -108,6 +109,7 @@ module mvutop_tester();
     reg[  NMVU*BLENGTH-1 : 0] olength_2;        // Config: output length in dimension 2 (z)
     reg[  NMVU*BLENGTH-1 : 0] olength_3;        // Config: output length in dimension 2 (w)
     reg[ NMVU*BSCALERB-1 : 0] scaler_b;         // Config: multiplicative scaler (operand 'b')
+    reg[   NMVU*NJUMPS-1 : 0] shacc_load_sel;   // Config: select jump trigger for shift/accumultor load    
 
     //
     // DUT
@@ -164,8 +166,9 @@ module mvutop_tester();
             .olength_0        (olength_0),
             .olength_1        (olength_1),
             .olength_2        (olength_2),
-            .scaler_b         (scaler_b),
             .olength_3        (olength_3),
+            .scaler_b         (scaler_b),
+            .shacc_load_sel   (shacc_load_sel),
 			.wrw_addr         (wrw_addr),
 			.wrw_word         (wrw_word),
 			.wrw_en           (wrw_en),
@@ -304,6 +307,7 @@ task automatic runGEMV(
     d_signed[mvu] = isign;
     w_signed[mvu] = wsign;
     scaler_b[mvu*BSCALERB +: BSCALERB] = scaler;
+    shacc_load_sel[mvu*NJUMPS +: NJUMPS] = 5'b00100;            // Load the shift/accumulator on when weight address jump 2 happens
     countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
 
     // Run the GEMV
@@ -586,8 +590,9 @@ initial begin
     olength_0 = 0;
     olength_1 = 0;
     olength_2 = 0;
-    scaler_b = 1;
     olength_3 = 0;
+    scaler_b = 1;
+    shacc_load_sel = 0;
     wrw_addr = 0;
     wrw_word = 0;
     wrw_en = 0;
