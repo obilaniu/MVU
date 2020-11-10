@@ -14,7 +14,6 @@ module mvutop(  clk,
                 done,
                 irq,
                 ic_clr,
-                ic_recv_from,
                 mul_mode,
                 d_signed,
                 w_signed,
@@ -31,6 +30,7 @@ module mvutop(  clk,
                 wbaseaddr,
                 ibaseaddr,
                 obaseaddr,
+                omvusel,
                 wstride_0,
                 wstride_1,
                 wstride_2,
@@ -113,8 +113,7 @@ input  wire[          NMVU-1 : 0] start;                // Start the MVU job
 output wire[          NMVU-1 : 0] done;                 // Indicates if a job is done
 output wire[          NMVU-1 : 0] irq;                  // Interrupt request
 
-input  wire                       ic_clr;               // Interconnect: clear
-input  wire[    NMVU*BMVUA-1 : 0] ic_recv_from;         // Interconnect: receive from MVU number
+input  wire                       ic_clr;				// Interconnect: clear
 
 input  wire[        2*NMVU-1 : 0] mul_mode;             // Config: multiply mode
 input  wire[          NMVU-1 : 0] d_signed;             // Config: input data signed
@@ -134,6 +133,7 @@ input  wire[    NMVU*BPREC-1 : 0] oprecision;           // Config: output precis
 input  wire[  NMVU*BBWADDR-1 : 0] wbaseaddr;            // Config: weight memory base address
 input  wire[  NMVU*BBDADDR-1 : 0] ibaseaddr;            // Config: data memory base address for input
 input  wire[  NMVU*BBDADDR-1 : 0] obaseaddr;            // Config: data memory base address for output
+input  wire[     NMVU*NMVU-1 : 0] omvusel;	    		// Config: MVU selector bits for output
 input  wire[  NMVU*BSTRIDE-1 : 0] wstride_0;            // Config: weight stride in dimension 0 (x)
 input  wire[  NMVU*BSTRIDE-1 : 0] wstride_1;            // Config: weight stride in dimension 1 (y)
 input  wire[  NMVU*BSTRIDE-1 : 0] wstride_2;            // Config: weight stride in dimension 2 (z)
@@ -187,6 +187,7 @@ reg[     BPREC-1 : 0] oprecision_q      [NMVU-1 : 0];           // Config: outpu
 reg[   BBWADDR-1 : 0] wbaseaddr_q       [NMVU-1 : 0];           // Config: weight memory base address
 reg[   BBDADDR-1 : 0] ibaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for input
 reg[   BBDADDR-1 : 0] obaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for output
+reg[      NMVU-1 : 0] omvusel_q         [NMVU-1 : 0];    		// Config: MVU selection bits for output
 reg[   BWBANKA-1 : 0] wstride_0_q       [NMVU-1 : 0];           // Config: weight stride in dimension 0 (x)
 reg[   BWBANKA-1 : 0] wstride_1_q       [NMVU-1 : 0];           // Config: weight stride in dimension 1 (y)
 reg[   BWBANKA-1 : 0] wstride_2_q       [NMVU-1 : 0];           // Config: weight stride in dimension 2 (z)
@@ -227,9 +228,14 @@ wire[        NMVU-1 : 0] wrd_grnt;
 wire[NMVU*BDBANKA-1 : 0] wrd_addr;
 
 // Interconnect
+wire                     ic_clr_int;
+wire[   NMVU*NMVU-1 : 0] ic_send_to;
 wire[        NMVU-1 : 0] ic_send_en;
+wire[NMVU*BDBANKA-1 : 0] ic_send_addr;
 wire[NMVU*BDBANKW-1 : 0] ic_send_word;
 wire[        NMVU-1 : 0] ic_recv_en;
+wire[   NMVU*NMVU-1 : 0] ic_recv_from;
+wire[NMVU*BDBANKA-1 : 0] ic_recv_addr;
 wire[NMVU*BDBANKW-1 : 0] ic_recv_word;
 wire[NMVU*BDBANKW-1 : 0] rdi_word;
 wire[        NMVU-1 : 0] wri_en;
@@ -240,6 +246,8 @@ wire[        NMVU-1 : 0] rdi_grnt;
 wire[NMVU*BDBANKA-1 : 0] rdi_addr;
 wire[        NMVU-1 : 0] wri_grnt;
 wire[NMVU*BDBANKA-1 : 0] wri_addr;
+
+wire[NMVU*BDBANKW-1 : 0] mvu_word_out;
 
 // Scaler
 wire[        NMVU-1 : 0] scaler_clr;            // Scaler: clear/reset
@@ -282,21 +290,48 @@ wire[        NMVU-1 : 0] outagu_clr;        // Clear the output AGU
 wire[        NMVU-1 : 0] outagu_load;       // Load the output AGU base address
 
 
-/* Wiring */
-/*   Interconnect... */
-interconn #(NMVU, BDBANKW) ic (clk,  ic_clr, ic_send_en, ic_send_word,
-                               ic_recv_from, ic_recv_en, ic_recv_word);
-assign ic_send_en   = rdi_grnt;
-assign ic_send_word = rdi_word;
+/*
+* Wiring 
+*/
+
+/*
+* Interconnect
+*/
+
+interconn #(
+    .N(NMVU),
+    .W(BDBANKW),
+    .BADDR(BDBANKA)
+) ic (
+    .clk(clk),
+    .clr(ic_clr_int),
+    .send_to(ic_send_to),
+    .send_en(ic_send_en),
+    .send_addr(ic_send_addr),
+    .send_word(ic_send_word),
+    .recv_from(ic_recv_from),
+    .recv_en(ic_recv_en),
+    .recv_addr(ic_recv_addr),
+    .recv_word(ic_recv_word)
+);
+
+// Interconnect wires
+generate for(i=0; i < NMVU; i = i+1) begin
+    assign ic_send_to[i*NMVU +: NMVU] = omvusel_q[i];
+    assign ic_send_en[i] = (| omvusel_q[i]) & !omvusel_q[i][i] & outstep[i];
+end endgenerate
+
+assign ic_send_word = mvu_word_out;
+assign ic_send_addr = wrd_addr;
 assign wri_word     = ic_recv_word;
 assign wri_en       = ic_recv_en;
+assign wri_addr     = ic_recv_addr;
 
 // TODO: FIGURE OUT WHERE TO WIRE OTHER INTERCONNECT DATA ACCESS SIGNAL
 assign rdi_en           = 0;
 //assign rdi_grnt         = 0;
 assign rdi_addr         = 0;
 //assign wri_grnt         = 0;
-assign wri_addr         = 0;
 
 assign rdd_en           = run;                              // MVU reads when running
 
@@ -310,6 +345,7 @@ assign run_acc          = run;                              // No stalls for now
 assign shacc_load       = shacc_done | shacc_load_start;    // Load accumulator with current output of MVP's
 
 // Clear signals (just connect to global reset for now)
+assign ic_clr_int       = !rst_n | ic_clr;
 assign controller_clr   = {NMVU{!rst_n}};
 assign inagu_clr        = {NMVU{!rst_n}} | start_q;
 assign outagu_clr       = {NMVU{!rst_n}};
@@ -323,7 +359,9 @@ assign outstep          = quant_step;
 assign quant_ctrl_clr   = {NMVU{!rst_n}} | quant_clr;
 
 // MVU Data Memory control
-assign wrd_en           = outstep;
+generate for(i = 0; i < NMVU; i = i + 1) begin: wrd_en_array
+    assign wrd_en[i] = outstep[i] & omvusel_q[i][i];
+end endgenerate
 
 
 // Delayed start signal to sync with the parameter buffer registers
@@ -348,6 +386,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             wbaseaddr_q[i]      <= 0;
             ibaseaddr_q[i]      <= 0;
             obaseaddr_q[i]      <= 0;
+            omvusel_q[i]        <= 0;
             wstride_0_q[i]      <= 0;
             wstride_1_q[i]      <= 0;
             wstride_2_q[i]      <= 0;
@@ -384,6 +423,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 wbaseaddr_q[i]      <= wbaseaddr    [i*BBWADDR +: BBWADDR];
                 ibaseaddr_q[i]      <= ibaseaddr    [i*BBDADDR +: BBDADDR];
                 obaseaddr_q[i]      <= obaseaddr    [i*BBDADDR +: BBDADDR];
+                omvusel_q[i]        <= omvusel      [i*NMVU +: NMVU];
                 wstride_0_q[i]      <= wstride_0    [i*BSTRIDE +: BWBANKA];
                 wstride_1_q[i]      <= wstride_1    [i*BSTRIDE +: BWBANKA];
                 wstride_2_q[i]      <= wstride_2    [i*BSTRIDE +: BWBANKA];
@@ -606,34 +646,35 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .quant_clr		(quant_clr_int[i]	    				),
             .quant_msbidx   (quant_msbidx_q[i]	                    ),
             .quant_load     (quant_load[i]                          ),
-            .quant_step     (quant_step[i]                          ),
-            .rdw_addr       (rdw_addr[i*BWBANKA +: BWBANKA]         ),
-            .wrw_addr       (wrw_addr[i*BWBANKA +: BWBANKA]         ),
-            .wrw_word       (wrw_word[i*BWBANKW +: BWBANKW]         ),
-            .wrw_en         (wrw_en[i]                              ),
-            .rdd_en         (rdd_en[i]                              ),
-            .rdd_grnt       (rdd_grnt[i]                            ),
-            .rdd_addr       (rdd_addr[i*BDBANKA +: BDBANKA]         ),
-            .wrd_en         (wrd_en[i]                              ),
-            .wrd_grnt       (wrd_grnt[i]                            ),
-            .wrd_addr       (wrd_addr[i*BDBANKA +: BDBANKA]         ),
-            .rdi_en         (rdi_en[i]                              ),
-            .rdi_grnt       (rdi_grnt[i]                            ),
-            .rdi_addr       (rdi_addr[i*BDBANKA +: BDBANKA]         ),
-            .rdi_word       (rdi_word[i*BDBANKW +: BDBANKW]         ),
-            .wri_en         (wri_en[i]                              ),
-            .wri_grnt       (wri_grnt[i]                            ),
-            .wri_addr       (wri_addr[i*BDBANKA +: BDBANKA]         ),
-            .wri_word       (wri_word[i*BDBANKW +: BDBANKW]         ),
-            .rdc_en         (rdc_en[i]                              ),
-            .rdc_grnt       (rdc_grnt[i]                            ),
-            .rdc_addr       (rdc_addr[i*BDBANKA +: BDBANKA]         ),
-            .rdc_word       (rdc_word[i*BDBANKW +: BDBANKW]         ),
-            .wrc_en         (wrc_en[i]                              ),
-            .wrc_grnt       (wrc_grnt[i]                            ),
-            .wrc_addr       (wrc_addr[BDBANKA-1: 0]                 ),
-            .wrc_word       (wrc_word[BDBANKW-1 : 0]                )
-        );
+            .quant_step 	(quant_step[i]							),
+            .rdw_addr		(rdw_addr[i*BWBANKA +: BWBANKA]			),
+			.wrw_addr		(wrw_addr[i*BWBANKA +: BWBANKA]			),
+			.wrw_word		(wrw_word[i*BWBANKW +: BWBANKW]			),
+			.wrw_en			(wrw_en[i]								),
+            .rdd_en			(rdd_en[i]								),
+            .rdd_grnt		(rdd_grnt[i]							),
+            .rdd_addr		(rdd_addr[i*BDBANKA +: BDBANKA]			),
+            .wrd_en			(wrd_en[i]								),
+            .wrd_grnt		(wrd_grnt[i]							),
+            .wrd_addr		(wrd_addr[i*BDBANKA +: BDBANKA]			),
+            .rdi_en			(rdi_en[i]								),
+            .rdi_grnt		(rdi_grnt[i]							),
+            .rdi_addr		(rdi_addr[i*BDBANKA +: BDBANKA]			),
+            .rdi_word		(rdi_word[i*BDBANKW +: BDBANKW]			),
+            .wri_en			(wri_en[i]								),
+            .wri_grnt		(wri_grnt[i]							),
+            .wri_addr		(wri_addr[i*BDBANKA +: BDBANKA]			),
+            .wri_word		(wri_word[i*BDBANKW +: BDBANKW]			),
+            .rdc_en			(rdc_en[i]								),
+            .rdc_grnt		(rdc_grnt[i]							),
+            .rdc_addr		(rdc_addr[i*BDBANKA +: BDBANKA]			),
+            .rdc_word		(rdc_word[i*BDBANKW +: BDBANKW]			),
+            .wrc_en			(wrc_en[i]								),
+            .wrc_grnt		(wrc_grnt[i]							),
+            .wrc_addr		(wrc_addr[BDBANKA-1: 0]					),
+        	.wrc_word		(wrc_word[BDBANKW-1 : 0]				),
+            .mvu_word_out   (mvu_word_out[i*BDBANKW +: BDBANKW]     )
+		);
 end endgenerate
 
 

@@ -85,7 +85,8 @@ module mvu( clk,
             wrc_en,
             wrc_grnt,
             wrc_addr,
-            wrc_word);
+            wrc_word,
+            mvu_word_out);
 
 
 /* Parameters */
@@ -163,6 +164,8 @@ input  wire                wrc_en;
 output wire                wrc_grnt;
 input  wire[BDBANKA-1 : 0] wrc_addr;
 input  wire[BDBANKW-1 : 0] wrc_word;
+
+output wire[BDBANKW-1 : 0] mvu_word_out;
 
 /* Generation Variables */
 genvar i, j;
@@ -317,6 +320,7 @@ end endgenerate
 
 assign core_data = rdd_word;
 assign wrd_word  = quant_out;
+assign mvu_word_out = quant_out;
 
 
 
