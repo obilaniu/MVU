@@ -19,7 +19,12 @@ module agu( clk,
             z0_out,
             z1_out,
             z2_out,
-            z3_out
+            z3_out,
+            on_j0,
+            on_j1,
+            on_j2,
+            on_j3,
+            on_j4
 );
 
 parameter BWADDR    = 21;             /* Bitwidth of Address */
@@ -44,6 +49,12 @@ output wire                         z0_out;             // Signals when jump len
 output wire                         z1_out;             // Signals when jump length 1 counter is 0
 output wire                         z2_out;             // Signals when jump length 2 counter is 0
 output wire                         z3_out;             // Signals when jump length 3 counter is 0
+output wire                         on_j0;
+output wire                         on_j1;
+output wire                         on_j2;
+output wire                         on_j3;
+output wire                         on_j4;
+
 
 
 /* Local wires */
@@ -72,11 +83,18 @@ assign z1 = i1 == 0;
 assign z2 = i2 == 0;
 assign z3 = i3 == 0;
 
-// jumpedN signals indicate when jumps happen
+// zN signals indicate when length counters hit zero
 assign z0_out = step & z0;
 assign z1_out = step & z1;
 assign z2_out = step & z2;
 assign z3_out = step & z3;
+
+// on_jN signals indicate when a jump occurs
+assign on_j0 = step;                            // Always happening
+assign on_j1 = step & z0;
+assign on_j2 = step & z0 & z1;
+assign on_j3 = step & z0 & z1 & z2;
+assign on_j4 = step & z0 & z1 & z2 & z3;
 
 
 // Index decrement & Address Bump logic

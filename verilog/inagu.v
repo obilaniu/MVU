@@ -87,6 +87,11 @@ wire  [   BPREC-1 : 0]  zigzag_offd;
 wire  [   BPREC-1 : 0]  zigzag_offw;
 wire                    wagu_z0_out;
 wire                    wagu_z1_out;
+wire                    wagu_on_j0;
+wire                    wagu_on_j1;
+wire                    wagu_on_j2;
+wire                    wagu_on_j3;
+wire                    wagu_on_j4;
 wire                    zigzagu_step;
 
 // Assignments
@@ -117,7 +122,12 @@ agu #(
     .z0_out     (),
     .z1_out     (),
     .z2_out     (),
-    .z3_out     ()
+    .z3_out     (),
+    .on_j0      (),
+    .on_j1      (),
+    .on_j2      (),
+    .on_j3      (),
+    .on_j4      ()
 );
 
 // Address generation unit for the weights
@@ -141,7 +151,12 @@ agu #(
     .z0_out     (wagu_z0_out),
     .z1_out     (wagu_z1_out),
     .z2_out     (),
-    .z3_out     ()
+    .z3_out     (),
+    .on_j0      (wagu_on_j0),
+    .on_j1      (wagu_on_j1),
+    .on_j2      (wagu_on_j2),
+    .on_j3      (wagu_on_j3),
+    .on_j4      (wagu_on_j4)
 );
 
 // Zig-zag address pattern generators
@@ -164,7 +179,8 @@ assign waddr_out = wbaseaddr + wagu_addr_out + zigzag_offw;
 
 // Signal when to step the zigzag and when to cycle out the accumulator
 assign zigzagu_step = en & wagu_z0_out;
-assign shacc_done = en & wagu_z1_out & wagu_z0_out;
+//assign shacc_done = en & wagu_z1_out & wagu_z0_out;
+assign shacc_done = en & wagu_on_j2;
 
 // Indicate when address is an MSB
 assign imsb = zigzag_offd == 0;
