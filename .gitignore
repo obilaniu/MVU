@@ -91,3 +91,4 @@
 
 # Specific directories
 verification/ip/xilinx/
+conv2d_jumps
