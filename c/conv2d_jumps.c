@@ -24,7 +24,7 @@ const int ilength2 = iprec*wprec-1;
 const int ilength3 = ((W-Fw+1)/Sw - 1); //Fc-1;
 const int ijump0 = iprec*(C*(W-Fw) + 1);                  // Move to next row
 const int ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);        // Move back to start of window; bump zig-zag
-const int ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw)*C + 1);   // Move window to right by horizontal stride
+const int ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);   // Move window to right by horizontal stride
 const int ijump3 = 0;
 const int countdown = (C * Fw) * (Fh) * (iprec * wprec) * ((W-Fw+1)/Sw);
 
@@ -54,7 +54,7 @@ int getNextInput()
         i_i2 = ilength2;
         i_i3 = ilength3;
         i_tptr += i_j4;
-        printf("\n");
+        printf("\n==> i_j4\n");
     }
     else if (i_i0 == 0 && i_i1 == 0 && i_i2 == 0)
     {
@@ -63,7 +63,7 @@ int getNextInput()
         i_i2 = ilength2;
         i_i3--;
         i_tptr += i_j3;
-        printf("\n");
+        printf("\n==> i_j3\n");
     }
     else if (i_i0 == 0 && i_i1 == 0)
     {
@@ -71,7 +71,7 @@ int getNextInput()
         i_i1 = ilength1;
         i_i2--;
         i_tptr += i_j2;
-        printf("\n");
+        printf("\n==> i_j2\n");
     }
     else if (i_i0 == 0)
     {
