@@ -17,24 +17,28 @@ int w_t[Fc][Fh][Fw][C][wprec];                      // Width tensor
 int *i_tptr = (int*)i_t;                            // Input address pointer
 int *w_tptr = (int*)w_t;                            // Weight address pointer
 
-// Computed MVU parameters
-const int m = 10;
-const int i_j0 = iprec;                                 // Move to next channel block and/or column
-const int i_j1 = iprec*(C*(W-Fw) + 1);                  // Move to next row
-const int i_j2 = -iprec*(C*(Fh-1)*W + Fw*C - 1);        // Move back to start of window; bump zig-zag
-const int i_j3 = -iprec*(C*(Fh-1)*W + (Fw-Sw)*C + 1);   // Move window to right by horizontal stride
-const int i_j4 = 0;
+// Computed MVU parameters to program into CSRs
 const int ilength0 = C*Fw-1;
 const int ilength1 = Fh-1;
 const int ilength2 = iprec*wprec-1;
 const int ilength3 = ((W-Fw+1)/Sw - 1); //Fc-1;
+const int ijump0 = iprec*(C*(W-Fw) + 1);                  // Move to next row
+const int ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);        // Move back to start of window; bump zig-zag
+const int ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw)*C + 1);   // Move window to right by horizontal stride
+const int ijump3 = 0;
+const int countdown = (C * Fw) * (Fh) * (iprec * wprec) * ((W-Fw+1)/Sw);
+
+// Internal parameters
+const int m = 10;
+const int i_j0 = iprec;                                 // Move to next channel block and/or column
+const int i_j1 = ijump0;
+const int i_j2 = ijump1;
+const int i_j3 = ijump2;
+const int i_j4 = ijump3;
 int i_zzoff = 0;
 int w_zzoff = 0;
-const int countdown = (C * Fw) * (Fh) * (iprec * wprec) * ((W-Fw+1)/Sw);
 int cntdwn = countdown;
 int cntup = 0;
-
-// AGU counters
 int i_i0 = ilength0;
 int i_i1 = ilength1;
 int i_i2 = ilength2;
