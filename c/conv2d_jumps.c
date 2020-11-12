@@ -21,11 +21,19 @@ int *w_tptr = (int*)w_t;                            // Weight address pointer
 const int ilength0 = C*Fw-1;
 const int ilength1 = Fh-1;
 const int ilength2 = iprec*wprec-1;
-const int ilength3 = ((W-Fw+1)/Sw - 1); //Fc-1;
-const int ijump0 = iprec*(C*(W-Fw) + 1);                  // Move to next row
-const int ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);        // Move back to start of window; bump zig-zag
-const int ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);   // Move window to right by horizontal stride
-const int ijump3 = 0;
+const int ilength3 = ((W-Fw+1)/Sw - 1);
+const int ijump0 = iprec*(C*(W-Fw) + 1);                    const char* i_jump0_str = "Move to next row";
+const int ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);          const char* i_jump1_str = "Move back to start of window; bump zig-zag";
+const int ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);   const char* i_jump2_str = "Move window to right by horizontal stride";
+const int ijump3 = 0;                                       const char* i_jump3_str = "";
+const int wlength0 = C*Fw*Fh-1;                             // Total size of a filter
+const int wlength1 = 0;
+const int wlength2 = 0;
+const int wlength3 = 0;
+const int wjump0 = -wprec*(C*Fw*Fh-1);                      // Move back to start of filter for next precision combo; Bump zig-zag
+const int wjump1 = 0;
+const int wjump2 = 0;
+const int wjump3 = wjump0;
 const int countdown = (C * Fw) * (Fh) * (iprec * wprec) * ((W-Fw+1)/Sw);
 
 // Internal parameters
@@ -43,7 +51,21 @@ int i_i0 = ilength0;
 int i_i1 = ilength1;
 int i_i2 = ilength2;
 int i_i3 = ilength3;
+int w_i0 = wlength0;
+int w_i1 = wlength1;
+int w_i2 = wlength2;
+int w_i3 = wlength3;
+const int w_j0 = wprec;                                 // Move to next channel block and/or column
+const int w_j1 = wjump0;
+const int w_j2 = wjump1;
+const int w_j3 = wjump2;
+const int w_j4 = wjump3;
 
+
+void bumpZigZag()
+{
+
+}
 
 int getNextInput()
 {   
@@ -54,7 +76,7 @@ int getNextInput()
         i_i2 = ilength2;
         i_i3 = ilength3;
         i_tptr += i_j4;
-        printf("\n==> i_j4\n");
+        printf("\n==> i_j4: %s\n", i_jump3_str);
     }
     else if (i_i0 == 0 && i_i1 == 0 && i_i2 == 0)
     {
@@ -63,7 +85,7 @@ int getNextInput()
         i_i2 = ilength2;
         i_i3--;
         i_tptr += i_j3;
-        printf("\n==> i_j3\n");
+        printf("\n==> i_j3: %s\n", i_jump2_str);
     }
     else if (i_i0 == 0 && i_i1 == 0)
     {
@@ -71,7 +93,7 @@ int getNextInput()
         i_i1 = ilength1;
         i_i2--;
         i_tptr += i_j2;
-        printf("\n==> i_j2\n");
+        printf("\n==> i_j2: %s\n", i_jump1_str);
     }
     else if (i_i0 == 0)
     {
@@ -85,46 +107,51 @@ int getNextInput()
         i_i0--;
         i_tptr += i_j0;       
     }
-    
-    
-/*
-    for (int l3=ilength3; l3 >= 0; l3--)
-    {
-        for (int l2=ilength2; l2 >= 0; l2--)
-        {
-            for (int l1=ilength1; l1 >= 0; l1--)
-            {
-                for (int l0=ilength0; l0 >= 0; l0--)
-                {
-                    printf("%4d,", *i_tptr+i_zzoff);
-                    i_tptr += i_j0;
-                    cntdwn--;
-                    cntup++;
-                }
-                if (l1 != 0) 
-                {
-                    printf("\nNext row\n");
-                    i_tptr += i_j1;
-                }
-            }
-            if (l2 != 0) 
-            {
-                printf("\nReturn to filter window start; Bump zig-zag\n");
-                i_tptr += i_j2;
-            }
-        }
-        if (l3 != 0)
-        {
-            printf("\nShift window to right by stride\n");
-            i_tptr += i_j3;
-        }
-    }
-    */
+
     return *i_tptr;
 }
 
 int getNextWeight()
 {
+    if (w_i0 == 0 && w_i1 == 0 && w_i2 == 0 && w_i3 == 0)
+    {
+        w_i0 = wlength0;
+        w_i1 = wlength1;
+        w_i2 = wlength2;
+        w_i3 = wlength3;
+        w_tptr += w_j4;
+        //printf("\n==> w_j4\n");
+    }
+    else if (w_i0 == 0 && w_i1 == 0 && w_i2 == 0)
+    {
+        w_i0 = wlength0;
+        w_i1 = wlength1;
+        w_i2 = wlength2;
+        w_i3--;
+        w_tptr += w_j3;
+        //printf("\n==> w_j3\n");
+    }
+    else if (w_i0 == 0 && w_i1 == 0)
+    {
+        w_i0 = wlength0;
+        w_i1 = wlength1;
+        w_i2--;
+        w_tptr += w_j2;
+        //printf("\n==> w_j2\n");
+    }
+    else if (w_i0 == 0)
+    {
+        w_i0 = wlength0;
+        w_i1--;
+        w_tptr += w_j1;
+        //printf("\n");
+    }
+    else
+    {
+        w_i0--;
+        w_tptr += w_j0;       
+    }
+
     return *w_tptr;
 }
 
@@ -178,41 +205,9 @@ int main()
     // Do conv2d
     for (cntdwn = countdown; cntdwn > 0; cntdwn--)
     {
-        /*
-        for (int l3=ilength3; l3 >= 0; l3--)
-        {
-            for (int l2=ilength2; l2 >= 0; l2--)
-            {
-                for (int l1=ilength1; l1 >= 0; l1--)
-                {
-                    for (int l0=ilength0; l0 >= 0; l0--)
-                    {
-                        printf("%4d,", *i_tptr+i_zzoff);
-                        i_tptr += i_j0;
-                        cntdwn--;
-                        cntup++;
-                    }
-                    if (l1 != 0) 
-                    {
-                        printf("\nNext row\n");
-                        i_tptr += i_j1;
-                    }
-                }
-                if (l2 != 0) 
-                {
-                    printf("\nReturn to filter window start; Bump zig-zag\n");
-                    i_tptr += i_j2;
-                }
-            }
-            if (l3 != 0)
-            {
-                printf("\nShift window to right by stride\n");
-                i_tptr += i_j3;
-            }
-        }
-        */
-        printf("%4d,", *i_tptr);
+        printf("(%04d,%05d),", *i_tptr, *w_tptr);
         getNextInput();
+        getNextWeight();
     }
     
 
