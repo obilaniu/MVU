@@ -1,8 +1,13 @@
 #include <stdio.h>
 
+//
 // Convolution parameters
+//
+
+// Case 1: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 2x2 bits
 const int iprec = 2;                                // Input data precision
 const int wprec = 2;                                // Weight precision
+const int oprec = 2;                                // Output precision
 const int W = 10;                                   // Input width
 const int H = 10;                                   // Input height
 const int C = 2;                                    // Input channel blocks
@@ -10,6 +15,41 @@ const int Fw = 3;                                   // Filter kernel width
 const int Fh = 3;                                   // Filter kernel height
 const int Fc = 2;                                   // Number of filter set blocks (i.e. number of output channel blocks)
 const int Sw = 1;                                   // Filter horizontal (width) stride
+const int Pw = 0;                                   // Zero-padding in width dimension
+const int Ph = 0;                                   // Zero-padding in height dimension
+
+
+// Case 2: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 1x1 bits 
+/*
+const int iprec = 1;                                // Input data precision
+const int wprec = 1;                                // Weight precision
+const int oprec = 1;                                // Output precision
+const int W = 10;                                   // Input width
+const int H = 10;                                   // Input height
+const int C = 2;                                    // Input channel blocks
+const int Fw = 3;                                   // Filter kernel width
+const int Fh = 3;                                   // Filter kernel height
+const int Fc = 2;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Sw = 1;                                   // Filter horizontal (width) stride
+const int Pw = 0;                                   // Zero-padding in width dimension
+const int Ph = 0;                                   // Zero-padding in height dimension
+*/
+
+// Case 3: 3x3 conv, 2x2 upper left corner of feature map, 2 channel blocks in, 2 channel blocks out, 2x2 bits
+/*
+const int iprec = 2;                                // Input data precision
+const int wprec = 2;                                // Weight precision
+const int oprec = 2;                                // Output precision
+const int W = 2;                                    // Input width
+const int H = 2;                                    // Input height
+const int C = 2;                                    // Input channel blocks
+const int Fw = 3;                                   // Filter kernel width
+const int Fh = 3;                                   // Filter kernel height
+const int Fc = 2;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Sw = 1;                                   // Filter horizontal (width) stride
+const int Pw = 1;                                   // Zero-padding in width dimension
+const int Ph = 1;                                   // Zero-padding in height dimension
+*/
 
 // Tensors
 int i_t[H][W][C][iprec];                            // Input tensor
@@ -21,7 +61,7 @@ int *w_tptr = (int*)w_t;                            // Weight address pointer
 // Computed MVU parameters to program into CSRs
 //
 
-// Scenario 1: Compute all output pixels for a single line, but only the first output channel block
+// Scheme 1: Compute all output pixels for a single line, but only the first output channel block
 // -note that this would require adding in jumps to the output address to skip over the locations
 //  for the next output channel blocks
 // -subsequent conv2dline operations would need to be executed to fill in the remaining output
@@ -46,15 +86,15 @@ const int wjump3 = wjump0;
 const int countdown = (C * Fw) * (Fh) * (iprec * wprec) * ((W-Fw+1)/Sw);
 */
 
-// Scenario 2: Compute all of the output pixels for a single line including all output channel blocks
+// Scheme 2: Compute all of the output pixels for a single line including all output channel blocks
 const int ilength0 = C*Fw-1;                                // Width of filter window X number of input channel blocks
 const int ilength1 = Fh-1;                                  // Height of filter
-const int ilength2 = iprec*wprec-1;                         // Number of bit combos
-const int ilength3 = Fc-1;                                  // Number of filter blocks (i.e. output channel blocks)
+const int ilength2 = iprec*wprec*Fc-1;                         // Number of bit combos
+const int ilength3 = 0;
 const int ijump0 = iprec*(C*(W-Fw) + 1);                    const char* i_jump0_str = "Move to next row";
 const int ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);          const char* i_jump1_str = "Move back to start of window";
-const int ijump2 = ijump1;                                  const char* i_jump2_str = "Move back to start of window; Operate on next filter set block";
-const int ijump3 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);   const char* i_jump3_str = "Move window to right by horizontal stride";
+const int ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);   const char* i_jump2_str = "Move window to right by horizontal stride";
+const int ijump3 = ijump2;                                  const char* i_jump3_str = "Move window to right by horizontal stride";
 const int wlength0 = C*Fw*Fh-1;                             // Total size of one filter block
 const int wlength1 = iprec*wprec-1;                         // Number of bit combos
 const int wlength2 = Fc-1;                                  // Number of filter blocks
@@ -66,6 +106,7 @@ const int wjump3 = wjump2;                                  const char* w_jump3_
 const int countdown = (C * Fw) * (Fh) * (iprec * wprec) * (Fc) * ((W-Fw+1)/Sw);
 const int bumpzigzag_on = 1;
 const int loadshacc_on = 1 << 2;
+const int woffset = wprec*C*(Fw*Ph+Pw);                     // Filter pointer offset
 
 
 // Internal parameters
@@ -235,7 +276,7 @@ int genNextOutput(int curjump)
 {
     if ((1 << curjump) >= loadshacc_on)
     {
-        outaddr++;
+        outaddr += oprec;
         printf("==> shacc load. Next output addr = %05d\n", outaddr);
     }
 }
@@ -243,6 +284,7 @@ int genNextOutput(int curjump)
 
 int main()
 {
+    w_tptr += woffset;
 
     // Print out the computed parameters
     printf("==Computed Parameters==\n");
@@ -250,7 +292,7 @@ int main()
     printf("ijump0  =%10d, ijump1  =%10d, ijump2  =%10d, ijump3  =%10d\n", ijump0, ijump1, ijump2, ijump3);
     printf("wlength0=%10d, wlength1=%10d, wlength2=%10d, wlength3=%10d\n", wlength0, wlength1, wlength2, wlength3);
     printf("wjump0  =%10d, wjump1  =%10d, wjump2  =%10d, wjump3  =%10d\n", wjump0, wjump1, wjump2, wjump3);
-    printf("countdown=%d\n", countdown);
+    printf("woffset=%d, countdown=%d\n", woffset, countdown);
     printf("\n");
 
 
