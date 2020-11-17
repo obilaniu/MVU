@@ -1,6 +1,12 @@
 #include <stdio.h>
 
 //
+// General parameters
+//
+const int m = 10;                                   // Spacing between dimension blocks in generated tensors
+
+
+//
 // Convolution parameters
 //
 
@@ -15,8 +21,10 @@ const int Fw = 3;                                   // Filter kernel width
 const int Fh = 3;                                   // Filter kernel height
 const int Fc = 2;                                   // Number of filter set blocks (i.e. number of output channel blocks)
 const int Sw = 1;                                   // Filter horizontal (width) stride
-const int Pw = 0;                                   // Zero-padding in width dimension
-const int Ph = 0;                                   // Zero-padding in height dimension
+const int Pl = 0;                                   // Zero-padding in on the left in the width dimension
+const int Pr = 0;                                   // Zero-padding in on the right in the width dimension
+const int Pt = 0;                                   // Zero-padding in on the top in the height dimension
+const int Pb = 0;                                   // Zero-padding in on the bottom in the height dimension
 
 
 // Case 2: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 1x1 bits 
@@ -57,83 +65,91 @@ int w_t[Fc][Fh][Fw][C][wprec];                      // Filter weight tensor
 int *i_tptr = (int*)i_t;                            // Input address pointer
 int *w_tptr = (int*)w_t;                            // Weight address pointer
 
-//
 // Computed MVU parameters to program into CSRs
-//
-
-// Scheme 1: Compute all output pixels for a single line, but only the first output channel block
-// -note that this would require adding in jumps to the output address to skip over the locations
-//  for the next output channel blocks
-// -subsequent conv2dline operations would need to be executed to fill in the remaining output
-//  channel blocks
-/*
-const int ilength0 = C*Fw-1;
-const int ilength1 = Fh-1;
-const int ilength2 = iprec*wprec-1;
-const int ilength3 = ((W-Fw+1)/Sw - 1);
-const int ijump0 = iprec*(C*(W-Fw) + 1);                    const char* i_jump0_str = "Move to next row";
-const int ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);          const char* i_jump1_str = "Move back to start of window; bump zig-zag";
-const int ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);   const char* i_jump2_str = "Move window to right by horizontal stride";
-const int ijump3 = 0;                                       const char* i_jump3_str = "";
-const int wlength0 = C*Fw*Fh-1;                             // Total size of a filter
-const int wlength1 = 0;
-const int wlength2 = 0;
-const int wlength3 = 0;
-const int wjump0 = -wprec*(C*Fw*Fh-1);                      // Move back to start of filter for next precision combo; Bump zig-zag
-const int wjump1 = 0;
-const int wjump2 = 0;
-const int wjump3 = wjump0;
-const int countdown = (C * Fw) * (Fh) * (iprec * wprec) * ((W-Fw+1)/Sw);
-*/
-
-// Scheme 2: Compute all of the output pixels for a single line including all output channel blocks
-const int ilength0 = C*Fw-1;                                // Width of filter window X number of input channel blocks
-const int ilength1 = Fh-1;                                  // Height of filter
-const int ilength2 = iprec*wprec*Fc-1;                         // Number of bit combos
-const int ilength3 = 0;
-const int ijump0 = iprec*(C*(W-Fw) + 1);                    const char* i_jump0_str = "Move to next row";
-const int ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);          const char* i_jump1_str = "Move back to start of window";
-const int ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);   const char* i_jump2_str = "Move window to right by horizontal stride";
-const int ijump3 = ijump2;                                  const char* i_jump3_str = "Move window to right by horizontal stride";
-const int wlength0 = C*Fw*Fh-1;                             // Total size of one filter block
-const int wlength1 = iprec*wprec-1;                         // Number of bit combos
-const int wlength2 = Fc-1;                                  // Number of filter blocks
-const int wlength3 = 0;
-const int wjump0 = -wprec*(C*Fw*Fh-1);                      const char* w_jump0_str = "Move back to start of filter for next precision combo";
-const int wjump1 = wprec;                                   const char* w_jump1_str = "Move to next filter set block";
-const int wjump2 = -wprec*(C*Fw*Fh*Fc-1);                   const char* w_jump2_str = "Move back to start of first filter set block for next window";
-const int wjump3 = wjump2;                                  const char* w_jump3_str = "Move back to start of first filter set block for next window";
-const int countdown = (C * Fw) * (Fh) * (iprec * wprec) * (Fc) * ((W-Fw+1)/Sw);
-const int bumpzigzag_on = 1;
-const int loadshacc_on = 1 << 2;
-const int woffset = wprec*C*(Fw*Ph+Pw);                     // Filter pointer offset
+int ilength0;
+int ilength1;
+int ilength2;
+int ilength3;
+int ijump0;
+int ijump1;
+int ijump2;
+int ijump3;
+int wlength0;
+int wlength1;
+int wlength2;
+int wlength3;
+int wjump0;
+int wjump1;
+int wjump2;
+int wjump3;
+int countdown;
+int bumpzigzag_on;
+int loadshacc_on;
+int ioffset;
+int woffset;
 
 
 // Internal parameters
-const int m = 10;
-const int i_j0 = iprec;                                 // Move to next channel block and/or column
-const int i_j1 = ijump0;
-const int i_j2 = ijump1;
-const int i_j3 = ijump2;
-const int i_j4 = ijump3;
-int i_zzoff = 0;
-int w_zzoff = 0;
-int cntdwn = countdown;
-int cntup = 0;
-int i_i0 = ilength0;
-int i_i1 = ilength1;
-int i_i2 = ilength2;
-int i_i3 = ilength3;
-int w_i0 = wlength0;
-int w_i1 = wlength1;
-int w_i2 = wlength2;
-int w_i3 = wlength3;
-const int w_j0 = wprec;                                 // Move to next channel block and/or column
-const int w_j1 = wjump0;
-const int w_j2 = wjump1;
-const int w_j3 = wjump2;
-const int w_j4 = wjump3;
-int outaddr = 0;
+int i_j0;
+int i_j1;
+int i_j2;
+int i_j3;
+int i_j4;
+int i_zzoff;
+int w_zzoff;
+int cntdwn;
+int i_i0;
+int i_i1;
+int i_i2;
+int i_i3;
+int w_i0;
+int w_i1;
+int w_i2;
+int w_i3;
+int w_j0;
+int w_j1;
+int w_j2;
+int w_j3;
+int w_j4;
+int outaddr;
+
+char *i_jump0_str = (char*)"";
+char *i_jump1_str = (char*)"";
+char *i_jump2_str = (char*)"";
+char *i_jump3_str = (char*)"";
+char *w_jump0_str = (char*)"";
+char *w_jump1_str = (char*)"";
+char *w_jump2_str = (char*)"";
+char *w_jump3_str = (char*)"";
+
+
+void assignInternalParams()
+{
+    i_j0 = iprec;                                 // Move to next channel block and/or column
+    i_j1 = ijump0;
+    i_j2 = ijump1;
+    i_j3 = ijump2;
+    i_j4 = ijump3;
+    i_zzoff = 0;
+    w_zzoff = 0;
+    cntdwn = countdown;
+    i_i0 = ilength0;
+    i_i1 = ilength1;
+    i_i2 = ilength2;
+    i_i3 = ilength3;
+    w_i0 = wlength0;
+    w_i1 = wlength1;
+    w_i2 = wlength2;
+    w_i3 = wlength3;
+    w_j0 = wprec;                                 // Move to next channel block and/or column
+    w_j1 = wjump0;
+    w_j2 = wjump1;
+    w_j3 = wjump2;
+    w_j4 = wjump3;
+    outaddr = 0;
+    w_tptr += woffset;
+    i_tptr += ioffset;
+}
 
 
 int iw, id = 0;
@@ -213,7 +229,11 @@ int getNextInput()
         i_i0 = ilength0;
         i_i1--;
         i_tptr += i_j1;
-        printf("\n");
+        if (i_j1 != iprec)
+            printf("\n==> i_j1: %s\n", i_jump0_str);
+        else
+            printf("\n");
+        
         return 1;
     }
     else
@@ -282,19 +302,121 @@ int genNextOutput(int curjump)
 }
 
 
+/*
+ Computes parameters for 2-D convolution for one output row 
+ on interior of input map (VALID in TF lingo)
+*/
+void setConv2dlineValid()
+{
+    // Scheme 1: Compute all output pixels for a single line, but only the first output channel block
+    // -note that this would require adding in jumps to the output address to skip over the locations
+    //  for the next output channel blocks
+    // -subsequent conv2dline operations would need to be executed to fill in the remaining output
+    //  channel blocks
+    /*
+    ilength0 = C*Fw-1;
+    ilength1 = Fh-1;
+    ilength2 = iprec*wprec-1;
+    ilength3 = ((W-Fw+1)/Sw - 1);
+    ijump0 = iprec*(C*(W-Fw) + 1);                    i_jump0_str = "Move to next row";
+    ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);          i_jump1_str = "Move back to start of window; bump zig-zag";
+    ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);   i_jump2_str = "Move window to right by horizontal stride";
+    ijump3 = 0;                                       i_jump3_str = "";
+    wlength0 = C*Fw*Fh-1;                             // Total size of a filter
+    wlength1 = 0;
+    wlength2 = 0;
+    wlength3 = 0;
+    wjump0 = -wprec*(C*Fw*Fh-1);                      // Move back to start of filter for next precision combo; Bump zig-zag
+    wjump1 = 0;
+    wjump2 = 0;
+    wjump3 = wjump0;
+    countdown = (C * Fw) * (Fh) * (iprec * wprec) * ((W-Fw+1)/Sw);
+    */
+
+    // Scheme 2: Compute all of the output pixels for a single line including all output channel blocks
+    ilength0 = C*Fw-1;                                                          // Width of filter window X number of input channel blocks
+    ilength1 = Fh-1;                                                            // Height of filter
+    ilength2 = iprec*wprec*Fc-1;                                                // Number of bit combos X filter sets
+    ilength3 = 0;
+    ijump0 = iprec*(C*(W-Fw) + 1);                                              i_jump0_str = (char*)"Move to next row";
+    ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);                                    i_jump1_str = (char*)"Move back to start of window";
+    ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);                             i_jump2_str = (char*)"Move window to right by horizontal stride";
+    ijump3 = ijump2;                                                            i_jump3_str = (char*)"Move window to right by horizontal stride";
+    wlength0 = C*Fw*Fh-1;                                                       // Total size of one filter block
+    wlength1 = iprec*wprec-1;                                                   // Number of bit combos
+    wlength2 = Fc-1;                                                            // Number of filter blocks
+    wlength3 = 0;
+    wjump0 = -wprec*(C*Fw*Fh-1);                                                w_jump0_str = (char*)"Move back to start of filter for next precision combo";
+    wjump1 = wprec;                                                             w_jump1_str = (char*)"Move to next filter set block";
+    wjump2 = -wprec*(C*Fw*Fh*Fc-1);                                             w_jump2_str = (char*)"Move back to start of first filter set block for next window";
+    wjump3 = wjump2;                                                            w_jump3_str = (char*)"Move back to start of first filter set block for next window";
+    countdown = (C * Fw) * (Fh) * (iprec * wprec) * (Fc) * ((W-Fw+1)/Sw);
+    bumpzigzag_on = 1;
+    loadshacc_on = 1 << 2;
+    woffset = 0;                                                                // Filter pointer offset
+    
+}
+
+/*
+ Computes parameters to do the convolution in the corner/edge of an input feature map
+ when there is "virtual" padding (i.e. no actual zeros in memory). Needed where the output 
+ feature map is the same size as the input feature map in width and height (i.e. SAME in TF lingo)
+ Pl and Pr are mutully exclusive, as are Pt and Pb. Set the one not being used to 0.
+*/
+void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
+{
+    // Upper left corner
+    if (Pt > 0 && Pl > 0)
+    {
+        woffset = wprec*C*(Pt*Fw + Pl);                                             // Start on correct weight in the first filter block
+        ioffset = 0;
+        ilength0 = C*(Fw-Pl)-1;                                                     // Width of filter window X number of input channel blocks
+        ilength1 = Fh-Pt-1;                                                         // Height of filter
+        ilength2 = iprec*wprec*Fc-1;                                                // Number of bit combos X number of filter sets
+        ilength3 = 0;
+        ijump0 = iprec*(C*(W-Fw+Pl) + 1);                                           i_jump0_str = (char*)"Move to next row";
+        ijump1 = -iprec*(C*(Fh-Pt-1)*W + (Fw-Pl)*C - 1);                            i_jump1_str = (char*)"Move back to start of window";
+        ijump2 = ijump1;                                                            i_jump2_str = i_jump1_str;
+        ijump3 = ijump1;                                                            i_jump3_str = i_jump1_str;
+        wlength0 = C*(Fw-Pl)-1;                                                     // One subset of the columns of the filter
+        wlength1 = Fh-Pt-1;                                                         // Subset of the rows of the filter
+        wlength2 = iprec*wprec-1;                                                   // Number of bit combos
+        wlength3 = Fc-1;                                                            // Number of filter sets
+        wjump0 = wprec*(C*Pl+1);                                                    w_jump0_str = (char*)"Jump to next row of filter set";
+        wjump1 = -wprec*(C*Fw*Fh - 1) + woffset;                                    w_jump1_str = (char*)"Move back to start of filter for next bit combo";
+        wjump2 = wprec + woffset;                                                   w_jump2_str = (char*)"Move to next filter set block";
+        wjump3 = -wprec*(C*Fw*Fh*Fc-1) + woffset;                                   w_jump3_str = (char*)"Move back to start of first filter set block for next window";
+        countdown = (C * (Fw-Pl)) * (Fh-Pt) * (iprec * wprec) * (Fc);
+        bumpzigzag_on = 2;
+        loadshacc_on = 1 << 3;       
+    }
+    // Upper right corner
+    else if (Pt > 0 && Pr > 0)
+    {
+    }
+    // Lower left corner
+    else if (Pb > 0 && Pl > 0)
+    {
+
+    }
+    // Lower right corner
+    else if (Pb > 0 && Pr > 0)
+    {
+
+    }
+    else
+    {
+        printf("Error! Not a valid padding config!\n");
+    }
+    
+        
+}
+
+
+
 int main()
 {
     w_tptr += woffset;
-
-    // Print out the computed parameters
-    printf("==Computed Parameters==\n");
-    printf("ilength0=%10d, ilength1=%10d, ilength2=%10d, ilength3=%10d\n", ilength0, ilength1, ilength2, ilength3);
-    printf("ijump0  =%10d, ijump1  =%10d, ijump2  =%10d, ijump3  =%10d\n", ijump0, ijump1, ijump2, ijump3);
-    printf("wlength0=%10d, wlength1=%10d, wlength2=%10d, wlength3=%10d\n", wlength0, wlength1, wlength2, wlength3);
-    printf("wjump0  =%10d, wjump1  =%10d, wjump2  =%10d, wjump3  =%10d\n", wjump0, wjump1, wjump2, wjump3);
-    printf("woffset=%d, countdown=%d\n", woffset, countdown);
-    printf("\n");
-
 
     // Initialize input tensor
     // The values are set such that each digit represents the position
@@ -338,7 +460,21 @@ int main()
         }       
     }
 
-    // Do conv2d
+    // Compute parameters for convolution
+    //setConv2dlinevalid();
+    setConv2dlineEdgePadding(1, 0, 1, 0);
+    assignInternalParams();
+
+    // Print out the computed parameters
+    printf("==Computed Parameters==\n");
+    printf("ilength0=%10d, ilength1=%10d, ilength2=%10d, ilength3=%10d\n", ilength0, ilength1, ilength2, ilength3);
+    printf("ijump0  =%10d, ijump1  =%10d, ijump2  =%10d, ijump3  =%10d\n", ijump0, ijump1, ijump2, ijump3);
+    printf("wlength0=%10d, wlength1=%10d, wlength2=%10d, wlength3=%10d\n", wlength0, wlength1, wlength2, wlength3);
+    printf("wjump0  =%10d, wjump1  =%10d, wjump2  =%10d, wjump3  =%10d\n", wjump0, wjump1, wjump2, wjump3);
+    printf("ioffset=%d, woffset=%d, countdown=%d\n", ioffset, woffset, countdown);
+    printf("\n");
+
+    // Do the operation
     int w_whichjump = 0;
     int i_whichjump = 0;
     for (cntdwn = countdown; cntdwn > 0; cntdwn--)
