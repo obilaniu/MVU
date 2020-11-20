@@ -368,6 +368,7 @@ void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
     // Upper left corner
     if (Pt > 0 && Pl > 0)
     {
+        printf("=Upper left corner=\n");
         woffset = wprec*C*(Pt*Fw + Pl);                                             // Start on weight tile within in the first filter block
         ioffset = 0;
         ilength0 = C*(Fw-Pl)-1;                                                     // Width of filter window X number of input channel blocks
@@ -393,6 +394,7 @@ void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
     // Upper right corner
     else if (Pt > 0 && Pr > 0)
     {
+        printf("=Upper right corner=\n");
         woffset = wprec*C*Pt*Fw;                                                    // Start on correct row of first filter block
         ioffset = iprec*(C*(W-Fw+Pr));                                              // Start on right edge of input feature map
         ilength0 = C*(Fw-Pr)-1;                                                     // Width of filter window X number of input channel blocks
@@ -416,12 +418,44 @@ void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
         loadshacc_on = 1 << 3;   
     }
     // Lower left corner
+    // 
     else if (Pb > 0 && Pl > 0)
     {
-
+        printf("=Lower left corner=\n");
+        woffset = wprec*C*Pl;                                                       // Start on weight tile within in the first filter block
+        ioffset = iprec*C*W*(H-1-Pb);                                               // Input row position near bottom edge
+        ilength0 = C*(Fw-Pl)-1;                                                     // Width of filter window X number of input channel blocks
+        ilength1 = Fh-Pb-1;                                                         // Height of filter
+        ilength2 = iprec*wprec*Fc-1;                                                // Number of bit combos X number of filter sets
+        ilength3 = 0;                                                               // Not needed. Countdown will terminate.
+        ijump0 = iprec*(C*(W-Fw+Pl) + 1);                                           i_jump0_str = (char*)"Move to next row";
+        ijump1 = -iprec*(C*(Fh-Pb-1)*W + (Fw-Pl)*C - 1);                            i_jump1_str = (char*)"Move back to start of window";
+        ijump2 = ijump1;                                                            i_jump2_str = i_jump1_str;
+        ijump3 = ijump1;                                                            i_jump3_str = i_jump1_str;
+        wlength0 = C*(Fw-Pl)-1;                                                     // One subset of the columns of the filter
+        wlength1 = Fh-Pb-1;                                                         // Subset of the rows of the filter
+        wlength2 = iprec*wprec-1;                                                   // Number of bit combos
+        wlength3 = Fc-1;                                                            // Number of filter sets, but don't really need since countdown will terminate
+        wjump0 = wprec*(C*Pl+1);                                                    w_jump0_str = (char*)"Jump to next row of filter set";
+        wjump1 = -wprec*(C*Fw*(Fh-Pb) - 1) + woffset;                               w_jump1_str = (char*)"Move back to start of filter for next bit combo";
+        wjump2 = wprec*(C*Fw + 1) + woffset;                                        w_jump2_str = (char*)"Move to next filter set block";
+        wjump3 = 0;                                                                 w_jump3_str = (char*)"Not needed!";
+        countdown = (C * (Fw-Pl)) * (Fh-Pb) * (iprec * wprec) * (Fc);
+        bumpzigzag_on = 2;
+        loadshacc_on = 1 << 3;    
     }
     // Lower right corner
     else if (Pb > 0 && Pr > 0)
+    {
+
+    }
+    // Left edge
+    else if (Pl > 0)
+    {
+
+    }
+    // Right edge
+    else if (Pr)
     {
 
     }
@@ -484,7 +518,7 @@ int main()
     // Compute parameters for convolution
     //setConv2dlineEdgePadding(1, 0, 1, 0);           // Upper-left corner
     //setConv2dlinevalid();                           // Inner
-    setConv2dlineEdgePadding(0, 1, 1, 0);           // Upper-right corner
+    setConv2dlineEdgePadding(1, 0, 0, 1);           // Lower-left corner
     assignInternalParams();
 
     // Print out the computed parameters
