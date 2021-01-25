@@ -86,12 +86,16 @@ module mvu( clk,
             wrc_grnt,
             wrc_addr,
             wrc_word,
-            mvu_word_out);
+            mvu_word_out,
+            wrihp_addr,
+            mvu_word_outhp);
 
 
 /* Parameters */
-parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
-parameter  NDBANK  = 32;   /* Number of N-bit, 1024-element Data BANK. */
+parameter  N          = 64;   /* N x N matrix-vector product size. Power-of-2. */
+parameter  NDBANK     = 32;   /* Number of N-bit, 1024-element Data BANK. */
+parameter  BDHPBANKW  = 32;    // Bitwidth of high-precision data bank word
+parameter  BDHPBANKA  = 9;     // Bitwidth of high-precision data bank address
 
 localparam CLOG2N      = $clog2(N);     /* clog2(N) */
 
@@ -166,6 +170,10 @@ input  wire[BDBANKA-1 : 0] wrc_addr;
 input  wire[BDBANKW-1 : 0] wrc_word;
 
 output wire[BDBANKW-1 : 0] mvu_word_out;
+
+input  wire[    BDHPBANKA : 0] wrihp_addr;          // High-precision data input write
+input  wire[N*BDHPBANKW-1 : 0] mvu_word_inhp;       // High-precision data input word (composed of N words)
+output wire[N*BDHPBANKW-1 : 0] mvu_word_outhp;      // High-precision data output word (composed of N words)
 
 /* Generation Variables */
 genvar i, j;
@@ -321,6 +329,21 @@ end endgenerate
 assign core_data = rdd_word;
 assign wrd_word  = quant_out;
 assign mvu_word_out = quant_out;
+
+
+// High-precision data bank
+ ram_highprec #(
+    .BDADDR(BDHPBANKA),
+    .BDWORD(N*BDHPBANKW)
+ ) dbhp (
+    .clk(clk),
+    .rd_en(1'b1),
+    .rd_addr(rddhp_addr), 
+    .rd_word(rddhp_word),
+    .wr_en(wrihp_en),
+    .wr_addr(wrihp_addr),
+    .wr_word(wrihp_word)
+ );
 
 
 

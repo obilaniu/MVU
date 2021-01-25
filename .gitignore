@@ -91,3 +91,5 @@
 
 # Specific directories
 verification/ip/xilinx/
+.vscode/launch.json
+c/conv2d_jumps

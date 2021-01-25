@@ -31,6 +31,9 @@ module mvutop(  clk,
                 ibaseaddr,
                 obaseaddr,
                 omvusel,
+                ihpbaseaddr,
+                ohpbaseaddr,
+                ohpmvusel,
                 wstride_0,
                 wstride_1,
                 wstride_2,
@@ -81,7 +84,11 @@ localparam BDBANKA = 15;            /* Bitwidth of Data    BANK Address */
 localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
 
 localparam BACC    = 27;            /* Bitwidth of Accumulators */
-localparam BSCALERP = 48;               // Bitwidth of the scaler output
+localparam BSCALERP = 32;               // Bitwidth of the scaler output
+
+localparam BDHPBANKW    = BSCALERP;     // Bitwidth of high-precision data bank word
+localparam BDHPBUSW     = BDHPBANKW*N;  // Bitwidth of high-precision data word bus
+localparam BDHPBANKA    = 12;           // Bitwidth of high-precision data bank address
 
 // Quantizer parameters
 localparam BQMSBIDX = $clog2(BSCALERP); // Bitwidth of the quantizer MSB location specifier
@@ -134,6 +141,9 @@ input  wire[  NMVU*BBWADDR-1 : 0] wbaseaddr;            // Config: weight memory
 input  wire[  NMVU*BBDADDR-1 : 0] ibaseaddr;            // Config: data memory base address for input
 input  wire[  NMVU*BBDADDR-1 : 0] obaseaddr;            // Config: data memory base address for output
 input  wire[     NMVU*NMVU-1 : 0] omvusel;	    		// Config: MVU selector bits for output
+input  wire[  NMVU*BBDADDR-1 : 0] ihpbaseaddr;          // Config: high-precision data memory base address for input
+input  wire[  NMVU*BBDADDR-1 : 0] ohpbaseaddr;          // Config: high-precision data memory base address for output
+input  wire[     NMVU*NMVU-1 : 0] ohpmvusel;            // Config: MVU selector bits for high-precision output
 input  wire[  NMVU*BSTRIDE-1 : 0] wstride_0;            // Config: weight stride in dimension 0 (x)
 input  wire[  NMVU*BSTRIDE-1 : 0] wstride_1;            // Config: weight stride in dimension 1 (y)
 input  wire[  NMVU*BSTRIDE-1 : 0] wstride_2;            // Config: weight stride in dimension 2 (z)
@@ -188,6 +198,9 @@ reg[   BBWADDR-1 : 0] wbaseaddr_q       [NMVU-1 : 0];           // Config: weigh
 reg[   BBDADDR-1 : 0] ibaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for input
 reg[   BBDADDR-1 : 0] obaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for output
 reg[      NMVU-1 : 0] omvusel_q         [NMVU-1 : 0];    		// Config: MVU selection bits for output
+reg[   BBDADDR-1 : 0] ihpbaseaddr_q     [NMVU-1 : 0];           // Config: high-precision data memory base address for input
+reg[   BBDADDR-1 : 0] ohpbaseaddr_q     [NMVU-1 : 0];           // Config: high-precision data memory base address for output
+reg[      NMVU-1 : 0] ohpmvusel_q       [NMVU-1 : 0];           // Config: MVU selector bits for high-precision output
 reg[   BWBANKA-1 : 0] wstride_0_q       [NMVU-1 : 0];           // Config: weight stride in dimension 0 (x)
 reg[   BWBANKA-1 : 0] wstride_1_q       [NMVU-1 : 0];           // Config: weight stride in dimension 1 (y)
 reg[   BWBANKA-1 : 0] wstride_2_q       [NMVU-1 : 0];           // Config: weight stride in dimension 2 (z)
@@ -227,7 +240,13 @@ wire[        NMVU-1 : 0] wrd_en;
 wire[        NMVU-1 : 0] wrd_grnt;
 wire[NMVU*BDBANKA-1 : 0] wrd_addr;
 
-// Interconnect
+// MVU high-precision Data memory control
+wire[        NMVU-1   : 0]  rddhp_en;
+wire[NMVU*BDHPBANKA-1 : 0]  rddhp_addr;
+wire[        NMVU-1   : 0]  wrdhp_en;
+wire[NMVU*BDHPBANKA-1 : 0]  wrdhp_addr;
+
+// Interconnect (quantized)
 wire                     ic_clr_int;
 wire[   NMVU*NMVU-1 : 0] ic_send_to;
 wire[        NMVU-1 : 0] ic_send_en;
@@ -240,14 +259,32 @@ wire[NMVU*BDBANKW-1 : 0] ic_recv_word;
 wire[NMVU*BDBANKW-1 : 0] rdi_word;
 wire[        NMVU-1 : 0] wri_en;
 wire[NMVU*BDBANKW-1 : 0] wri_word;
-
 wire[        NMVU-1 : 0] rdi_en;
 wire[        NMVU-1 : 0] rdi_grnt;
 wire[NMVU*BDBANKA-1 : 0] rdi_addr;
 wire[        NMVU-1 : 0] wri_grnt;
 wire[NMVU*BDBANKA-1 : 0] wri_addr;
-
 wire[NMVU*BDBANKW-1 : 0] mvu_word_out;
+
+// Interconnect (high-precision)
+wire                     ichp_clr_int;
+wire[   NMVU*NMVU-1 : 0] ichp_send_to;
+wire[        NMVU-1 : 0] ichp_send_en;
+wire[NMVU*BDHPBANKA-1 : 0] ichp_send_addr;
+wire[NMVU*BDHPBUSW-1 : 0] ichp_send_word;
+wire[        NMVU-1 : 0] ichp_recv_en;
+wire[   NMVU*NMVU-1 : 0] ichp_recv_from;
+wire[NMVU*BDHPBANKA-1 : 0] ichp_recv_addr;
+wire[NMVU*BDHPBUSW-1 : 0] ichp_recv_word;
+wire[NMVU*BDHPBUSW-1 : 0] rdihp_word;
+wire[        NMVU-1 : 0] wrihp_en;
+wire[NMVU*BDHPBUSW-1 : 0] wrihp_word;
+wire[        NMVU-1 : 0] rdihp_en;
+wire[        NMVU-1 : 0] rdihp_grnt;
+wire[NMVU*BDHPBANKA-1 : 0] rdihp_addr;
+wire[        NMVU-1 : 0] wrihp_grnt;
+wire[NMVU*BDHPBANKA-1 : 0] wrihp_addr;
+wire[NMVU*BDHPBUSW-1 : 0] mvu_word_outhp;
 
 // Scaler
 wire[        NMVU-1 : 0] scaler_clr;            // Scaler: clear/reset
@@ -288,14 +325,16 @@ wire[        NMVU-1 : 0] shacc_done;        // Accumulator done control
 wire[        NMVU-1 : 0] maxpool_done;      // Max pool done control
 wire[        NMVU-1 : 0] outagu_clr;        // Clear the output AGU
 wire[        NMVU-1 : 0] outagu_load;       // Load the output AGU base address
-
+wire[        NMVU-1 : 0] outhpagu_clr;      // Clear the output high-precision AGU
+wire[        NMVU-1 : 0] outhpagu_step;     // Step the output high-precision AGU
+wire[        NMVU-1 : 0] outhpagu_load;     // Load the output high-precision AGU base address
 
 /*
 * Wiring 
 */
 
 /*
-* Interconnect
+* Interconnect (quantized)
 */
 
 interconn #(
@@ -322,16 +361,55 @@ generate for(i=0; i < NMVU; i = i+1) begin
 end endgenerate
 
 assign ic_send_word = mvu_word_out;
-assign ic_send_addr = wrd_addr;
+assign ic_send_addr = wrd_addr;             // Set to address that MVU output is writing to
 assign wri_word     = ic_recv_word;
 assign wri_en       = ic_recv_en;
-assign wri_addr     = ic_recv_addr;
+assign wri_addr     = ic_recv_addr;         // This is the incoming address from the interconnect
 
 // TODO: FIGURE OUT WHERE TO WIRE OTHER INTERCONNECT DATA ACCESS SIGNAL
 assign rdi_en           = 0;
 //assign rdi_grnt         = 0;
 assign rdi_addr         = 0;
 //assign wri_grnt         = 0;
+
+
+/*
+* Interconnect (high-precision)
+*/
+
+interconn #(
+    .N(NMVU),
+    .W(BDHPBUSW),
+    .BADDR(BDHPBANKA)
+) ichp (
+    .clk(clk),
+    .clr(ichp_clr_int),
+    .send_to(ichp_send_to),
+    .send_en(ichp_send_en),
+    .send_addr(ichp_send_addr),
+    .send_word(ichp_send_word),
+    .recv_from(ichp_recv_from),
+    .recv_en(ichp_recv_en),
+    .recv_addr(ichp_recv_addr),
+    .recv_word(ichp_recv_word)
+);
+
+// Interconnect wires
+generate for(i=0; i < NMVU; i = i+1) begin
+    assign ichp_send_to[i*NMVU +: NMVU] = ohpmvusel_q[i];
+    assign ichp_send_en[i] = (| ohpmvusel_q[i]) & !ohpmvusel_q[i][i] & shacc_done[i];      // Trigger when shift/accumulator is done
+end endgenerate
+
+assign ichp_send_word = mvu_word_outhp;
+assign ichp_send_addr = wrdhp_addr;
+assign wrihp_word     = ichp_recv_word;
+assign wrihp_en       = ichp_recv_en;
+assign wrihp_addr     = ichp_recv_addr;
+
+
+/*
+* More signals
+*/
 
 assign rdd_en           = run;                              // MVU reads when running
 
@@ -349,6 +427,7 @@ assign ic_clr_int       = !rst_n | ic_clr;
 assign controller_clr   = {NMVU{!rst_n}};
 assign inagu_clr        = {NMVU{!rst_n}} | start_q;
 assign outagu_clr       = {NMVU{!rst_n}};
+assign outhpagu_clr     = {NMVU{!rst_n}};
 assign shacc_clr_int    = {NMVU{!rst_n}} | shacc_clr;       // Clear the accumulator
 assign scaler_clr       = {NMVU{!rst_n}};
 assign quant_clr_int    = {NMVU{!rst_n}} | quant_clr;
@@ -387,6 +466,9 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             ibaseaddr_q[i]      <= 0;
             obaseaddr_q[i]      <= 0;
             omvusel_q[i]        <= 0;
+            ihpbaseaddr_q[i]    <= 0;
+            ohpbaseaddr_q[i]    <= 0;
+            ohpmvusel_q[i]      <= 0;
             wstride_0_q[i]      <= 0;
             wstride_1_q[i]      <= 0;
             wstride_2_q[i]      <= 0;
@@ -424,6 +506,9 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 ibaseaddr_q[i]      <= ibaseaddr    [i*BBDADDR +: BBDADDR];
                 obaseaddr_q[i]      <= obaseaddr    [i*BBDADDR +: BBDADDR];
                 omvusel_q[i]        <= omvusel      [i*NMVU +: NMVU];
+                ihpbaseaddr_q[i]    <= ihpbaseaddr  [i*BBDADDR +: BBDADDR];
+                ohpbaseaddr_q[i]    <= ohpbaseaddr  [i*BBDADDR +: BBDADDR];
+                ohpmvusel_q[i]      <= ohpmvusel    [i*NMVU +: NMVU];
                 wstride_0_q[i]      <= wstride_0    [i*BSTRIDE +: BWBANKA];
                 wstride_1_q[i]      <= wstride_1    [i*BSTRIDE +: BWBANKA];
                 wstride_2_q[i]      <= wstride_2    [i*BSTRIDE +: BWBANKA];
@@ -527,6 +612,22 @@ generate for(i = 0; i < NMVU; i = i+1) begin:outaguarray
         );
 end endgenerate
 
+// Output address generators for high precision interconnect
+generate for(i = 0; i < NMVU; i = i+1) begin:outhpaguarray
+    outagu #(
+            .BDBANKA    (BDBANKA)
+        ) outaguunit
+        (
+            .clk        (clk                                ),
+            .clr        (outhpagu_clr[i]                      ),
+            .step       (outhpagu_step[i]),
+            .load       (outhpagu_load[i]),
+            .baseaddr   (ohpbaseaddr[i*BBDADDR +:	BBDADDR]    ),
+            .addrout    (wrdhp_addr[i*BDBANKA  +: BDBANKA]    )
+        );
+end endgenerate
+
+
 // Quantizer Controllers
 generate for(i = 0; i < NMVU; i = i+1) begin: quantser_ctrlarray
     assign quant_bwout[i*BPREC +: BQBOUT] = oprecision[i*BPREC +: BQBOUT];
@@ -621,6 +722,26 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
         .out    (outagu_load[i])
     );
 
+    shiftreg #(
+        .N      (SCALERLATENCY)
+    ) outhpagu_load_delayarrayunit (
+        .clk    (clk),
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (start_q[i]),
+        .out    (outhpagu_load[i])
+    );
+
+    shiftreg #(
+        .N      (SCALERLATENCY)
+    ) outhpagu_step_delayarrayunit (
+        .clk    (clk),
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (shacc_done[i]),
+        .out    (outhpagu_step[i])
+    );
+
 end endgenerate
 
 
@@ -673,7 +794,9 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .wrc_grnt		(wrc_grnt[i]							),
             .wrc_addr		(wrc_addr[BDBANKA-1: 0]					),
         	.wrc_word		(wrc_word[BDBANKW-1 : 0]				),
-            .mvu_word_out   (mvu_word_out[i*BDBANKW +: BDBANKW]     )
+            .mvu_word_out   (mvu_word_out[i*BDBANKW +: BDBANKW]     ),
+            .wrihp_addr     (wrihp_addr[i*BDHPBANKA +: BDHPBANKA]   ),
+            .mvu_word_outhp (mvu_word_outhp[i*BDHPBANKW +: BDHPBANKW])
 		);
 end endgenerate
 
