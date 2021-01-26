@@ -32,11 +32,10 @@ proc genIPFiles {ipname} {
     set ipXCIfile $ipname.xci
     read_ip $ipbuilddir/$ipXCIfile
     set locked [get_property IS_LOCKED [get_ips $ipname]]
-    #set upgrade [get_property UPGRADE_VERSIONS [get_ips $ipname]]
-    #if {$locked && $upgrade != ""} 
-    #{
-    #	upgrade_ip [get_ips $ipname]]
-    #}
+    set upgrade [get_property UPGRADE_VERSIONS [get_ips $ipname]]
+    if {$locked && $upgrade != ""} {
+    	upgrade_ip [get_ips $ipname]]
+    }
     generate_target -force all [get_ips $ipname]
     #catch { config_ip_cache -export [get_ips -all $ipname] }
     #export_ip_user_files -of_objects [get_files $ipXCIfile -no_script -sync -force -quiet]

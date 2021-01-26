@@ -23,6 +23,7 @@
 ../../../../verilog/zigzagu.v
 ../../../../verilog/controller.v
 ../../../../verilog/shiftreg.v
+../../../../verilog/fixedpointscaler.v
 ../../../../verilog/mvutop.v
 ../../../lib/utils/utils.sv
 ../tb/mvutop_tester.sv

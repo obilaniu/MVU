@@ -17,14 +17,16 @@ import utils::*;
 
 module mvutop_tester();
 
-    /* Create input registers and output wires */
-    parameter  NMVU    =  1;   /* Number of MVUs. Ideally a Power-of-2. */
+    /* Create input logicisters and output wires */
+    parameter  NMVU    =  8;   /* Number of MVUs. Ideally a Power-of-2. */
     parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
     parameter  NDBANK  = 32;   /* Number of 2N-bit, 512-element Data BANK. */
     localparam BMVUA   = $clog2(NMVU);  /* Bitwidth of MVU          Address */
     localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
 	localparam BWBANKW = 4096;			// Bitwidth of Weights BANK Word
-    localparam BDBANKA = 15;            /* Bitwidth of Data    BANK Address */
+    localparam BDBANKABS = $clog2(NDBANK);  /* Bitwidth of Data    BANK Address Bank Select */
+    localparam BDBANKAWS = 10;              /* Bitwidth of Data    BANK Address Word Select */
+    localparam BDBANKA   = BDBANKABS+ BDBANKAWS;    /* Bitwidth of Data    BANK Address */
     localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
 	
 	// Other Parameters
@@ -34,12 +36,15 @@ module mvutop_tester();
     localparam BBDADDR	= 15;			// Bitwidth of the data base address ports
     localparam BSTRIDE	= 15;			// Bitwidth of the stride ports
     localparam BLENGTH	= 15;			// Bitwidth of the length ports
+    localparam BSCALERB = 16;           // Bitwidth of multiplicative scaler (operand 'b')
+    localparam BSCALERP = 48;           // Bitwidth of the scaler output
+    localparam NJUMPS   = 5;            // Number of address jumps supported
 
-    localparam BACC    = 32;            /* Bitwidth of Accumulators */
+    localparam BACC    = 27;            /* Bitwidth of Accumulators */
 
 	// Quantizer parameters
-    localparam BQMSBIDX = $clog2(BACC);     // Bitwidth of the quantizer MSB location specifier
-    localparam BQBOUT   = $clog2(BACC);     // Bitwitdh of the quantizer 
+    localparam BQMSBIDX = $clog2(BSCALERP); // Bitwidth of the quantizer MSB location specifier
+    localparam BQBOUT   = $clog2(BSCALERP); // Bitwitdh of the quantizer 
 
     // I/O port wires
     reg                      clk         ;//input  clk;
@@ -48,8 +53,9 @@ module mvutop_tester();
     reg [        NMVU-1 : 0] done        ;//output done;
     reg [        NMVU-1 : 0] irq         ;//output irq
     reg                      ic_clr      ;//input  ic_clr;
-    reg [  NMVU*BMVUA-1 : 0] ic_recv_from;//input  ic_recv_from;
     reg [      2*NMVU-1 : 0] mul_mode    ;//input  mul_mode;
+    reg [        NMVU-1 : 0] d_signed    ;//input  d_signed
+    reg [        NMVU-1 : 0] w_signed    ;//input  w_signed
     reg [        NMVU-1 : 0] shacc_clr   ;//input  shacc_clr;
     reg [        NMVU-1 : 0] max_en      ;//input  max_en;
     reg [        NMVU-1 : 0] max_clr     ;//input  max_clr;
@@ -73,7 +79,7 @@ module mvutop_tester();
     reg[  NMVU*BBWADDR-1 : 0] wbaseaddr;        // Config: weight memory base address
     reg[  NMVU*BBDADDR-1 : 0] ibaseaddr;        // Config: data memory base address for input
     reg[  NMVU*BBDADDR-1 : 0] obaseaddr;        // Config: data memory base address for output
-
+    reg[     NMVU*NMVU-1 : 0] omvusel;	 		// Config: MVU selector bits for output
 
     reg[  NMVU*BWBANKA-1 : 0] wrw_addr;         // Weight memory: write address
     reg[  NMVU*BWBANKW-1 : 0] wrw_word;	        // Weight memory: write word
@@ -81,21 +87,29 @@ module mvutop_tester();
     reg[  NMVU*BSTRIDE-1 : 0] wstride_0;        // Config: weight stride in dimension 0 (x)
     reg[  NMVU*BSTRIDE-1 : 0] wstride_1;        // Config: weight stride in dimension 1 (y)
     reg[  NMVU*BSTRIDE-1 : 0] wstride_2;        // Config: weight stride in dimension 2 (z)
+    reg[  NMVU*BSTRIDE-1 : 0] wstride_3;        // Config: weight stride in dimension 3 (w)
     reg[  NMVU*BSTRIDE-1 : 0] istride_0;        // Config: input stride in dimension 0 (x)
     reg[  NMVU*BSTRIDE-1 : 0] istride_1;        // Config: input stride in dimension 1 (y)
     reg[  NMVU*BSTRIDE-1 : 0] istride_2;        // Config: input stride in dimension 2 (z)
+    reg[  NMVU*BSTRIDE-1 : 0] istride_3;        // Config: input stride in dimension 3 (w)
     reg[  NMVU*BSTRIDE-1 : 0] ostride_0;        // Config: output stride in dimension 0 (x)
     reg[  NMVU*BSTRIDE-1 : 0] ostride_1;        // Config: output stride in dimension 1 (y)
     reg[  NMVU*BSTRIDE-1 : 0] ostride_2;        // Config: output stride in dimension 2 (z)
+    reg[  NMVU*BSTRIDE-1 : 0] ostride_3;        // Config: output stride in dimension 2 (w)
     reg[  NMVU*BLENGTH-1 : 0] wlength_0;        // Config: weight length in dimension 0 (x)
     reg[  NMVU*BLENGTH-1 : 0] wlength_1;        // Config: weight length in dimension 1 (y)
     reg[  NMVU*BLENGTH-1 : 0] wlength_2;        // Config: weight length in dimension 2 (z)
+    reg[  NMVU*BLENGTH-1 : 0] wlength_3;        // Config: weight length in dimension 2 (w)
     reg[  NMVU*BLENGTH-1 : 0] ilength_0;        // Config: input length in dimension 0 (x)
     reg[  NMVU*BLENGTH-1 : 0] ilength_1;        // Config: input length in dimension 1 (y)
     reg[  NMVU*BLENGTH-1 : 0] ilength_2;        // Config: input length in dimension 2 (z)
+    reg[  NMVU*BLENGTH-1 : 0] ilength_3;        // Config: input length in dimension 2 (w)
     reg[  NMVU*BLENGTH-1 : 0] olength_0;        // Config: output length in dimension 0 (x)
     reg[  NMVU*BLENGTH-1 : 0] olength_1;        // Config: output length in dimension 1 (y)
     reg[  NMVU*BLENGTH-1 : 0] olength_2;        // Config: output length in dimension 2 (z)
+    reg[  NMVU*BLENGTH-1 : 0] olength_3;        // Config: output length in dimension 2 (w)
+    reg[ NMVU*BSCALERB-1 : 0] scaler_b;         // Config: multiplicative scaler (operand 'b')
+    reg[   NMVU*NJUMPS-1 : 0] shacc_load_sel;   // Config: select jump trigger for shift/accumultor load    
 
     //
     // DUT
@@ -112,8 +126,9 @@ module mvutop_tester();
             .done             (done         ),
             .irq              (irq          ),
             .ic_clr           (ic_clr       ),
-            .ic_recv_from     (ic_recv_from ),
             .mul_mode         (mul_mode     ),
+            .d_signed         (d_signed     ),
+            .w_signed         (w_signed     ),
             .shacc_clr        (shacc_clr    ),
             .max_en           (max_en       ),
             .max_clr          (max_clr      ),
@@ -127,24 +142,33 @@ module mvutop_tester();
             .wbaseaddr        (wbaseaddr),
             .ibaseaddr        (ibaseaddr),
             .obaseaddr        (obaseaddr),
+            .omvusel          (omvusel),
             .wstride_0        (wstride_0),
             .wstride_1        (wstride_1),
             .wstride_2        (wstride_2),
+            .wstride_3        (wstride_3),
             .istride_0        (istride_0),
             .istride_1        (istride_1),
             .istride_2        (istride_2),
+            .istride_3        (istride_3),
             .ostride_0        (ostride_0),
             .ostride_1        (ostride_1),
             .ostride_2        (ostride_2),
+            .ostride_3        (ostride_3),
             .wlength_0        (wlength_0),
             .wlength_1        (wlength_1),
             .wlength_2        (wlength_2),
+            .wlength_3        (wlength_3),
             .ilength_0        (ilength_0),
             .ilength_1        (ilength_1),
             .ilength_2        (ilength_2),
+            .ilength_3        (ilength_3),
             .olength_0        (olength_0),
             .olength_1        (olength_1),
             .olength_2        (olength_2),
+            .olength_3        (olength_3),
+            .scaler_b         (scaler_b),
+            .shacc_load_sel   (shacc_load_sel),
 			.wrw_addr         (wrw_addr),
 			.wrw_word         (wrw_word),
 			.wrw_en           (wrw_en),
@@ -162,36 +186,136 @@ module mvutop_tester();
 // =================================================================================================
 // Utility Tasks
 
-task writeData(unsigned[BDBANKW-1 : 0] word, unsigned[BDBANKA-1 : 0] addr);
-    wrc_addr = addr;
-    wrc_word = word;
-    wrc_en = 1;
-    #(`CLKPERIOD);
-    wrc_en = 0;
+task checkmvu(int mvu);
+    if (mvu > N) begin
+        print($sformatf("MVU specificed %d is greater than number of MVUs %d", mvu, N), "Error");
+        $finish();
+    end
 endtask
 
-task writeDataRepeat(logic unsigned[BDBANKW-1 : 0] word, logic unsigned[BDBANKA-1 : 0] startaddr, int size, int stride=1);
+task writeData(int mvu, unsigned[BDBANKW-1 : 0] word, unsigned[BDBANKA-1 : 0] addr);
+    checkmvu(mvu);
+    wrc_addr = addr;
+    wrc_word = word;
+    wrc_en[mvu] = 1'b1;
+    #(`CLKPERIOD);
+    wrc_en[mvu] = 1'b0;
+endtask
 
+task writeDataRepeat(int mvu, logic unsigned[BDBANKW-1 : 0] word, logic unsigned[BDBANKA-1 : 0] startaddr, int size, int stride=1);
+    checkmvu(mvu);
     for (int i = 0; i < size; i++) begin
-        writeData(word, startaddr);
+        writeData(.mvu(mvu), .word(word), .addr(startaddr));
         startaddr = startaddr + stride;
     end
 endtask
 
-task writeWeights(unsigned[BWBANKW-1 : 0] word, unsigned[BWBANKA-1 : 0] addr);
-    wrw_addr = addr;
-    wrw_word = word;
-    wrw_en = 1;
+task writeWeights(int mvu, unsigned[BWBANKW-1 : 0] word, unsigned[BWBANKA-1 : 0] addr);
+    checkmvu(mvu);
+    wrw_addr[mvu*BWBANKA +: BWBANKA] = addr;
+    wrw_word[mvu*BWBANKW +: BWBANKW] = word;
+    wrw_en[mvu] = 1'b1;
     #(`CLKPERIOD);
-    wrw_en = 0;
+    wrw_en[mvu] = 1'b0;
 endtask
 
-task writeWeightsRepeat(logic unsigned[BWBANKW-1 : 0] word, logic unsigned[BWBANKA-1 : 0] startaddr, int size, int stride=1);
+task writeWeightsRepeat(int mvu, logic unsigned[BWBANKW-1 : 0] word, logic unsigned[BWBANKA-1 : 0] startaddr, int size, int stride=1);
+    checkmvu(mvu);
     for (int i = 0; i < size; i++) begin
-        writeWeights(word, startaddr);
+        writeWeights(.mvu(mvu), .word(word), .addr(startaddr));
         #(`CLKPERIOD);
         startaddr = startaddr + stride;
     end
+endtask
+
+task automatic readData(int mvu, logic unsigned [BDBANKA-1 : 0] addr, ref logic unsigned [BDBANKW-1 : 0] word, ref logic unsigned [NMVU-1 : 0] grnt);
+    checkmvu(mvu);
+    rdc_addr[mvu*BDBANKA +: BDBANKA] = addr;
+    rdc_en[mvu] = 1;
+    #(`CLKPERIOD);
+    grnt[mvu] = rdc_grnt[mvu];
+    rdc_en[mvu] = 0;
+    #(`CLKPERIOD*2);
+    word = rdc_word[mvu*BDBANKW +: BDBANKW];
+
+endtask
+
+
+// Executes a GMEV
+task automatic runGEMV(
+    int mvu,            // MVU number to execute on
+    int iprec,
+    int wprec,
+    int oprec,
+    int omsb,
+    int iaddr,
+    int waddr,
+    byte omvu,          // output mvus
+    int obank,
+    int oaddr,
+    int m_w,            // Matrix width / vector length
+    int m_h,            // Matrix height
+    logic isign = 0,    // True if input data are signed
+    logic wsign = 0,    // True if weights are signed
+    int scaler = 1
+);
+
+    logic [BDBANKABS-1 : 0]     obank_sel = obank;
+    logic [BDBANKAWS-1 : 0]     oword_sel = oaddr;
+
+    int countdown_val = m_w * m_h * iprec * wprec;
+    int pipeline_latency = 9;
+    int buffer_cycles = 10;
+    int cyclecount = countdown_val + pipeline_latency + oprec + buffer_cycles;
+
+    // Check that the MVU number is okay
+    checkmvu(mvu);
+
+    // Configure paramters on the port of the DUT
+    wprecision[mvu*BPREC +: BPREC] = wprec;
+    iprecision[mvu*BPREC +: BPREC] = iprec;
+    oprecision[mvu*BPREC +: BPREC] = oprec;
+    quant_msbidx[mvu*BQMSBIDX +: BQMSBIDX] = omsb;
+    wbaseaddr[mvu*BWBANKA +: BWBANKA] = waddr;
+    ibaseaddr[mvu*BDBANKA +: BDBANKA] = iaddr;
+    obaseaddr[mvu*BDBANKA +: BDBANKA] = {obank_sel, oword_sel};
+    omvusel[mvu*NMVU +: NMVU] = omvu;                           // Set the output MVUs
+    wstride_0[mvu*BSTRIDE +: BSTRIDE] = -wprec*(m_w-1);         // Move back to tile 0 of current tile row
+    wstride_1[mvu*BSTRIDE +: BSTRIDE] = wprec;                  // move 1 tile ahead to next tile row
+    wstride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
+    wstride_3[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
+    istride_0[mvu*BSTRIDE +: BSTRIDE] = -iprec*(m_w-1);         // Move back to beginning vector 
+    istride_1[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
+    istride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
+    istride_3[mvu*BSTRIDE +: BSTRIDE] = -iprec*(m_w-1);         // Set the same as istride_0
+    ostride_0[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
+    ostride_1[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
+    ostride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
+    ostride_3[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
+    wlength_0[mvu*BLENGTH +: BLENGTH] = m_w-1;                  // Number tiles in width minus 1
+    wlength_1[mvu*BLENGTH +: BLENGTH] = wprec*iprec-1;          // number bit combinations minus 1
+    wlength_2[mvu*BLENGTH +: BLENGTH] = m_h-1;                  // Number tiles in height minus 1
+    wlength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    ilength_0[mvu*BLENGTH +: BLENGTH] = m_h-1;                  // Number tiles in height minus 1
+    ilength_1[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    ilength_2[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    ilength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    olength_0[mvu*BLENGTH +: BLENGTH] = 1;                      // Write out sequentially
+    olength_1[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    olength_2[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    olength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    d_signed[mvu] = isign;
+    w_signed[mvu] = wsign;
+    scaler_b[mvu*BSCALERB +: BSCALERB] = scaler;
+    shacc_load_sel[mvu*NJUMPS +: NJUMPS] = 5'b00100;            // Load the shift/accumulator on when weight address jump 2 happens
+    countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
+
+    // Run the GEMV
+    start[mvu] = 1'b1;
+    #(`CLKPERIOD);
+    start[mvu] = 1'b0;
+    #(`CLKPERIOD*cyclecount);
+
 endtask
 
 
@@ -220,194 +344,194 @@ end
 // Testbench tasks
 
 //
-// Memory test
+// Controller memory access test
 //
-task memTests();
+task controllerMemTest();
+
+    logic unsigned [BDBANKW-1 : 0] word;
+    logic unsigned [NMVU-1 : 0] grnt;
+
+    print_banner("Controller memory access test");
+
+    // Read/Write tests
+    writeData(0, 'hdeadbeefdeadbeef, 0);
+    readData(0, 0, word, grnt);
+    print($sformatf("word=%x, grnt=%b", word, grnt));
+    writeData(0, 'hbeefdeadbeefdead, 1);
+    readData(0, 1, word, grnt);
+    print($sformatf("word=%x, grnt=%b", word, grnt));
+
 
 endtask
 
 //
+// Matrix-vector multiplication (GEMV) test
 //
-//
-task gemvTests();
+task gemvTests(int mvu, int omvu, int scaler);
 
-    print("TEST 1: matrix-vector mult: 1x1 x 1 tiles, 1x1 => 1 bit precision, , input=all 0's");
-    wprecision = 1;
-    iprecision = 1;
-    oprecision = 1;
-    wbaseaddr = 0;
-    ibaseaddr = 0;
-    obaseaddr = 0;
-    wstride_0 = 0;
-    wstride_1 = 0;
-    wstride_2 = 0;
-    istride_0 = 0;
-    istride_1 = 0;
-    istride_2 = 0;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    wlength_0 = 0;
-    wlength_1 = 0;
-    wlength_2 = 0;
-    ilength_0 = 0;
-    ilength_1 = 0;
-    ilength_2 = 0;
-    olength_0 = 0;
-    olength_1 = 0;
-    olength_2 = 0;
-    countdown = 1;
-    start = 1;
-    #(`CLKPERIOD);
-    start = 0;
-    #(`CLKPERIOD*10);
+    print_banner("Matrix-vector multiplication (GEMV) test");
 
-    print("TEST 2: matrix-vector mult: 2x2 x 2 tiles, 1x1 => 1 bit precision, input=all 0's");
-    wprecision = 1;
-    iprecision = 1;
-    oprecision = 1;
-    wbaseaddr = 0;
-    ibaseaddr = 0;
-    obaseaddr = 0;
-    wstride_0 = 0;
-    wstride_1 = 0;
-    wstride_2 = 0;
-    istride_0 = -1;
-    istride_1 = 0;
-    istride_2 = 0;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    wlength_0 = 3;
-    wlength_1 = 0;
-    wlength_2 = 0;
-    ilength_0 = 1;
-    ilength_1 = 1;
-    ilength_2 = 0;
-    olength_0 = 1;
-    olength_1 = 0;
-    olength_2 = 0;
-    countdown = 4;
-    start = 1;
-    #(`CLKPERIOD);
-    start = 0;
-    #(`CLKPERIOD*15);
+    print("TEST gemv 1: matrix-vector mult: 1x1 x 1 tiles, 1x1 => 1 bit precision, , input=all 0's");
+    runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
+            .omsb(0), .iaddr(0), .waddr(0), .omvu(omvu), .obank(0), .oaddr(0), 
+            .m_w(1), .m_h(1), .scaler(scaler));
+
+
+    print("TEST gemv 2: matrix-vector mult: 2x2 x 2 tiles, 1x1 => 1 bit precision, input=all 0's");
+    runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
+            .omsb(0), .iaddr(0), .waddr(0), .omvu(omvu), .obank(0), .oaddr(0), 
+            .m_w(2), .m_h(2), .scaler(scaler));
+
 
     // TEST 3
     // Expected result: accumulators get to value h480, output to data memory is b10 for each element
     // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
     // (i.e. d3*d3*d64*d2 = d1152 = h480)
-    print("TEST 3: matrix-vector mult: 2x2 x 2 tiles, 2x2 => 2 bit precision, , input=all 1's");
-    writeDataRepeat('hffffffffffffffff, 'h0000, 4);
-    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 8);
-    wprecision = 2;
-    iprecision = 2;
-    oprecision = 2;
-    quant_msbidx = 10;
-    wbaseaddr = 0;
-    ibaseaddr = 0;
-    obaseaddr = 'h4000;
-    wstride_0 = -2;      // 1 tile back move x 2 bits
-    wstride_1 = 2;       // 1 tile ahead move x 2 bits
-    wstride_2 = 0;
-    istride_0 = -2;      // 1 tile back move x 2 bits 
-    istride_1 = 0;
-    istride_2 = -2;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    wlength_0 = 1;       // 2 tiles in width
-    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
-    wlength_2 = 1;       // 2 tiles in height
-    ilength_0 = 1;       // 2 tiles in height
-    ilength_1 = 0;       // number bit combinations
-    ilength_2 = 0;       // 2 tiles in width of matrix operand
-    olength_0 = 1;
-    olength_1 = 0;
-    olength_2 = 0;
-    countdown = 16;       // 2 tiles x 2 tiles x 2bit x 2bits
-    start = 1;
-    #(`CLKPERIOD);
-    start = 0;
-    #(`CLKPERIOD*28);
+    // Result output to bank 1 starting at address 0
+    print("TEST gemv 3: matrix-vector mult: 2x2 x 2 tiles, 2x2 => 2 bit precision, , input=all 1's");
+    writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0000), .size(4), .stride(1));
+    writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h0), .size(8), .stride(1));
+    runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .oprec(2), .omsb(10), 
+            .iaddr(0), .waddr(0), .omvu(omvu), .obank(1), .oaddr(0), 
+            .m_w(2), .m_h(2), .scaler(scaler));
+
 
     // TEST 4
     // Expected result: accumulators get to value h6c0, output to data memory is b110 for each element
     // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
     // (i.e. d3*d3*d64*d3 = d1728 = h6c0)
-    print("TEST 4: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=all 1's");
-    writeDataRepeat('hffffffffffffffff, 'h0000, 6);
-    writeWeightsRepeat({BWBANKW{1'b1}}, 'h0, 18);
-    wprecision = 2;
-    iprecision = 2;
-    oprecision = 3;
-    quant_msbidx = 10;
-    wbaseaddr = 0;
-    ibaseaddr = 0;
-    obaseaddr = 'h6000;
-    wstride_0 = -4;      // 2 tile back move x 2 bits
-    wstride_1 = 2;       // 1 tile ahead move x 2 bits
-    wstride_2 = 0;
-    istride_0 = -4;      // 2 tile back move x 2 bits 
-    istride_1 = 0;
-    istride_2 = -4;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    wlength_0 = 2;       // 3 tiles in width
-    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
-    wlength_2 = 2;       // 3 tiles in height
-    ilength_0 = 2;       // 3 tiles in height
-    ilength_1 = 0;       // number bit combinations
-    ilength_2 = 0;       // 2 tiles in width of matrix operand
-    olength_0 = 2;
-    olength_1 = 0;
-    olength_2 = 0;
-    countdown = 36;       // 3 tiles x 3 tiles x 2bit x 2bits
-    start = 1;
-    #(`CLKPERIOD);
-    start = 0;
-    #(`CLKPERIOD*48);
+    // Result output to bank 2 starting at address 0
+    print("TEST gmev 4: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=all 1's");
+    writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0000), .size(6), .stride(1));
+    writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h0), .size(18), .stride(1));
+    runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .oprec(3), .omsb(10), 
+            .iaddr(0), .waddr(0), .omvu(omvu), .obank(2), .oaddr(0), 
+            .m_w(3), .m_h(3), .scaler(scaler));
+
 
     // TEST 5
     // Expected result: accumulators get to value h180, output to data memory is b001 for each element
-    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
     // (i.e. d2*d1*d64*d3 = d384 = h180)
-    print("TEST 5: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=b10, weights=b01");
-    writeDataRepeat('hffffffffffffffff, 'h0000, 3, 2);      // MSB=1  \
-    writeDataRepeat('h0000000000000000, 'h0001, 3, 2);      // LSB=0  - = b10
-    writeWeightsRepeat({BWBANKW{1'b0}}, 'h0, 9, 2);         // MSB=0 \
-    writeWeightsRepeat({BWBANKW{1'b1}}, 'h1, 9, 2);         // LSB=1 - = b01
-    wprecision = 2;
-    iprecision = 2;
-    oprecision = 3;
-    quant_msbidx = 10;
-    wbaseaddr = 0;
-    ibaseaddr = 0;
-    obaseaddr = 'h7000;
-    wstride_0 = -4;      // 2 tile back move x 2 bits
-    wstride_1 = 2;       // 1 tile ahead move x 2 bits
-    wstride_2 = 0;
-    istride_0 = -4;      // 2 tile back move x 2 bits 
-    istride_1 = 0;
-    istride_2 = -4;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    wlength_0 = 2;       // 3 tiles in width
-    wlength_1 = 3;       // number bit combinations i.e. 2x2 bits
-    wlength_2 = 2;       // 3 tiles in height
-    ilength_0 = 2;       // 3 tiles in height
-    ilength_1 = 0;       // number bit combinations
-    ilength_2 = 0;       // 2 tiles in width of matrix operand
-    olength_0 = 2;
-    olength_1 = 0;
-    olength_2 = 0;
-    countdown = 36;       // 3 tiles x 3 tiles x 2bit x 2bits
-    start = 1;
-    #(`CLKPERIOD);
-    start = 0;
-    #(`CLKPERIOD*48);
+    // Result output to bank 3 starting at address 0
+    print("TEST gemv 5: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=b10, weights=b01");
+    writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0000), .size(3), .stride(2));      // MSB=1  \
+    writeDataRepeat(.mvu(mvu), .word('h0000000000000000), .startaddr('h0001), .size(3), .stride(2));      // LSB=0  - = b10
+    writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b0}}), .startaddr('h0), .size(9), .stride(2));         // MSB=0 \
+    writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h1), .size(9), .stride(2));         // LSB=1 - = b01
+    runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .oprec(3), .omsb(10), 
+            .iaddr(0), .waddr(0), .omvu(omvu), .obank(3), .oaddr(0), 
+            .m_w(3), .m_h(3), .scaler(scaler));
+
+
+
+endtask
+
+
+//
+// Test signed Matrix-Vector multiplication (gemv signed)
+//
+task gemvSignedTests(int mvu, int omvu, int scaler);
+
+    print_banner("Matrix-vector signed multiplication (GEMV) test");
+
+    // Expected result: accumulators get to value hffffffffffffff80, output to data memory is b10 for each element
+    // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. d1*-d1*d64*d2 = -d128 = 32'hffffffffffffff80)
+    // Result output to bank 10 starting at address 0
+    print("TEST gemv signed 1: matrix-vector mult: 2x2 x 2 tiles, 2u X 2s => 2 bit precision, input: d=1, w=-1");
+    writeDataRepeat(.mvu(mvu), .word('h0000000000000000), .startaddr('h0000), .size(2), .stride(2));      // MSB=0 \
+    writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0001), .size(2), .stride(2));      // LSB=1 - = b01 = d1
+    writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h0), .size(8));            // MSB=1, LSB=1 => b11 = -d1
+    runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .oprec(2), .omsb(7), 
+            .iaddr(0), .waddr(0), .omvu(omvu), .obank(10), .oaddr(0), 
+            .m_w(2), .m_h(2), .isign(0), .wsign(1), .scaler(scaler));
+ 
+
+
+    // Expected result: accumulators get to value hfffffffffffffd00, output to data memory is b10 for each element
+    // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. -d2*d3*d64*d2 = -d768 = 32'hfffffffffffffd00)
+    // Result output to bank 11 starting at address 0
+    print("TEST gemv signed 2: matrix-vector mult: 2x2 x 2 tiles, 2s X 2u => 2 bit precision, input: d=-2, w=3");
+    writeDataRepeat(mvu, 'hffffffffffffffff, 'h0000, 2, 2);      // MSB=1 \
+    writeDataRepeat(mvu, 'h0000000000000000, 'h0001, 2, 2);      // LSB=0 - = b10 = -d2
+    writeWeightsRepeat(mvu, {BWBANKW{1'b1}}, 'h0, 8);            // MSB=1, LSB=1 => b11 = d3
+    runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .oprec(2), .omsb(10), 
+            .iaddr(0), .waddr(0), .omvu(omvu), .obank(11), .oaddr(0), 
+            .m_w(2), .m_h(2), .isign(1), .wsign(0), .scaler(scaler)); 
+
+
+    // Expected result: accumulators get to value h0000000000000100, output to data memory is b01 for each element
+    // (i.e. [0000000000000000, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
+    // (i.e. -d2*-d1*d64*d2 = d256 = 32'h0000000000000100)
+    // Result output to bank 12 starting at address 0
+    print("TEST gemv signed 3: matrix-vector mult: 2x2 x 2 tiles, 2s X 2s => 2 bit precision, input: d=-2, w=-1");
+    writeDataRepeat(mvu, 'hffffffffffffffff, 'h0000, 2, 2);      // MSB=1 \
+    writeDataRepeat(mvu, 'h0000000000000000, 'h0001, 2, 2);      // LSB=0 - = b10 = -d2
+    writeWeightsRepeat(mvu, {BWBANKW{1'b1}}, 'h0, 8);            // MSB=1, LSB=1 => b11 = d3
+    runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .oprec(2), .omsb(9), 
+        .iaddr(0), .waddr(0), .omvu(omvu), .obank(12), .oaddr(0), 
+        .m_w(2), .m_h(2), .isign(1), .wsign(1), .scaler(scaler)); 
+
+    // Expected result: accumulators get to value hfffffffffffffd00, output to data memory is b110 for each element
+    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
+    // (i.e. d3*-d2*d64*d2 = -d768 = 32'hfffffffffffffd00)
+    // Result output to bank 13 starting at address 0
+    print("TEST gemv signed 4: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: d=3, w=-2");
+    writeDataRepeat(mvu, 'h0000000000000000, 'h0000, 2, 3);      // MSB  =0 \
+    writeDataRepeat(mvu, 'hffffffffffffffff, 'h0001, 2, 3);      // MSB-1=1 - = b011 = d3
+    writeDataRepeat(mvu, 'hffffffffffffffff, 'h0002, 2, 3);      // LSB  =1 /
+    writeWeightsRepeat(mvu, {BWBANKW{1'b1}}, 'h0, 4, 2);         // MSB  =1 \
+    writeWeightsRepeat(mvu, {BWBANKW{1'b0}}, 'h1, 4, 2);         // LSB  =0 - = b10 = -d2
+    runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .oprec(3), .omsb(11), 
+       .iaddr(0), .waddr(0), .omvu(omvu), .obank(13), .oaddr(0), 
+       .m_w(2), .m_h(2), .isign(1), .wsign(1), .scaler(scaler)); 
+
+    // Expected result: accumulators get to value hffffffffffffff00, output to data memory is b110 for each element
+    // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
+    // (i.e. (d3*-d2*d32 + d2*d1*d32)*d2 = -d256 = 32'hffffffffffffff00)
+    // Result output to bank 14 starting at address 0
+    print("TEST gemv signed 5: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}");
+    writeDataRepeat(mvu, 'h0000000000000000, 'h0000, 2, 3);      // MSB  ={0,0}... \
+    writeDataRepeat(mvu, 'hffffffffffffffff, 'h0001, 2, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
+    writeDataRepeat(mvu, 'haaaaaaaaaaaaaaaa, 'h0002, 2, 3);      // LSB  ={1,0}... /
+    writeWeightsRepeat(mvu, {BWBANKW/2{2'b10}}, 'h0, 4, 2);      // MSB  ={1,0}... \
+    writeWeightsRepeat(mvu, {BWBANKW/2{2'b01}}, 'h1, 4, 2);      // LSB  ={0,1}... - = {b10,b01} = {-d2, d1}
+    runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .oprec(3), .omsb(9), 
+       .iaddr(0), .waddr(0), .omvu(omvu), .obank(14), .oaddr(0), 
+       .m_w(2), .m_h(2), .isign(1), .wsign(1), .scaler(scaler)); 
+
+
+    // Expected result: accumulators get to value hfffffffffffffe7d, output to data memory is b100 for each element
+    // (i.e. [hffffffffffffffff, 0000000000000000, 0000000000000000, ...)
+    // (i.e. (d3*-d2*d32 + d2*d1*d31 + d1*d1*d1)*d3 = -d387 = 32'hfffffffffffffe7d)
+    // Result output to bank 15 starting at address 0
+    print("TEST gemv signed 6: matrix-vector mult: 3x3 x 3 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
+    writeDataRepeat(mvu, 'h0000000000000000, 'h0000, 3, 3);      // MSB  ={0,0}... \
+    writeDataRepeat(mvu, 'hfffffffffffffffe, 'h0001, 3, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
+    writeDataRepeat(mvu, 'haaaaaaaaaaaaaaab, 'h0002, 3, 3);      // LSB  ={1,0}... /
+    writeWeightsRepeat(mvu, {BWBANKW/2{2'b10}}, 'h0, 9, 2);      // MSB  ={1,0}... \
+    writeWeightsRepeat(mvu, {BWBANKW/2{2'b01}}, 'h1, 9, 2);      // LSB  ={0,1}... - = {b10,b01} = {-d2, d1}
+    runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .oprec(3), .omsb(9), 
+       .iaddr(0), .waddr(0), .omvu(omvu), .obank(15), .oaddr(0), 
+       .m_w(3), .m_h(3), .isign(1), .wsign(1), .scaler(scaler)); 
+
+
+    // Expected result: accumulators get to value h0000000000000063, output to data memory is b001 for each element
+    // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, ...)
+    // (i.e. (d3*d1*d32 + d2*-d1*d31 + d1*-d1*d1)*d3 = d99 = 32'h0000000000000063)
+    // Result output to bank 16 starting at address 0
+    print("TEST gemv signed 7: matrix-vector mult: 3x3 x 3 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
+    writeDataRepeat(mvu, 'h0000000000000000, 'h0000, 3, 3);      // MSB  ={0,0}... \
+    writeDataRepeat(mvu, 'hfffffffffffffffe, 'h0001, 3, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
+    writeDataRepeat(mvu, 'haaaaaaaaaaaaaaab, 'h0002, 3, 3);      // LSB  ={1,0}... /
+    writeWeightsRepeat(mvu, {BWBANKW/2{2'b01}}, 'h0, 9, 2);      // MSB  ={1,0}... \
+    writeWeightsRepeat(mvu, {BWBANKW/2{2'b11}}, 'h1, 9, 2);      // LSB  ={0,1}... - = {b10,b01} = {-d2, d1}
+    runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .oprec(3), .omsb(8), 
+       .iaddr(0), .waddr(0), .omvu(omvu), .obank(16), .oaddr(0), 
+       .m_w(3), .m_h(3), .isign(1), .wsign(1), .scaler(scaler)); 
+
 
 endtask
 
@@ -421,8 +545,9 @@ initial begin
     rst_n = 0;
     start = 0;
     ic_clr = 0;      
-    ic_recv_from = 0;
-    mul_mode = 'b01;
+    mul_mode = {NMVU{2'b01}};
+    d_signed = 0;
+    w_signed = 0;
     shacc_clr = 0;
     max_en = 0;
     max_clr = 0;
@@ -441,24 +566,33 @@ initial begin
     wbaseaddr = 0;
     ibaseaddr = 0;
     obaseaddr = 0;
+    omvusel = 0;  
     wstride_0 = 0;
     wstride_1 = 0;
     wstride_2 = 0;
+    wstride_3 = 0;
     istride_0 = 0;
     istride_1 = 0;
     istride_2 = 0;
+    istride_3 = 0;
     ostride_0 = 0;
     ostride_1 = 0;
     ostride_2 = 0;
+    ostride_3 = 0;
     wlength_0 = 0;
     wlength_1 = 0;
     wlength_2 = 0;
+    wlength_3 = 0;
     ilength_0 = 0;
     ilength_1 = 0;
     ilength_2 = 0;
+    ilength_3 = 0;
     olength_0 = 0;
     olength_1 = 0;
     olength_2 = 0;
+    olength_3 = 0;
+    scaler_b = 1;
+    shacc_load_sel = 0;
     wrw_addr = 0;
     wrw_word = 0;
     wrw_en = 0;
@@ -471,10 +605,72 @@ initial begin
     // Turn some stuff on
     max_en = 1;
 
+    // Test memory access
+    controllerMemTest();
  
-    // Run gemv tests
-    gemvTests();
+    // Run gemv tests, mvu0 -> mvu0
+    print_banner("GEMV tests: mvu0 -> mvu0");
+    gemvTests(.mvu(0), .omvu('b00000001), .scaler(1));
 
+    // Run signed gemv tests, mvu0 -> mvu0
+    print_banner("Signed GEMV tests: mvu0 -> mvu0");
+    gemvSignedTests(.mvu(0), .omvu('b00000001), .scaler(1));
+
+    // Repeat signed gemv tests, but with scaler set to 2
+    // Test 1 -> -d256, b00 in bank 10
+    // Test 2 -> -d1536, b01 in bank 11
+    // Test 3 -> d512, b10 in bank 12
+    // Test 4 -> -d1536, b101 in bank 13
+    // Test 5 -> -d512, b100 in bank 14
+    // Test 6 -> -d774, b001 in bank 15
+    // Test 7 -> d198, b011 in bank 16
+    //gemvSignedTests(.mvu(0), .omvu(0), .scaler(2));
+
+    // Repeat signed gemv tests, but with scaler set to 5, mvu0 -> mvu0
+    // Expected outcomes:
+    // Test 1 -> -d640, b10 in bank 10
+    // Test 2 -> -d3840, b00 in bank 11
+    // Test 3 -> d1280, b01 in bank 12
+    // Test 4 -> -d3840, b000 in bank 13
+    // Test 5 -> -d1280, b110 in bank 14
+    // Test 6 -> -d1935, b000 in bank 15
+    // Test 7 -> d495, b111 in bank 16
+    //gemvSignedTests(.mvu(0), .omvu(0), .scaler(5));
+
+    //
+    // Interconnect tests
+    // 
+
+    // Repeat the unsigned gemv tests, mvu0 -> mvu1
+    print_banner("GEMV tests: mvu0 -> mvu1");
+    gemvTests(.mvu(0), .omvu('b00000010), .scaler(1));
+
+    // Repeat the unsigned gemv tests, mvu2 -> mvu3
+    print_banner("GEMV tests: mvu2 -> mvu3");
+    gemvTests(.mvu(2), .omvu('b00001000), .scaler(1));
+
+    // Repeat the unsigned gemv tests, mvu3-> mvu2
+    print_banner("GEMV tests: mvu3 -> mvu2");
+    gemvTests(.mvu(3), .omvu('b00000100), .scaler(1));
+
+    // Repeat the unsigned gemv tests, mvu7-> mvu0
+    // Blank out mvu0's memory banks first
+    print_banner("GEMV tests: mvu7 -> mvu0");
+    writeDataRepeat(0, 'h0000000000000000, 'h0000, 9, 1);
+    writeDataRepeat(0, 'h0000000000000000, {5'b00001, 10'b0000000000}, 9, 1);
+    writeDataRepeat(0, 'h0000000000000000, {5'b00010, 10'b0000000000}, 9, 1);
+    writeDataRepeat(0, 'h0000000000000000, {5'b00011, 10'b0000000000}, 9, 1);
+    gemvTests(.mvu(7), .omvu('b00000001), .scaler(1));
+
+    //
+    // Broadcast tests
+    //
+
+    // Repeat the unsigned gemv tests, mvu4-> mvu5, mvu6
+    print_banner("GEMV tests: mvu4 -> mvu5,6");
+    gemvTests(.mvu(4), .omvu('b01100000), .scaler(1));
+
+    
 
     print_banner($sformatf("Simulation done."));
     $finish();
