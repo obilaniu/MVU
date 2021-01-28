@@ -67,13 +67,21 @@ module mvutop(  clk,
                 wrc_en,
                 wrc_grnt,
                 wrc_addr,
-                wrc_word);
+                wrc_word,
+                wrs_en,
+                wrs_addr,
+                wrs_word,
+                wrb_en,
+                wrb_addr,
+                wrb_word
+);
 
 
 /* Parameters */
 parameter  NMVU    =  8;   /* Number of MVUs. Ideally a Power-of-2. */
 parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
 parameter  NDBANK  = 32;   /* Number of N-bit, 1024-element Data BANK. */
+parameter  BBIAS   = 32;   // Bitwidth of bias values
 
 localparam BMVUA   = $clog2(NMVU);  /* Bitwidth of MVU          Address */
 localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
@@ -102,6 +110,12 @@ localparam SCALERLATENCY = 3;           // Number of stages in the scaler pipeli
 localparam MAXPOOLSTAGES = 1;           // Number of max pool pipeline stages
 localparam MEMRDLATENCY = 2;            // Memory read latency
 localparam NJUMPS       = 5;            // Number of address jump parameters available
+
+// Scalar and Bias memory bank parameters
+localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
+localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word
+localparam BBBANKA     = 6;             // Bitwidth of Scaler BANK address
+localparam BBBANKW     = BBIAS*N;       // Bitwidth of Scaler BANK word
 
 
 //
@@ -176,6 +190,16 @@ output wire[          NMVU-1 : 0] wrc_grnt;             // Data memory: controll
 input  wire[       BDBANKA-1 : 0] wrc_addr;             // Data memory: controller write address
 input  wire[       BDBANKW-1 : 0] wrc_word;             // Data memory: controller write word
 
+// Scaler memory signals
+input   wire[         NMVU-1 : 0] wrs_en;                 // Scaler memory: write enable
+input   wire[      BSBANKA-1 : 0] wrs_addr;               // Scaler memory: write address
+input   wire[      BSBANKW-1 : 0] wrs_word;               // Scaler memory: write word
+
+// Bias memory signals
+input   wire[         NMVU-1 : 0] wrb_en;                 // Bias memory: write enable
+input   wire[      BBBANKA-1 : 0] wrb_addr;               // Bias memory: write address
+input   wire[      BBBANKW-1 : 0] wrb_word;               // Bias memory: write word
+
 genvar i;
 
 
@@ -230,6 +254,12 @@ wire[NMVU*BDBANKA-1 : 0] rdd_addr;
 wire[        NMVU-1 : 0] wrd_en;
 wire[        NMVU-1 : 0] wrd_grnt;
 wire[NMVU*BDBANKA-1 : 0] wrd_addr;
+
+// MVU Scaler and Bias memory control
+wire[        NMVU-1 : 0] rds_en;                 // Scaler memory: read enable
+wire[NMVU*BSBANKA-1 : 0] rds_addr;               // Scaler memory: read address
+wire[        NMVU-1 : 0] rdb_en;                 // Bias memory: read enable
+wire[NMVU*BBBANKA-1 : 0] rdb_addr;               // Bias memory: read address
 
 // Interconnect
 wire                     ic_clr_int;
@@ -668,7 +698,8 @@ end endgenerate
 generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
     mvu #(
             .N              (N),
-            .NDBANK         (NDBANK)
+            .NDBANK         (NDBANK),
+            .BBIAS          (BBIAS)
         ) mvunit
         (
             .clk            (clk                                    ),
@@ -713,7 +744,17 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .wrc_grnt		(wrc_grnt[i]							),
             .wrc_addr		(wrc_addr[BDBANKA-1: 0]					),
         	.wrc_word		(wrc_word[BDBANKW-1 : 0]				),
-            .mvu_word_out   (mvu_word_out[i*BDBANKW +: BDBANKW]     )
+            .mvu_word_out   (mvu_word_out[i*BDBANKW +: BDBANKW]     ),
+            .rds_en         (rds_en[i]                              ),
+            .rds_addr       (rds_addr[i*BSBANKA +: BSBANKA]         ),
+            .wrs_en         (wrs_en[i]                              ),
+            .wrs_addr       (wrs_addr                               ),
+            .wrs_word       (wrs_word                               ),
+            .rdb_en         (rdb_en[i]                              ),
+            .rdb_addr       (rds_addr[i*BBBANKA +: BBBANKA]         ),
+            .wrb_en         (wrb_en[i]                              ),
+            .wrb_addr       (wrb_addr                               ),
+            .wrb_word       (wrb_word                               )
 		);
 end endgenerate
 

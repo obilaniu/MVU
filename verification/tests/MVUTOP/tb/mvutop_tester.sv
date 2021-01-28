@@ -21,6 +21,8 @@ module mvutop_tester();
     parameter  NMVU    =  8;   /* Number of MVUs. Ideally a Power-of-2. */
     parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
     parameter  NDBANK  = 32;   /* Number of 2N-bit, 512-element Data BANK. */
+    parameter  BBIAS   = 32;   // Bitwidth of bias values
+
     localparam BMVUA   = $clog2(NMVU);  /* Bitwidth of MVU          Address */
     localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
 	localparam BWBANKW = 4096;			// Bitwidth of Weights BANK Word
@@ -39,6 +41,13 @@ module mvutop_tester();
     localparam BSCALERB = 16;           // Bitwidth of multiplicative scaler (operand 'b')
     localparam BSCALERP = 48;           // Bitwidth of the scaler output
     localparam NJUMPS   = 5;            // Number of address jumps supported
+
+    // Scalar and Bias memory bank parameters
+    localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
+    localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word
+    localparam BBBANKA     = 6;             // Bitwidth of Scaler BANK address
+    localparam BBBANKW     = BBIAS*N;       // Bitwidth of Scaler BANK word
+
 
     localparam BACC    = 27;            /* Bitwidth of Accumulators */
 
@@ -68,6 +77,17 @@ module mvutop_tester();
     reg [        NMVU-1 : 0] wrc_grnt    ;//output wrc_grnt;
     reg [     BDBANKA-1 : 0] wrc_addr    ;//input  wrc_addr;
     reg [     BDBANKW-1 : 0] wrc_word    ;//input  wrc_word;
+
+    // Scaler memory signals
+    reg[         NMVU-1 : 0] wrs_en;      // Scaler memory: write enable
+    reg[      BSBANKA-1 : 0] wrs_addr;    // Scaler memory: write address
+    reg[      BSBANKW-1 : 0] wrs_word;    // Scaler memory: write word
+
+    //Bias memory signals
+    reg[         NMVU-1 : 0] wrb_en;                 // Bias memory: write enable
+    reg[      BBBANKA-1 : 0] wrb_addr;               // Bias memory: write address
+    reg[      BBBANKW-1 : 0] wrb_word;               // Bias memory: write word
+
 
 	reg [         NMVU-1 : 0] quant_clr;        // Quantizer: clear
     reg [NMVU*BQMSBIDX-1 : 0] quant_msbidx;     // Quantizer: bit position index of the MSB
@@ -117,7 +137,8 @@ module mvutop_tester();
     mvutop #(
             .NMVU  (NMVU  ),
             .N     (N     ),
-            .NDBANK(NDBANK)
+            .NDBANK(NDBANK),
+            .BBIAS (BBIAS )
         ) dut
         (
             .clk              (clk          ),
@@ -179,7 +200,13 @@ module mvutop_tester();
             .wrc_en           (wrc_en),
             .wrc_grnt         (wrc_grnt),
             .wrc_addr         (wrc_addr),
-            .wrc_word         (wrc_word)
+            .wrc_word         (wrc_word),
+            .wrs_en           (wrs_en),
+            .wrs_addr         (wrs_addr),
+            .wrs_word         (wrs_word),
+            .wrb_en           (wrb_en),
+            .wrb_addr         (wrb_addr),
+            .wrb_word         (wrb_word)         
         );
 
 
@@ -557,6 +584,12 @@ initial begin
     wrc_en = 0;
     wrc_addr = 0;
     wrc_word = 0;
+    wrs_en = 0;
+    wrs_addr = 0;
+    wrs_word = 0;
+    wrb_en = 0;
+    wrb_addr = 0;
+    wrb_word = 0;
 	quant_clr = 0;
     quant_msbidx = 0;
     countdown = 0;
