@@ -73,7 +73,17 @@ module mvutop(  clk,
                 wrs_word,
                 wrb_en,
                 wrb_addr,
-                wrb_word
+                wrb_word,
+                sbaseaddr,
+                bbaseaddr,
+                sstride_0,
+                sstride_1,
+                bstride_0,
+                bstride_1,
+                slength_0,
+                slength_1,
+                blength_0,
+                blength_1
 );
 
 
@@ -200,6 +210,18 @@ input   wire[         NMVU-1 : 0] wrb_en;                 // Bias memory: write 
 input   wire[      BBBANKA-1 : 0] wrb_addr;               // Bias memory: write address
 input   wire[      BBBANKW-1 : 0] wrb_word;               // Bias memory: write word
 
+// Scaler and Bias memory configiration
+input  wire[  NMVU*BSBANKA-1 : 0] sbaseaddr;            // Config: scaler memory base address
+input  wire[  NMVU*BBBANKA-1 : 0] bbaseaddr;            // Config: bias memory base address
+input  wire[  NMVU*BSTRIDE-1 : 0] sstride_0;            // Config: scaler AGU stride 0
+input  wire[  NMVU*BSTRIDE-1 : 0] sstride_1;            // Config: scaler AGU stride 1
+input  wire[  NMVU*BSTRIDE-1 : 0] bstride_0;            // Config: bias AGU stride 0
+input  wire[  NMVU*BSTRIDE-1 : 0] bstride_1;            // Config: bias AGU stride 1
+input  wire[  NMVU*BLENGTH-1 : 0] slength_0;            // Config: scaler AGU length 0
+input  wire[  NMVU*BLENGTH-1 : 0] slength_1;            // Config: scaler AGU length 1
+input  wire[  NMVU*BLENGTH-1 : 0] blength_0;            // Config: bias AGU length 0
+input  wire[  NMVU*BLENGTH-1 : 0] blength_1;            // Config: bias AGU length 1
+
 genvar i;
 
 
@@ -241,6 +263,16 @@ reg[   BLENGTH-1 : 0] olength_2_q       [NMVU-1 : 0];           // Config: outpu
 reg[   BLENGTH-1 : 0] olength_3_q       [NMVU-1 : 0];           // Config: output length in dimension 3 (w)
 reg[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];           // Config: multiplicative scaler (operand 'b')
 reg[    NJUMPS-1 : 0] shacc_load_sel_q  [NMVU-1 : 0];           // Config: select jump trigger for shift/accumultor load
+reg[   BSBANKA-1 : 0] sbaseaddr_q       [NMVU-1 : 0];           // Config: scaler memory base address
+reg[   BBBANKA-1 : 0] bbaseaddr_q       [NMVU-1 : 0];           // Config: bias memory base address
+reg[   BSTRIDE-1 : 0] sstride_0_q       [NMVU-1 : 0];           // Config: scaler AGU stride 0
+reg[   BSTRIDE-1 : 0] sstride_1_q       [NMVU-1 : 0];           // Config: scaler AGU stride 1
+reg[   BSTRIDE-1 : 0] bstride_0_q       [NMVU-1 : 0];           // Config: bias AGU stride 0
+reg[   BSTRIDE-1 : 0] bstride_1_q       [NMVU-1 : 0];           // Config: bias AGU stride 1
+reg[   BLENGTH-1 : 0] slength_0_q       [NMVU-1 : 0];           // Config: scaler AGU length 0
+reg[   BLENGTH-1 : 0] slength_1_q       [NMVU-1 : 0];           // Config: scaler AGU length 1
+reg[   BLENGTH-1 : 0] blength_0_q       [NMVU-1 : 0];           // Config: bias AGU length 0
+reg[   BLENGTH-1 : 0] blength_1_q       [NMVU-1 : 0];           // Config: bias AGU length 1
 
 /* Local Wires */
 
@@ -327,6 +359,8 @@ wire[        NMVU-1 : 0] wagu_on_j1;        // Indicates when a weight address j
 wire[        NMVU-1 : 0] wagu_on_j2;        // Indicates when a weight address jump 2 happens
 wire[        NMVU-1 : 0] wagu_on_j3;        // Indicates when a weight address jump 3 happens
 wire[        NMVU-1 : 0] wagu_on_j4;        // Indicates when a weight address jump 4 happens
+wire[        NMVU-1 : 0] scaleragu_step;    // Steps the scaler memory AGU
+wire[        NMVU-1 : 0] biasagu_step;      // Steps the bias memory AGU
 
 
 /*
@@ -452,6 +486,14 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             scaler_b_q[i]       <= 0;
             olength_3_q[i]      <= 0;
             shacc_load_sel_q[i] <= 5'b00100;                // For 5 jumps, select the j2 by default
+            sstride_0_q[i]      <= 0;
+            sstride_1_q[i]      <= 0;
+            bstride_0_q[i]      <= 0;
+            bstride_1_q[i]      <= 0;
+            slength_0_q[i]      <= 0;
+            slength_1_q[i]      <= 0;
+            blength_0_q[i]      <= 0;
+            blength_1_q[i]      <= 0;
         end else begin
             if (start[i]) begin
                 mul_mode_q[i]       <= mul_mode     [i*2 +: 2];
@@ -490,6 +532,14 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 scaler_b_q[i]       <= scaler_b     [i*BSCALERB +: BSCALERB];
                 olength_3_q[i]      <= olength_3    [i*BLENGTH +: BLENGTH];
                 shacc_load_sel_q[i] <= shacc_load_sel[i*NJUMPS +: NJUMPS];
+                sstride_0_q[i]      <= sstride_0    [i*BSTRIDE +: BSTRIDE];
+                sstride_1_q[i]      <= sstride_1    [i*BSTRIDE +: BSTRIDE];
+                bstride_0_q[i]      <= bstride_0    [i*BSTRIDE +: BSTRIDE];
+                bstride_1_q[i]      <= bstride_1    [i*BSTRIDE +: BSTRIDE];
+                slength_0_q[i]      <= slength_0    [i*BLENGTH +: BLENGTH];
+                slength_1_q[i]      <= slength_1    [i*BLENGTH +: BLENGTH];
+                blength_0_q[i]      <= blength_0    [i*BLENGTH +: BLENGTH];
+                blength_1_q[i]      <= blength_1    [i*BLENGTH +: BLENGTH];
             end
         end
     end
@@ -558,6 +608,67 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
     );
 end endgenerate
 
+
+// Scaler and Bias memory address generation units
+generate for(i = 0; i < NMVU; i = i+1) begin: scalarbiasaguarray
+    agu #(
+        .BWADDR     (BSBANKA),
+        .BWLENGTH   (BLENGTH)
+    ) scaleragu_unit (
+        .clk        (clk),
+        .clr        (!rst_n),
+        .step       (scaleragu_step[i]),
+        .l0         (slength_0_q[i]),
+        .l1         (slength_1_q[i]),
+        .l2         ('d0),
+        .l3         ('d0),
+        .j0         ('d1),
+        .j1         (sstride_0_q[i][BSBANKA-1 : 0]),
+        .j2         (sstride_1_q[i][BSBANKA-1 : 0]),
+        .j3         ('d0),
+        .j4         ('d0),
+        .addr_out   (rds_addr[i*BSBANKA +: BSBANKA]),
+        .z0_out     (),
+        .z1_out     (),
+        .z2_out     (),
+        .z3_out     (),
+        .on_j0      (),
+        .on_j1      (),
+        .on_j2      (),
+        .on_j3      (),
+        .on_j4      ()
+    );
+    agu #(
+        .BWADDR     (BBBANKA),
+        .BWLENGTH   (BLENGTH)
+    ) biasagu_unit (
+        .clk        (clk),
+        .clr        (!rst_n),
+        .step       (biasagu_step[i]),
+        .l0         (blength_0_q[i]),
+        .l1         (blength_1_q[i]),
+        .l2         ('d0),
+        .l3         ('d0),
+        .j0         ('d1),
+        .j1         (bstride_0_q[i][BBBANKA-1 : 0]),
+        .j2         (bstride_1_q[i][BBBANKA-1 : 0]),
+        .j3         ('d0),
+        .j4         ('d0),
+        .addr_out   (rdb_addr[i*BBBANKA +: BBBANKA]),
+        .z0_out     (),
+        .z1_out     (),
+        .z2_out     (),
+        .z3_out     (),
+        .on_j0      (),
+        .on_j1      (),
+        .on_j2      (),
+        .on_j3      (),
+        .on_j4      ()
+    );
+
+end endgenerate
+
+
 // Output address generators
 generate for(i = 0; i < NMVU; i = i+1) begin:outaguarray
     outagu #(
@@ -594,7 +705,7 @@ assign neg_acc = (d_signed & d_msb) ^ (w_signed & w_msb);
 
 // Trigger when the shacc should load
 generate for(i = 0; i < NMVU; i = i+1) begin: triggers
-    always @(shacc_load_sel_q, wagu_on_j0, wagu_on_j1, wagu_on_j2, wagu_on_j3, wagu_on_j4) begin
+    always @(*) begin //@(shacc_load_sel_q[i], wagu_on_j0[i], wagu_on_j1[i], wagu_on_j2[i], wagu_on_j3[i], wagu_on_j4[i]) begin
         if (run[i]) begin
             case (shacc_load_sel_q[i])
                 5'b00001:

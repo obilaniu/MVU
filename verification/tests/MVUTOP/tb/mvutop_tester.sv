@@ -129,7 +129,19 @@ module mvutop_tester();
     reg[  NMVU*BLENGTH-1 : 0] olength_2;        // Config: output length in dimension 2 (z)
     reg[  NMVU*BLENGTH-1 : 0] olength_3;        // Config: output length in dimension 2 (w)
     reg[ NMVU*BSCALERB-1 : 0] scaler_b;         // Config: multiplicative scaler (operand 'b')
-    reg[   NMVU*NJUMPS-1 : 0] shacc_load_sel;   // Config: select jump trigger for shift/accumultor load    
+    reg[   NMVU*NJUMPS-1 : 0] shacc_load_sel;   // Config: select jump trigger for shift/accumultor load
+
+    // Scaler and Bias memory configiration
+    reg[  NMVU*BSBANKA-1 : 0] sbaseaddr;            // Config: scaler memory base address
+    reg[  NMVU*BBBANKA-1 : 0] bbaseaddr;            // Config: bias memory base address
+    reg[  NMVU*BSTRIDE-1 : 0] sstride_0;            // Config: scaler AGU stride 0
+    reg[  NMVU*BSTRIDE-1 : 0] sstride_1;            // Config: scaler AGU stride 1
+    reg[  NMVU*BSTRIDE-1 : 0] bstride_0;            // Config: bias AGU stride 0
+    reg[  NMVU*BSTRIDE-1 : 0] bstride_1;            // Config: bias AGU stride 1
+    reg[  NMVU*BLENGTH-1 : 0] slength_0;            // Config: scaler AGU length 0
+    reg[  NMVU*BLENGTH-1 : 0] slength_1;            // Config: scaler AGU length 1
+    reg[  NMVU*BLENGTH-1 : 0] blength_0;            // Config: bias AGU length 0
+    reg[  NMVU*BLENGTH-1 : 0] blength_1;            // Config: bias AGU length 1
 
     //
     // DUT
@@ -206,7 +218,17 @@ module mvutop_tester();
             .wrs_word         (wrs_word),
             .wrb_en           (wrb_en),
             .wrb_addr         (wrb_addr),
-            .wrb_word         (wrb_word)         
+            .wrb_word         (wrb_word),
+            .sbaseaddr        (sbaseaddr),
+            .bbaseaddr        (bbaseaddr),
+            .sstride_0        (sstride_0),
+            .sstride_1        (sstride_1),
+            .bstride_0        (bstride_0),
+            .bstride_1        (bstride_1),
+            .slength_0        (slength_0),
+            .slength_1        (slength_1),
+            .blength_0        (blength_0),
+            .blength_1        (blength_1)
         );
 
 
@@ -254,6 +276,43 @@ task writeWeightsRepeat(int mvu, logic unsigned[BWBANKW-1 : 0] word, logic unsig
         startaddr = startaddr + stride;
     end
 endtask
+
+task writeScalers(int mvu, unsigned[BSBANKW-1 : 0] word, unsigned[BSBANKA-1 : 0] addr);
+    checkmvu(mvu);
+    wrs_addr[mvu*BSBANKA +: BSBANKA] = addr;
+    wrs_word[mvu*BSBANKW +: BSBANKW] = word;
+    wrs_en[mvu] = 1'b1;
+    #(`CLKPERIOD);
+    wrs_en[mvu] = 1'b0;
+endtask
+
+task writeScalersRepeat(int mvu, logic unsigned[BSBANKW-1 : 0] word, logic unsigned[BSBANKA-1 : 0] startaddr, int size, int stride=1);
+    checkmvu(mvu);
+    for (int i = 0; i < size; i++) begin
+        writeScalers(.mvu(mvu), .word(word), .addr(startaddr));
+        #(`CLKPERIOD);
+        startaddr = startaddr + stride;
+    end
+endtask
+
+task writeBiases(int mvu, unsigned[BBBANKW-1 : 0] word, unsigned[BBBANKA-1 : 0] addr);
+    checkmvu(mvu);
+    wrb_addr[mvu*BBBANKA +: BBBANKA] = addr;
+    wrb_word[mvu*BBBANKW +: BBBANKW] = word;
+    wrb_en[mvu] = 1'b1;
+    #(`CLKPERIOD);
+    wrb_en[mvu] = 1'b0;
+endtask
+
+task writeBiasesRepeat(int mvu, logic unsigned[BBBANKW-1 : 0] word, logic unsigned[BBBANKA-1 : 0] startaddr, int size, int stride=1);
+    checkmvu(mvu);
+    for (int i = 0; i < size; i++) begin
+        writeBiases(.mvu(mvu), .word(word), .addr(startaddr));
+        #(`CLKPERIOD);
+        startaddr = startaddr + stride;
+    end
+endtask
+
 
 task automatic readData(int mvu, logic unsigned [BDBANKA-1 : 0] addr, ref logic unsigned [BDBANKW-1 : 0] word, ref logic unsigned [NMVU-1 : 0] grnt);
     checkmvu(mvu);
@@ -390,6 +449,33 @@ task controllerMemTest();
 
 
 endtask
+
+//
+// Scaler memory write test
+//
+task scalerMemTest();
+   
+    print_banner("Scaler memory write test");
+
+    // Write test
+    writeScalersRepeat(0, {(BSBANKW/32){'hdeadbeef}}, 0, 4, 1);
+
+    #(`CLKPERIOD*10);
+
+endtask
+
+//
+// Bias memory write test
+//
+task biasMemTest();
+    
+    print_banner("Bias memory write test");
+
+    // Write test
+    writeBiasesRepeat(0, {(BBBANKW/32){'hdeadbeef}}, 0, 4, 1);
+
+endtask
+
 
 //
 // Matrix-vector multiplication (GEMV) test
@@ -629,6 +715,18 @@ initial begin
     wrw_addr = 0;
     wrw_word = 0;
     wrw_en = 0;
+    sbaseaddr = 0;
+    bbaseaddr = 0;
+    sstride_0 = 0;
+    sstride_1 = 0;
+    bstride_0 = 0;
+    bstride_1 = 0;
+    slength_0 = 0;
+    slength_1 = 0;
+    blength_0 = 0;
+    blength_1 = 0;
+
+
     #(`CLKPERIOD*10);
 
     // Come out of reset
@@ -640,7 +738,12 @@ initial begin
 
     // Test memory access
     controllerMemTest();
+
+    // Test scaler and bias memory writes
+    scalerMemTest();
+    biasMemTest();
  
+ /*
     // Run gemv tests, mvu0 -> mvu0
     print_banner("GEMV tests: mvu0 -> mvu0");
     gemvTests(.mvu(0), .omvu('b00000001), .scaler(1));
@@ -702,7 +805,7 @@ initial begin
     // Repeat the unsigned gemv tests, mvu4-> mvu5, mvu6
     print_banner("GEMV tests: mvu4 -> mvu5,6");
     gemvTests(.mvu(4), .omvu('b01100000), .scaler(1));
-
+*/
     
 
     print_banner($sformatf("Simulation done."));
