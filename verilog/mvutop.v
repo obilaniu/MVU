@@ -288,10 +288,13 @@ wire[        NMVU-1 : 0] wrd_grnt;
 wire[NMVU*BDBANKA-1 : 0] wrd_addr;
 
 // MVU Scaler and Bias memory control
-wire[        NMVU-1 : 0] rds_en;                 // Scaler memory: read enable
-wire[NMVU*BSBANKA-1 : 0] rds_addr;               // Scaler memory: read address
-wire[        NMVU-1 : 0] rdb_en;                 // Bias memory: read enable
-wire[NMVU*BBBANKA-1 : 0] rdb_addr;               // Bias memory: read address
+wire[        NMVU-1 : 0] rds_en;                        // Scaler memory: read enable
+wire[NMVU*BSBANKA-1 : 0] rds_addr;                      // Scaler memory: read address
+wire[     BSBANKA-1 : 0] rds_addr_offset [NMVU-1 : 0];  // Scaler memory: read address offset from scaler mem AGU
+wire[        NMVU-1 : 0] rdb_en;                        // Bias memory: read enable
+wire[NMVU*BBBANKA-1 : 0] rdb_addr;                      // Bias memory: read address
+wire[     BBBANKA-1 : 0] rdb_addr_offset [NMVU-1 : 0];  // Bias memory: read address offset from bias mem AGU
+
 
 // Interconnect
 wire                     ic_clr_int;
@@ -361,6 +364,7 @@ wire[        NMVU-1 : 0] wagu_on_j3;        // Indicates when a weight address j
 wire[        NMVU-1 : 0] wagu_on_j4;        // Indicates when a weight address jump 4 happens
 wire[        NMVU-1 : 0] scaleragu_step;    // Steps the scaler memory AGU
 wire[        NMVU-1 : 0] biasagu_step;      // Steps the bias memory AGU
+
 
 
 /*
@@ -625,9 +629,9 @@ generate for(i = 0; i < NMVU; i = i+1) begin: scalarbiasaguarray
         .j0         ('d1),
         .j1         (sstride_0_q[i][BSBANKA-1 : 0]),
         .j2         (sstride_1_q[i][BSBANKA-1 : 0]),
-        .j3         ('d0),
-        .j4         ('d0),
-        .addr_out   (rds_addr[i*BSBANKA +: BSBANKA]),
+        .j3         (sstride_1_q[i][BSBANKA-1 : 0]),            // Cheating
+        .j4         (sstride_1_q[i][BSBANKA-1 : 0]),            // Cheating
+        .addr_out   (rds_addr_offset[i]),
         .z0_out     (),
         .z1_out     (),
         .z2_out     (),
@@ -638,6 +642,9 @@ generate for(i = 0; i < NMVU; i = i+1) begin: scalarbiasaguarray
         .on_j3      (),
         .on_j4      ()
     );
+
+    assign rds_addr[i*BSBANKA +: BSBANKA] = sbaseaddr_q[i] + rds_addr_offset[i];
+
     agu #(
         .BWADDR     (BBBANKA),
         .BWLENGTH   (BLENGTH)
@@ -652,9 +659,9 @@ generate for(i = 0; i < NMVU; i = i+1) begin: scalarbiasaguarray
         .j0         ('d1),
         .j1         (bstride_0_q[i][BBBANKA-1 : 0]),
         .j2         (bstride_1_q[i][BBBANKA-1 : 0]),
-        .j3         ('d0),
-        .j4         ('d0),
-        .addr_out   (rdb_addr[i*BBBANKA +: BBBANKA]),
+        .j3         (bstride_1_q[i][BBBANKA-1 : 0]),            // Cheating
+        .j4         (bstride_1_q[i][BBBANKA-1 : 0]),            // Cheating
+        .addr_out   (rdb_addr_offset[i]),
         .z0_out     (),
         .z1_out     (),
         .z2_out     (),
@@ -665,6 +672,8 @@ generate for(i = 0; i < NMVU; i = i+1) begin: scalarbiasaguarray
         .on_j3      (),
         .on_j4      ()
     );
+
+    assign rdb_addr[i*BBBANKA +: BBBANKA] = bbaseaddr_q[i] + rdb_addr_offset[i];
 
 end endgenerate
 
