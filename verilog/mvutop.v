@@ -490,6 +490,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             scaler_b_q[i]       <= 0;
             olength_3_q[i]      <= 0;
             shacc_load_sel_q[i] <= 5'b00100;                // For 5 jumps, select the j2 by default
+            sbaseaddr_q[i]      <= 0;
+            bbaseaddr_q[i]      <= 0;
             sstride_0_q[i]      <= 0;
             sstride_1_q[i]      <= 0;
             bstride_0_q[i]      <= 0;
@@ -536,6 +538,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 scaler_b_q[i]       <= scaler_b     [i*BSCALERB +: BSCALERB];
                 olength_3_q[i]      <= olength_3    [i*BLENGTH +: BLENGTH];
                 shacc_load_sel_q[i] <= shacc_load_sel[i*NJUMPS +: NJUMPS];
+                sbaseaddr_q[i]      <= sbaseaddr    [i*BSBANKA +: BSBANKA];
+                bbaseaddr_q[i]      <= bbaseaddr    [i*BBBANKA +: BBBANKA];
                 sstride_0_q[i]      <= sstride_0    [i*BSTRIDE +: BSTRIDE];
                 sstride_1_q[i]      <= sstride_1    [i*BSTRIDE +: BSTRIDE];
                 bstride_0_q[i]      <= bstride_0    [i*BSTRIDE +: BSTRIDE];
