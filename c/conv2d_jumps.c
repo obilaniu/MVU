@@ -64,88 +64,70 @@ int i_t[H][W][C][iprec];                            // Input tensor
 int w_t[Fc][Fh][Fw][C][wprec];                      // Filter weight tensor
 int *i_tptr = (int*)i_t;                            // Input address pointer
 int *w_tptr = (int*)w_t;                            // Weight address pointer
+int s_t[Fc];                                        // Scaler array (for batch norm and scaled quantization)
+int b_t[Fc];                                        // Bias array (for batch norm and conv/fc)
+int *s_tptr = (int*)s_t;                            // Scaler address pointer
+int *b_tptr = (int*)b_t;                            // Bias address pointer
 
 // Computed MVU parameters to program into CSRs
-int ilength0;
-int ilength1;
-int ilength2;
-int ilength3;
-int ijump0;
-int ijump1;
-int ijump2;
-int ijump3;
-int wlength0;
-int wlength1;
-int wlength2;
-int wlength3;
-int wjump0;
-int wjump1;
-int wjump2;
-int wjump3;
+int ilength[4];
+int ijump[4];
+int wlength[4];
+int wjump[4];
 int countdown;
 int bumpzigzag_on;
 int loadshacc_on;
 int ioffset;
 int woffset;
+int slength[4];
+int sjump[4];
+int blength[4];
+int bjump[4];
 
 
 // Internal parameters
-int i_j0;
-int i_j1;
-int i_j2;
-int i_j3;
-int i_j4;
+int i_j[5];
 int i_zzoff;
 int w_zzoff;
 int cntdwn;
-int i_i0;
-int i_i1;
-int i_i2;
-int i_i3;
-int w_i0;
-int w_i1;
-int w_i2;
-int w_i3;
-int w_j0;
-int w_j1;
-int w_j2;
-int w_j3;
-int w_j4;
+int i_i[4];
+int w_i[4];
+int w_j[5];
+int s_i[4];
+int s_j[5];
+int b_i[4];
+int b_j[5];
 int outaddr;
 
-char *i_jump0_str = (char*)"";
-char *i_jump1_str = (char*)"";
-char *i_jump2_str = (char*)"";
-char *i_jump3_str = (char*)"";
-char *w_jump0_str = (char*)"";
-char *w_jump1_str = (char*)"";
-char *w_jump2_str = (char*)"";
-char *w_jump3_str = (char*)"";
+char* i_jump_str[4];
+char* w_jump_str[4];
+char* s_jump_str[4];
+char* b_jump_str[4];
 
 
 void assignInternalParams()
 {
-    i_j0 = iprec;                                 // Move to next channel block and/or column
-    i_j1 = ijump0;
-    i_j2 = ijump1;
-    i_j3 = ijump2;
-    i_j4 = ijump3;
+    i_j[0] = iprec;                                 // Move to next channel block and/or column
+    i_j[1] = ijump[0];
+    i_j[2] = ijump[1];
+    i_j[3] = ijump[2];
+    i_j[4] = ijump[3];
     i_zzoff = 0;
     w_zzoff = 0;
     cntdwn = countdown;
-    i_i0 = ilength0;
-    i_i1 = ilength1;
-    i_i2 = ilength2;
-    i_i3 = ilength3;
-    w_i0 = wlength0;
-    w_i1 = wlength1;
-    w_i2 = wlength2;
-    w_i3 = wlength3;
-    w_j0 = wprec;                                 // Move to next channel block and/or column
-    w_j1 = wjump0;
-    w_j2 = wjump1;
-    w_j3 = wjump2;
-    w_j4 = wjump3;
+    i_i[0] = ilength[0];
+    i_i[1] = ilength[1];
+    i_i[2] = ilength[2];
+    i_i[3] = ilength[3];
+    w_i[0] = wlength[0];
+    w_i[1] = wlength[1];
+    w_i[2] = wlength[2];
+    w_i[3] = wlength[3];
+    w_j[0] = wprec;                                 // Move to next channel block and/or column
+    w_j[1] = wjump[0];
+    w_j[2] = wjump[1];
+    w_j[3] = wjump[2];
+    w_j[4] = wjump[3];
     outaddr = 0;
     w_tptr += woffset;
     i_tptr += ioffset;
@@ -192,105 +174,75 @@ void bumpZigZag(int curjump)
     }
 }
 
-
-int getNextInput()
-{   
-    if (i_i0 == 0 && i_i1 == 0 && i_i2 == 0 && i_i3 == 0)
+int getNextAddr(int *i, int *length, int *j, int **tptr, const char* tensorid, char** jump_str)
+{
+    if (i[0] == 0 && i[1] == 0 && i[2] == 0 && i[3] == 0)
     {
-        i_i0 = ilength0;
-        i_i1 = ilength1;
-        i_i2 = ilength2;
-        i_i3 = ilength3;
-        i_tptr += i_j4;
-        printf("\n==> i_j4: %s\n", i_jump3_str);
+        i[0] = length[0];
+        i[1] = length[1];
+        i[2] = length[2];
+        i[3] = length[3];
+        *tptr += j[4];
+        printf("\n==> %s_j4: %s\n", tensorid, jump_str[3]);
         return 4;
     }
-    else if (i_i0 == 0 && i_i1 == 0 && i_i2 == 0)
+    else if (i[0] == 0 && i[1] == 0 && i[2] == 0)
     {
-        i_i0 = ilength0;
-        i_i1 = ilength1;
-        i_i2 = ilength2;
-        i_i3--;
-        i_tptr += i_j3;
-        printf("\n==> i_j3: %s\n", i_jump2_str);
+        i[0] = length[0];
+        i[1] = length[1];
+        i[2] = length[2];
+        i[3]--;
+        *tptr += j[3];
+        printf("\n==> %s_j3: %s\n", tensorid, jump_str[2]);
         return 3;
     }
-    else if (i_i0 == 0 && i_i1 == 0)
+    else if (i[0] == 0 && i[1] == 0)
     {
-        i_i0 = ilength0;
-        i_i1 = ilength1;
-        i_i2--;
-        i_tptr += i_j2;
-        printf("\n==> i_j2: %s\n", i_jump1_str);
+        i[0] = length[0];
+        i[1] = length[1];
+        i[2]--;
+        *tptr += j[2];
+        printf("\n==> %s_j2: %s\n", tensorid, jump_str[1]);
         return 2;
     }
-    else if (i_i0 == 0)
+    else if (i[0] == 0)
     {
-        i_i0 = ilength0;
-        i_i1--;
-        i_tptr += i_j1;
-        if (i_j1 != iprec)
-            printf("\n==> i_j1: %s\n", i_jump0_str);
-        else
-            printf("\n");
+        i[0] = length[0];
+        i[1]--;
+        *tptr += j[1];
+        printf("==> %s_j1: %s\n", tensorid, jump_str[0]);
         
         return 1;
     }
     else
     {
-        i_i0--;
-        i_tptr += i_j0;       
+        i[0]--;
+        *tptr += j[0];
         return 0;
-    }
+    }  
+}
+
+
+int getNextInput()
+{
+    return getNextAddr(i_i, ilength, i_j, &i_tptr, "i", i_jump_str);
 }
 
 int getNextWeight()
 {
-    if (w_i0 == 0 && w_i1 == 0 && w_i2 == 0 && w_i3 == 0)
-    {
-        w_i0 = wlength0;
-        w_i1 = wlength1;
-        w_i2 = wlength2;
-        w_i3 = wlength3;
-        w_tptr += w_j4;
-        printf("==> w_j4: %s\n", w_jump3_str);
-        return 4;
-    }
-    else if (w_i0 == 0 && w_i1 == 0 && w_i2 == 0)
-    {
-        w_i0 = wlength0;
-        w_i1 = wlength1;
-        w_i2 = wlength2;
-        w_i3--;
-        w_tptr += w_j3;
-        printf("==> w_j3: %s\n", w_jump2_str);
-        return 3;
-    }
-    else if (w_i0 == 0 && w_i1 == 0)
-    {
-        w_i0 = wlength0;
-        w_i1 = wlength1;
-        w_i2--;
-        w_tptr += w_j2;
-        printf("==> w_j2: %s\n", w_jump1_str);
-        return 2;
-    }
-    else if (w_i0 == 0)
-    {
-        w_i0 = wlength0;
-        w_i1--;
-        w_tptr += w_j1;
-        printf("==> w_j1: %s\n", w_jump0_str);
-        return 1;
-    }
-    else
-    {
-        w_i0--;
-        w_tptr += w_j0;
-        return 0;
-    }
-
+    return getNextAddr(w_i, wlength, w_j, &w_tptr, "w", w_jump_str);
 }
+
+int getNextScaler()
+{
+    return getNextAddr(s_i, slength, s_j, &s_tptr, "s", s_jump_str);
+}
+
+int getNextBias()
+{
+    return getNextAddr(b_i, blength, b_j, &b_tptr, "b", b_jump_str);
+}
+
 
 int genNextOutput(int curjump)
 {
@@ -299,6 +251,7 @@ int genNextOutput(int curjump)
         outaddr += oprec;
         printf("==> shacc load. Next output addr = %05d\n", outaddr);
     }
+    return 0;
 }
 
 
@@ -334,22 +287,22 @@ void setConv2dlineValid()
     */
 
     // Scheme 2: Compute all of the output pixels for a single line including all output channel blocks
-    ilength0 = C*Fw-1;                                                          // Width of filter window X number of input channel blocks
-    ilength1 = Fh-1;                                                            // Height of filter
-    ilength2 = iprec*wprec*Fc-1;                                                // Number of bit combos X filter sets
-    ilength3 = 0;
-    ijump0 = iprec*(C*(W-Fw) + 1);                                              i_jump0_str = (char*)"Move to next row";
-    ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);                                    i_jump1_str = (char*)"Move back to start of window";
-    ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);                             i_jump2_str = (char*)"Move window to right by horizontal stride";
-    ijump3 = ijump2;                                                            i_jump3_str = (char*)"Move window to right by horizontal stride";
-    wlength0 = C*Fw*Fh-1;                                                       // Total size of one filter block
-    wlength1 = iprec*wprec-1;                                                   // Number of bit combos
-    wlength2 = Fc-1;                                                            // Number of filter blocks
-    wlength3 = 0;
-    wjump0 = -wprec*(C*Fw*Fh-1);                                                w_jump0_str = (char*)"Move back to start of filter for next precision combo";
-    wjump1 = wprec;                                                             w_jump1_str = (char*)"Move to next filter set block";
-    wjump2 = -wprec*(C*Fw*Fh*Fc-1);                                             w_jump2_str = (char*)"Move back to start of first filter set block for next window";
-    wjump3 = wjump2;                                                            w_jump3_str = (char*)"Move back to start of first filter set block for next window";
+    ilength[0] = C*Fw-1;                                                          // Width of filter window X number of input channel blocks
+    ilength[1] = Fh-1;                                                            // Height of filter
+    ilength[2] = iprec*wprec*Fc-1;                                                // Number of bit combos X filter sets
+    ilength[3] = 0;
+    ijump[0] = iprec*(C*(W-Fw) + 1);                                              i_jump_str[0] = (char*)"Move to next row";
+    ijump[1] = -iprec*(C*(Fh-1)*W + Fw*C - 1);                                    i_jump_str[1] = (char*)"Move back to start of window";
+    ijump[2] = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);                             i_jump_str[2] = (char*)"Move window to right by horizontal stride";
+    ijump[3] = ijump[2];                                                          i_jump_str[3] = (char*)"Move window to right by horizontal stride";
+    wlength[0] = C*Fw*Fh-1;                                                       // Total size of one filter block
+    wlength[1] = iprec*wprec-1;                                                   // Number of bit combos
+    wlength[2] = Fc-1;                                                            // Number of filter blocks
+    wlength[3] = 0;
+    wjump[0] = -wprec*(C*Fw*Fh-1);                                                w_jump_str[0] = (char*)"Move back to start of filter for next precision combo";
+    wjump[1] = wprec;                                                             w_jump_str[1] = (char*)"Move to next filter set block";
+    wjump[2] = -wprec*(C*Fw*Fh*Fc-1);                                             w_jump_str[2] = (char*)"Move back to start of first filter set block for next window";
+    wjump[3] = wjump[2];                                                          w_jump_str[3] = (char*)"Move back to start of first filter set block for next window";
     countdown = (C * Fw) * (Fh) * (iprec * wprec) * (Fc) * ((W-Fw+1)/Sw);
     bumpzigzag_on = 1;
     loadshacc_on = 1 << 2;
@@ -357,12 +310,14 @@ void setConv2dlineValid()
     
 }
 
+
 /*
  Computes parameters to do the convolution in the corner/edge of an input feature map
  when there is "virtual" padding (i.e. no actual zeros in memory). Needed where the output 
  feature map is the same size as the input feature map in width and height (i.e. SAME in TF lingo)
  Pl and Pr are mutully exclusive, as are Pt and Pb. Set the one not being used to 0.
 */
+/*
 void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
 {
     // Upper left corner
@@ -466,7 +421,7 @@ void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
     
         
 }
-
+*/
 
 
 int main()
@@ -517,16 +472,16 @@ int main()
 
     // Compute parameters for convolution
     //setConv2dlineEdgePadding(1, 0, 1, 0);           // Upper-left corner
-    //setConv2dlinevalid();                           // Inner
-    setConv2dlineEdgePadding(1, 0, 0, 1);           // Lower-left corner
+    setConv2dlineValid();                           // Inner
+    //setConv2dlineEdgePadding(1, 0, 0, 1);           // Lower-left corner
     assignInternalParams();
 
     // Print out the computed parameters
     printf("==Computed Parameters==\n");
-    printf("ilength0=%10d, ilength1=%10d, ilength2=%10d, ilength3=%10d\n", ilength0, ilength1, ilength2, ilength3);
-    printf("ijump0  =%10d, ijump1  =%10d, ijump2  =%10d, ijump3  =%10d\n", ijump0, ijump1, ijump2, ijump3);
-    printf("wlength0=%10d, wlength1=%10d, wlength2=%10d, wlength3=%10d\n", wlength0, wlength1, wlength2, wlength3);
-    printf("wjump0  =%10d, wjump1  =%10d, wjump2  =%10d, wjump3  =%10d\n", wjump0, wjump1, wjump2, wjump3);
+    printf("ilength0=%10d, ilength1=%10d, ilength2=%10d, ilength3=%10d\n", ilength[0], ilength[1], ilength[2], ilength[3]);
+    printf("ijump0  =%10d, ijump1  =%10d, ijump2  =%10d, ijump3  =%10d\n", ijump[0], ijump[1], ijump[2], ijump[3]);
+    printf("wlength0=%10d, wlength1=%10d, wlength2=%10d, wlength3=%10d\n", wlength[0], wlength[1], wlength[2], wlength[3]);
+    printf("wjump0  =%10d, wjump1  =%10d, wjump2  =%10d, wjump3  =%10d\n", wjump[0], wjump[1], wjump[2], wjump[3]);
     printf("ioffset=%d, woffset=%d, countdown=%d\n", ioffset, woffset, countdown);
     printf("\n");
 
