@@ -131,6 +131,25 @@ void assignInternalParams()
     outaddr = 0;
     w_tptr += woffset;
     i_tptr += ioffset;
+    s_i[0] = slength[0];
+    s_i[1] = slength[1];
+    s_i[2] = slength[2];
+    s_i[3] = slength[3];
+    s_j[0] = 0;                                 
+    s_j[1] = sjump[0];
+    s_j[2] = sjump[1];
+    s_j[3] = sjump[2];
+    s_j[4] = sjump[3];
+    b_i[0] = blength[0];
+    b_i[1] = blength[1];
+    b_i[2] = blength[2];
+    b_i[3] = blength[3];
+    b_j[0] = 0;                                 
+    b_j[1] = bjump[0];
+    b_j[2] = bjump[1];
+    b_j[3] = bjump[2];
+    b_j[4] = bjump[3];
+    
 }
 
 
@@ -233,14 +252,22 @@ int getNextWeight()
     return getNextAddr(w_i, wlength, w_j, &w_tptr, "w", w_jump_str);
 }
 
-int getNextScaler()
+int getNextScaler(int curjump)
 {
-    return getNextAddr(s_i, slength, s_j, &s_tptr, "s", s_jump_str);
+    if ((1 << curjump) >= loadshacc_on)
+    {
+        return getNextAddr(s_i, slength, s_j, &s_tptr, "s", s_jump_str);
+    }
+    return -1;
 }
 
-int getNextBias()
+int getNextBias(int curjump)
 {
-    return getNextAddr(b_i, blength, b_j, &b_tptr, "b", b_jump_str);
+    if ((1 << curjump) >= loadshacc_on)
+    {
+        return getNextAddr(b_i, blength, b_j, &b_tptr, "b", b_jump_str);
+    }
+    return -1;
 }
 
 
@@ -306,8 +333,23 @@ void setConv2dlineValid()
     countdown = (C * Fw) * (Fh) * (iprec * wprec) * (Fc) * ((W-Fw+1)/Sw);
     bumpzigzag_on = 1;
     loadshacc_on = 1 << 2;
-    woffset = 0;                                                                // Filter pointer offset
-    
+    woffset = 0;                                                                  // Filter pointer offset
+    slength[0] = 0;                                                               // Don't need this inner loop
+    slength[1] = 0;                                                               // Don't need this inner loop
+    slength[2] = 0;                                                               // Don't need this inner loop
+    slength[3] = Fc-1;                                                            // 
+    sjump[0] = 0;                                                                 s_jump_str[0] = (char *)"";
+    sjump[1] = 0;                                                                 s_jump_str[1] = (char *)"";
+    sjump[2] = 1;                                                                 s_jump_str[2] = (char*)"Move to next channel block";
+    sjump[3] = -Fc+1;                                                             s_jump_str[3] = (char*)"Move back to first channel block";
+    blength[0] = 0;                                                               // 
+    blength[1] = 0;                                                               // 
+    blength[2] = 0;                                                               // 
+    blength[3] = Fc-1;
+    bjump[0] = 0;                                                                 b_jump_str[0] = (char*)"";
+    bjump[1] = 0;                                                                 b_jump_str[1] = (char*)"";
+    bjump[2] = 1;                                                                 b_jump_str[2] = (char*)"Move to next channel block";
+    bjump[3] = -Fc+1;                                                             b_jump_str[3] = (char*)"Move back to first channel block";
 }
 
 
@@ -470,6 +512,19 @@ int main()
         }       
     }
 
+    // Initialize the scaler tensor
+    for (int fc=0; fc < Fc; fc++)
+    {
+        s_t[fc] = fc;
+    }
+
+    // Initialize the bias tensor
+    for (int fc=0; fc < Fc; fc++)
+    {
+        b_t[fc] = fc;
+    }
+
+
     // Compute parameters for convolution
     //setConv2dlineEdgePadding(1, 0, 1, 0);           // Upper-left corner
     setConv2dlineValid();                           // Inner
@@ -482,6 +537,10 @@ int main()
     printf("ijump0  =%10d, ijump1  =%10d, ijump2  =%10d, ijump3  =%10d\n", ijump[0], ijump[1], ijump[2], ijump[3]);
     printf("wlength0=%10d, wlength1=%10d, wlength2=%10d, wlength3=%10d\n", wlength[0], wlength[1], wlength[2], wlength[3]);
     printf("wjump0  =%10d, wjump1  =%10d, wjump2  =%10d, wjump3  =%10d\n", wjump[0], wjump[1], wjump[2], wjump[3]);
+    printf("slength0=%10d, slength1=%10d, slength2=%10d, slength3=%10d\n", slength[0], slength[1], slength[2], slength[3]);
+    printf("sjump0  =%10d, sjump1  =%10d, sjump2  =%10d, sjump3  =%10d\n", sjump[0], sjump[1], sjump[2], sjump[3]);
+    printf("blength0=%10d, blength1=%10d, blength2=%10d, blength3=%10d\n", blength[0], blength[1], blength[2], blength[3]);
+    printf("bjump0  =%10d, bjump1  =%10d, bjump2  =%10d, bjump3  =%10d\n", bjump[0], bjump[1], bjump[2], bjump[3]);
     printf("ioffset=%d, woffset=%d, countdown=%d\n", ioffset, woffset, countdown);
     printf("\n");
 
@@ -495,11 +554,14 @@ int main()
         w_whichjump = getNextWeight();
         bumpZigZag(w_whichjump);
         genNextOutput(w_whichjump);
-
+        if (getNextScaler(w_whichjump) >= 0)
+            printf("==> s_tptr: %04d\n", *(s_tptr));
+        if (getNextBias(w_whichjump) >= 0)
+            printf("==> b_tptr: %04d\n", *(b_tptr));
     }
     
 
-    printf("\n\nFinal locations: i_tptr=%d, w_tptr=%d\n", *i_tptr, *w_tptr);
+    printf("\n\nFinal locations: i_tptr=%d, w_tptr=%d, s_ptr=%d, b_tptr=%d\n", *i_tptr, *w_tptr, *s_tptr, *b_tptr);
 
     return 0;
 }
