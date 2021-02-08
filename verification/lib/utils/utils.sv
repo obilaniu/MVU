@@ -2,7 +2,7 @@
 
 package utils;
 //==================================================================================================
-// Enum: print_verbosity
+// Enum: print_verbosity_t
 // Defines standard verbosity levels for reports.
 //
 //  VERB_NONE    Report is always printed. Verbosity level setting cannot disable it.
@@ -17,7 +17,47 @@ typedef enum {
     VERB_HIGH   = 300,
     VERB_FULL   = 400,
     VERB_DEBUG  = 500
-} print_verbosity;
+} print_verbosity_t;
+
+typedef int data_q_t[$];
+
+//==================================================================================================
+// Logger class, logs test string to a file
+class Logger;  /* base class*/;
+    int fd;
+    bit log_time;
+    bit log_to_std_out;
+
+    function new (string file_name, bit log_time=1, bit log_to_std_out=1);
+          this.fd = $fopen(file_name,"w");
+          this.log_time = log_time;
+          this.log_to_std_out = log_to_std_out;
+    endfunction
+
+    function void print (string msg, string id="INFO", print_verbosity_t verbosity=VERB_LOW);
+        string time_stamp = this.log_time ? $sformatf("%t",$time()) : "";
+        string log = $sformatf("[%5s] %s %s ", id, time_stamp, msg);
+        if (verbosity<VERB_MEDIUM) begin
+            if (log_to_std_out == 1) begin
+                $display("%s", log);
+            end
+        end
+        $fwrite(this.fd, log);
+    endfunction
+
+    function void print_banner (string msg, string id="INFO", print_verbosity_t verbosity=VERB_LOW);
+        string sep = "=======================================================================";
+        string log = $sformatf("%s\n[%5s]  %s \n%s", sep, id, msg, sep);
+        if (verbosity<VERB_MEDIUM) begin
+            if (log_to_std_out == 1) begin
+                $display("%s", log);
+            end
+        end
+        $fwrite(this.fd, log);
+    endfunction
+
+endclass
+
 //==================================================================================================
 // Struct test_stats
 // Defines a struct that holds test statistics 
@@ -46,7 +86,7 @@ endfunction
             $display("[%5s][t=%10d]  %s ", ID, $time(), MSG); \
    end
 
-function void print(string MSG, string ID="INFO", print_verbosity VERBOSITY=VERB_LOW);
+function void print(string MSG, string ID="INFO", print_verbosity_t VERBOSITY=VERB_LOW);
     `__print__(ID, MSG, VERBOSITY);
 endfunction
 
@@ -60,7 +100,7 @@ endfunction
         `__print__(ID,"=======================================================================",VERBOSITY) \
    end
 
-function void print_banner(string MSG, string ID="INFO", print_verbosity VERBOSITY=VERB_LOW);
+function void print_banner(string MSG, string ID="INFO", print_verbosity_t VERBOSITY=VERB_LOW);
     `__print_banner__(ID, MSG, VERBOSITY);
 endfunction
 
@@ -86,7 +126,7 @@ endfunction
 
 //==================================================================================================
 // A function to report results
-function void print_result(test_stats test_stat, print_verbosity verbosity);
+function void print_result(test_stats test_stat, print_verbosity_t verbosity);
     `__print_banner__("INFO", "Test results", verbosity)
     `__print__("INFO", $sformatf("Number of passed tests = %0d", test_stat.pass_cnt), verbosity)
     `__print__("INFO", $sformatf("Number of failed tests = %0d\n", test_stat.fail_cnt), verbosity)
@@ -107,5 +147,23 @@ function void print_matrix_from_array(inout integer array, integer row_len, inte
         array_shape_str = "";
     end
 endfunction : print_matrix_from_array
+
+//==================================================================================================
+// Given a text file with data written into each line, this function returns a queue with all elements
+// in it.
+function automatic data_q_t datafile_to_q(string __file, Logger logger);
+    int fd = $fopen (__file, "r");
+    string data_str, temp, line;
+    data_q_t data_q;
+    if (fd)  begin logger.print($sformatf("%s was opened successfully : %0d", __file, fd)); end
+    else     begin logger.print($sformatf("%s was NOT opened successfully : %0d", __file, fd)); $finish(); end
+    while (!$feof(fd)) begin
+        temp = $fgets(line, fd);
+        if (line.substr(0, 1) != "//") begin
+            data_q.push_back(line.atoi());
+        end
+    end
+    return data_q;
+endfunction
 
 endpackage : utils

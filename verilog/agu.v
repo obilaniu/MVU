@@ -1,6 +1,35 @@
 /**
- * Address Generation Unit (AGU)
- */
+  Address Generation Unit (AGU)
+ 
+  Description:
+  Computes an offset address based on a series of address jumps.
+  This unit functions like a set of inner loops.
+ 
+  Psuedocode:
+ 
+  while(1)
+  {
+      for (i3 = l3; i3 > 0; i3--)
+      {
+          for (i2 = l2; i2 > 0; i2--)
+          {
+              for (i1 = l1; i1 > 0; i1--)
+              {
+                  for (i0 = l0; i0 > 0; i0--)
+                  {
+                      addr_out += j0;
+                  }
+                  addr_out += j1;
+              }
+              addr_out += j2;
+          }
+          addr_out += j3;
+      }
+      addr_out += j4;
+  }
+ 
+ 
+*/
 
 /**** Module ****/
 module agu( clk,

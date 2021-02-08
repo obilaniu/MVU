@@ -327,6 +327,16 @@ task automatic readData(int mvu, logic unsigned [BDBANKA-1 : 0] addr, ref logic 
 endtask
 
 
+// Initialize scaler and bias memories
+task scalerMemInit(int mvu);
+    writeScalersRepeat(.mvu(mvu), .word({(BSBANKW){16'h0001}}), .startaddr(0), .size(2**BSBANKA));
+endtask
+
+task biasMemInit(int mvu);
+    writeBiasesRepeat(.mvu(mvu), .word({(BBBANKW){32'h00000000}}), .startaddr(0), .size(2**BBBANKA));
+endtask
+
+
 // Executes a GMEV
 task automatic runGEMV(
     int mvu,            // MVU number to execute on
@@ -395,6 +405,16 @@ task automatic runGEMV(
     scaler_b[mvu*BSCALERB +: BSCALERB] = scaler;
     shacc_load_sel[mvu*NJUMPS +: NJUMPS] = 5'b00100;            // Load the shift/accumulator on when weight address jump 2 happens
     countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
+
+    // Scaler and bias memory parameters
+    sstride_0[mvu*BSTRIDE +: BSTRIDE] = 1;
+    sstride_1[mvu*BSTRIDE +: BSTRIDE] = 0;
+    bstride_0[mvu*BSTRIDE +: BSTRIDE] = 1;
+    bstride_1[mvu*BSTRIDE +: BSTRIDE] = 0;
+    slength_0[mvu*BLENGTH +: BLENGTH] = 0;
+    slength_1[mvu*BLENGTH +: BLENGTH] = m_h-1;
+    blength_0[mvu*BLENGTH +: BLENGTH] = 0;
+    blength_1[mvu*BLENGTH +: BLENGTH] = m_h-1;
 
     // Run the GEMV
     start[mvu] = 1'b1;
@@ -737,17 +757,33 @@ initial begin
     max_en = 1;
 
     // Test memory access
-    controllerMemTest();
+    //controllerMemTest();
 
     // Test scaler and bias memory writes
-    scalerMemTest();
-    biasMemTest();
+    //scalerMemTest();
+    //biasMemTest();
+
+    // Initialize scaler and bias memories
+    scalerMemInit(0);
+    biasMemInit(0);
+    #(`CLKPERIOD*10);
  
- /*
+ 
     // Run gemv tests, mvu0 -> mvu0
     print_banner("GEMV tests: mvu0 -> mvu0");
     gemvTests(.mvu(0), .omvu('b00000001), .scaler(1));
 
+    // Run gemv tests, mvu0 -> mvu0, but with escalating scaler and bias memory values set
+    print_banner("GEMV tests: mvu0 -> mvu0");
+    writeScalers(.mvu(0), .word({BSBANKW{16'h0001}}), .addr(0));
+    writeScalers(.mvu(0), .word({BSBANKW{16'h0002}}), .addr(1));
+    writeScalers(.mvu(0), .word({BSBANKW{16'h0003}}), .addr(2));
+    writeBiases(.mvu(0), .word({BSBANKW{32'h00000000}}), .addr(0));
+    writeBiases(.mvu(0), .word({BSBANKW{32'h00000001}}), .addr(1));
+    writeBiases(.mvu(0), .word({BSBANKW{32'h00000002}}), .addr(2));
+    gemvTests(.mvu(0), .omvu('b00000001), .scaler(1));
+
+/*
     // Run signed gemv tests, mvu0 -> mvu0
     print_banner("Signed GEMV tests: mvu0 -> mvu0");
     gemvSignedTests(.mvu(0), .omvu('b00000001), .scaler(1));

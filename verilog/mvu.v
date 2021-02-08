@@ -331,7 +331,7 @@ generate for (i=0; i < N; i=i+1) begin: scalerarray
         .clr(scaler_clr),
         .a(shacc_out[i]),
         .b(rds_word[i*BSCALERB +: BSCALERB]),
-        .c(rdb_word[i*BSCALERC +: BSCALERC]),
+        .c(rdb_word[i*BBIAS +: BSCALERC]),
         .d({BSCALERD{1'b0}}),
         .p(scaler_out[i])
     );

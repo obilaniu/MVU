@@ -364,6 +364,10 @@ wire[        NMVU-1 : 0] wagu_on_j3;        // Indicates when a weight address j
 wire[        NMVU-1 : 0] wagu_on_j4;        // Indicates when a weight address jump 4 happens
 wire[        NMVU-1 : 0] scaleragu_step;    // Steps the scaler memory AGU
 wire[        NMVU-1 : 0] biasagu_step;      // Steps the bias memory AGU
+wire[        NMVU-1 : 0] scaleragu_clr;     // Clears the state of the Scaler memory AGU
+wire[        NMVU-1 : 0] biasagu_clr;       // Clears the state of the bias memory AGU
+wire[        NMVU-1 : 0] scaleragu_clr_dly; // Clears the state of the Scaler memory AGU
+wire[        NMVU-1 : 0] biasagu_clr_dly;   // Clears the state of the bias memory AGU
 
 
 
@@ -412,6 +416,10 @@ assign rdi_addr         = 0;
 
 assign rdd_en           = run;                              // MVU reads when running
 
+// Scaler/bias memory signals
+assign rds_en           = run;
+assign rdb_en           = run;
+
 // TODO: WIRE THESE UP TO SOMETHING USEFUL
 assign outload          = 0;
 assign quant_stall      = 0;
@@ -427,6 +435,8 @@ assign controller_clr   = {NMVU{!rst_n}};
 assign inagu_clr        = {NMVU{!rst_n}} | start_q;
 assign outagu_clr       = {NMVU{!rst_n}};
 assign shacc_clr_int    = {NMVU{!rst_n}} | shacc_clr;       // Clear the accumulator
+assign scaleragu_clr    = {NMVU{!rst_n}} | scaleragu_clr_dly;
+assign biasagu_clr      = {NMVU{!rst_n}} | biasagu_clr_dly;
 assign scaler_clr       = {NMVU{!rst_n}};
 assign quant_clr_int    = {NMVU{!rst_n}} | quant_clr;
 
@@ -619,22 +629,23 @@ end endgenerate
 
 // Scaler and Bias memory address generation units
 generate for(i = 0; i < NMVU; i = i+1) begin: scalarbiasaguarray
+
     agu #(
         .BWADDR     (BSBANKA),
         .BWLENGTH   (BLENGTH)
     ) scaleragu_unit (
         .clk        (clk),
-        .clr        (!rst_n),
+        .clr        (scaleragu_clr),
         .step       (scaleragu_step[i]),
-        .l0         (slength_0_q[i]),
-        .l1         (slength_1_q[i]),
-        .l2         ('d0),
-        .l3         ('d0),
-        .j0         ('d1),
-        .j1         (sstride_0_q[i][BSBANKA-1 : 0]),
-        .j2         (sstride_1_q[i][BSBANKA-1 : 0]),
-        .j3         (sstride_1_q[i][BSBANKA-1 : 0]),            // Cheating
-        .j4         (sstride_1_q[i][BSBANKA-1 : 0]),            // Cheating
+        .l0         ('d0),
+        .l1         ('d0),
+        .l2         (slength_0_q[i]),
+        .l3         (slength_1_q[i]),
+        .j0         ('d0),
+        .j1         ('d0),
+        .j2         ('d0),
+        .j3         (sstride_0_q[i][BSBANKA-1 : 0]),            // TODO: come up with better numbering scheme
+        .j4         (sstride_1_q[i][BSBANKA-1 : 0]),
         .addr_out   (rds_addr_offset[i]),
         .z0_out     (),
         .z1_out     (),
@@ -647,24 +658,22 @@ generate for(i = 0; i < NMVU; i = i+1) begin: scalarbiasaguarray
         .on_j4      ()
     );
 
-    assign rds_addr[i*BSBANKA +: BSBANKA] = sbaseaddr_q[i] + rds_addr_offset[i];
-
     agu #(
         .BWADDR     (BBBANKA),
         .BWLENGTH   (BLENGTH)
     ) biasagu_unit (
         .clk        (clk),
-        .clr        (!rst_n),
-        .step       (biasagu_step[i]),
-        .l0         (blength_0_q[i]),
-        .l1         (blength_1_q[i]),
-        .l2         ('d0),
-        .l3         ('d0),
-        .j0         ('d1),
-        .j1         (bstride_0_q[i][BBBANKA-1 : 0]),
-        .j2         (bstride_1_q[i][BBBANKA-1 : 0]),
-        .j3         (bstride_1_q[i][BBBANKA-1 : 0]),            // Cheating
-        .j4         (bstride_1_q[i][BBBANKA-1 : 0]),            // Cheating
+        .clr        (scaleragu_clr),
+        .step       (scaleragu_step[i]),
+        .l0         ('d0),
+        .l1         ('d0),
+        .l2         (blength_0_q[i]),
+        .l3         (blength_1_q[i]),
+        .j0         ('d0),
+        .j1         ('d0),
+        .j2         ('d0),
+        .j3         (bstride_0_q[i][BBBANKA-1 : 0]),            // TODO: come up with better numbering scheme
+        .j4         (bstride_1_q[i][BBBANKA-1 : 0]),
         .addr_out   (rdb_addr_offset[i]),
         .z0_out     (),
         .z1_out     (),
@@ -677,6 +686,7 @@ generate for(i = 0; i < NMVU; i = i+1) begin: scalarbiasaguarray
         .on_j4      ()
     );
 
+    assign rds_addr[i*BSBANKA +: BSBANKA] = sbaseaddr_q[i] + rds_addr_offset[i];
     assign rdb_addr[i*BBBANKA +: BBBANKA] = bbaseaddr_q[i] + rdb_addr_offset[i];
 
 end endgenerate
@@ -796,6 +806,26 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     );
 
     shiftreg #(
+        .N      (VVPSTAGES + MEMRDLATENCY)      // TODO: find a better way to re-time this
+    ) scaleragu_step_delayarrayunit (
+        .clk    (clk), 
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (agu_shacc_done[i]),
+        .out    (scaleragu_step[i])
+    );
+
+    shiftreg #(
+        .N      (VVPSTAGES + MEMRDLATENCY)      // TODO: find a better way to re-time this
+    ) scaleragu_clr_delayarrayunit (
+        .clk    (clk), 
+        .clr    (~rst_n),
+        .step   (1'b1),
+        .in     (start_q[i]),
+        .out    (scaleragu_clr_dly[i])
+    );
+
+    shiftreg #(
         .N      (SCALERLATENCY+MAXPOOLSTAGES)
     ) maxpool_done_delayarrayunit (
         .clk    (clk),
@@ -875,7 +905,7 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .wrs_addr       (wrs_addr                               ),
             .wrs_word       (wrs_word                               ),
             .rdb_en         (rdb_en[i]                              ),
-            .rdb_addr       (rds_addr[i*BBBANKA +: BBBANKA]         ),
+            .rdb_addr       (rdb_addr[i*BBBANKA +: BBBANKA]         ),
             .wrb_en         (wrb_en[i]                              ),
             .wrb_addr       (wrb_addr                               ),
             .wrb_word       (wrb_word                               )
