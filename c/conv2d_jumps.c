@@ -336,20 +336,20 @@ void setConv2dlineValid()
     woffset = 0;                                                                  // Filter pointer offset
     slength[0] = 0;                                                               // Don't need this inner loop
     slength[1] = 0;                                                               // Don't need this inner loop
-    slength[2] = 0;                                                               // Don't need this inner loop
-    slength[3] = Fc-1;                                                            // 
+    slength[2] = 0;                                                               // Don't need this inner loop. NOTE: this is length0 in the HW
+    slength[3] = Fc-1;                                                            // NOTE: this is length1 in the HW
     sjump[0] = 0;                                                                 s_jump_str[0] = (char *)"";
     sjump[1] = 0;                                                                 s_jump_str[1] = (char *)"";
-    sjump[2] = 1;                                                                 s_jump_str[2] = (char*)"Move to next channel block";
-    sjump[3] = -Fc+1;                                                             s_jump_str[3] = (char*)"Move back to first channel block";
-    blength[0] = 0;                                                               // 
-    blength[1] = 0;                                                               // 
-    blength[2] = 0;                                                               // 
-    blength[3] = Fc-1;
+    sjump[2] = 1;                                                                 s_jump_str[2] = (char*)"Move to next channel block";          // NOTE: this is jump/stride 0 in the HW
+    sjump[3] = -Fc+1;                                                             s_jump_str[3] = (char*)"Move back to first channel block";    // NOTE: this is jump/stride 1 in the HW
+    blength[0] = 0;                                                               // Don't need this inner loop
+    blength[1] = 0;                                                               // Don't need this inner loop
+    blength[2] = 0;                                                               // Don't need this inner loop
+    blength[3] = Fc-1;                                                            // NOTE: this is length1 in the HW
     bjump[0] = 0;                                                                 b_jump_str[0] = (char*)"";
     bjump[1] = 0;                                                                 b_jump_str[1] = (char*)"";
-    bjump[2] = 1;                                                                 b_jump_str[2] = (char*)"Move to next channel block";
-    bjump[3] = -Fc+1;                                                             b_jump_str[3] = (char*)"Move back to first channel block";
+    bjump[2] = 1;                                                                 b_jump_str[2] = (char*)"Move to next channel block";          // NOTE: this is jump/stride 0 in the HW
+    bjump[3] = -Fc+1;                                                             b_jump_str[3] = (char*)"Move back to first channel block";    // NOTE: this is jump/stride 1 in the HW
 }
 
 
