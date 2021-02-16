@@ -9,20 +9,20 @@ module inagu(
     clr,
     en,
     iprecision,
-    istride0,
-    istride1,
-    istride2,
-    istride3,
+    ijump0,
+    ijump1,
+    ijump2,
+    ijump3,
     ilength0,
     ilength1,
     ilength2,
     ilength3,
     ibaseaddr,
     wprecision,
-    wstride0,
-    wstride1,
-    wstride2,
-    wstride3,
+    wjump0,
+    wjump1,
+    wjump2,
+    wjump3,
     wlength0,
     wlength1,
     wlength2,
@@ -53,23 +53,23 @@ input  wire                 clr;            // Clear
 input  wire                 en;             // Enable
 input  wire[   BPREC-1 : 0] iprecision;     // Input Data Precision
 input  wire[   BPREC-1 : 0] wprecision;     // Weight Precision
-input  wire[ BDBANKA-1 : 0] istride0;       // Input Data Stride: dimension 0
-input  wire[ BDBANKA-1 : 0] istride1;       // Input Data Stride: dimension 1
-input  wire[ BDBANKA-1 : 0] istride2;       // Input Data Stride: dimension 2
-input  wire[ BDBANKA-1 : 0] istride3;       // Input Data Stride: dimension 3
-input  wire[BWLENGTH-1 : 0] ilength0;       // Input Data Length: dimension 0
-input  wire[BWLENGTH-1 : 0] ilength1;       // Input Data Length: dimension 1
-input  wire[BWLENGTH-1 : 0] ilength2;       // Input Data Length: dimension 2
-input  wire[BWLENGTH-1 : 0] ilength3;       // Input Data Length: dimension 3
+input  wire[ BDBANKA-1 : 0] ijump0;         // Input Data jump: 0
+input  wire[ BDBANKA-1 : 0] ijump1;         // Input Data jump: 1
+input  wire[ BDBANKA-1 : 0] ijump2;         // Input Data jump: 2
+input  wire[ BDBANKA-1 : 0] ijump3;         // Input Data jump: 3
+input  wire[BWLENGTH-1 : 0] ilength0;       // Input Data Length: 0
+input  wire[BWLENGTH-1 : 0] ilength1;       // Input Data Length: 1
+input  wire[BWLENGTH-1 : 0] ilength2;       // Input Data Length: 2
+input  wire[BWLENGTH-1 : 0] ilength3;       // Input Data Length: 3
 input  wire[ BDBANKA-1 : 0] ibaseaddr;      // Input data Base address
-input  wire[ BWBANKA-1 : 0] wstride0;       // Weight Stride: dimension 0
-input  wire[ BWBANKA-1 : 0] wstride1;       // Weight Stride: dimension 1
-input  wire[ BWBANKA-1 : 0] wstride2;       // Weight Stride: dimension 2
-input  wire[ BWBANKA-1 : 0] wstride3;       // Weight Stride: dimension 3
-input  wire[BWLENGTH-1 : 0] wlength0;       // Weight Length: dimension 0
-input  wire[BWLENGTH-1 : 0] wlength1;       // Weight Length: dimension 1
-input  wire[BWLENGTH-1 : 0] wlength2;       // Weight Length: dimension 2
-input  wire[BWLENGTH-1 : 0] wlength3;       // Weight Length: dimension 3
+input  wire[ BWBANKA-1 : 0] wjump0;         // Weight jump: 0
+input  wire[ BWBANKA-1 : 0] wjump1;         // Weight jump: 1
+input  wire[ BWBANKA-1 : 0] wjump2;         // Weight jump: 2
+input  wire[ BWBANKA-1 : 0] wjump3;         // Weight jump: 3
+input  wire[BWLENGTH-1 : 0] wlength0;       // Weight Length: 0
+input  wire[BWLENGTH-1 : 0] wlength1;       // Weight Length: 1
+input  wire[BWLENGTH-1 : 0] wlength2;       // Weight Length: 2
+input  wire[BWLENGTH-1 : 0] wlength3;       // Weight Length: 3
 input  wire[ BWBANKA-1 : 0] wbaseaddr;      // Weight Base address
 output wire[ BDBANKA-1 : 0] iaddr_out;      // Input Data Address generated
 output wire[ BWBANKA-1 : 0] waddr_out;      // Weight Address generated
@@ -119,10 +119,10 @@ agu #(
     .l2         (ilength2),
     .l3         (ilength3),
     .j0         (dagu_j0),
-    .j1         (istride0),
-    .j2         (istride1),
-    .j3         (istride2),
-    .j4         (istride3),
+    .j1         (ijump0),
+    .j2         (ijump1),
+    .j3         (ijump2),
+    .j4         (ijump3),
     .addr_out   (dagu_addr_out),
     .z0_out     (),
     .z1_out     (),
@@ -148,10 +148,10 @@ agu #(
     .l2         (wlength2),
     .l3         (wlength3),
     .j0         (wagu_j0),
-    .j1         (wstride0),
-    .j2         (wstride1),
-    .j3         (wstride2),
-    .j4         (wstride3),
+    .j1         (wjump0),
+    .j2         (wjump1),
+    .j3         (wjump2),
+    .j4         (wjump3),
     .addr_out   (wagu_addr_out),
     .z0_out     (wagu_z0_out),
     .z1_out     (wagu_z1_out),

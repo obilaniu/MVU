@@ -31,18 +31,18 @@ module mvutop(  clk,
                 ibaseaddr,
                 obaseaddr,
                 omvusel,
-                wstride_0,
-                wstride_1,
-                wstride_2,
-                wstride_3,
-                istride_0,
-                istride_1,
-                istride_2,
-                istride_3,
-                ostride_0,
-                ostride_1,
-                ostride_2,
-                ostride_3,
+                wjump_0,
+                wjump_1,
+                wjump_2,
+                wjump_3,
+                ijump_0,
+                ijump_1,
+                ijump_2,
+                ijump_3,
+                ojump_0,
+                ojump_1,
+                ojump_2,
+                ojump_3,
                 wlength_0,
                 wlength_1,
                 wlength_2,
@@ -94,7 +94,7 @@ localparam BCNTDWN	    = 29;			// Bitwidth of the countdown ports
 localparam BPREC 	    = 6;			// Bitwidth of the precision ports
 localparam BBWADDR	    = 9;			// Bitwidth of the weight base address ports
 localparam BBDADDR	    = 15;			// Bitwidth of the data base address ports
-localparam BSTRIDE	    = 15;			// Bitwidth of the stride ports
+localparam BJUMP	    = 15;			// Bitwidth of the jump ports
 localparam BLENGTH	    = 15;			// Bitwidth of the length ports
 localparam BSCALERB     = 16;           // Bitwidth of the scaler parameter
 localparam VVPSTAGES    = 3;            // Number of stages in the VVP pipeline
@@ -136,30 +136,30 @@ input  wire[  NMVU*BBWADDR-1 : 0] wbaseaddr;            // Config: weight memory
 input  wire[  NMVU*BBDADDR-1 : 0] ibaseaddr;            // Config: data memory base address for input
 input  wire[  NMVU*BBDADDR-1 : 0] obaseaddr;            // Config: data memory base address for output
 input  wire[     NMVU*NMVU-1 : 0] omvusel;	    		// Config: MVU selector bits for output
-input  wire[  NMVU*BSTRIDE-1 : 0] wstride_0;            // Config: weight stride in dimension 0 (x)
-input  wire[  NMVU*BSTRIDE-1 : 0] wstride_1;            // Config: weight stride in dimension 1 (y)
-input  wire[  NMVU*BSTRIDE-1 : 0] wstride_2;            // Config: weight stride in dimension 2 (z)
-input  wire[  NMVU*BSTRIDE-1 : 0] wstride_3;            // Config: weight stride in dimension 3 (w)
-input  wire[  NMVU*BSTRIDE-1 : 0] istride_0;            // Config: input stride in dimension 0 (x)
-input  wire[  NMVU*BSTRIDE-1 : 0] istride_1;            // Config: input stride in dimension 1 (y)
-input  wire[  NMVU*BSTRIDE-1 : 0] istride_2;            // Config: input stride in dimension 2 (z)
-input  wire[  NMVU*BSTRIDE-1 : 0] istride_3;            // Config: input stride in dimension 3 (w)
-input  wire[  NMVU*BSTRIDE-1 : 0] ostride_0;            // Config: output stride in dimension 0 (x)
-input  wire[  NMVU*BSTRIDE-1 : 0] ostride_1;            // Config: output stride in dimension 1 (y)
-input  wire[  NMVU*BSTRIDE-1 : 0] ostride_2;            // Config: output stride in dimension 2 (z)
-input  wire[  NMVU*BSTRIDE-1 : 0] ostride_3;            // Config: output stride in dimension 3 (w)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_0;            // Config: weight length in dimension 0 (x)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_1;            // Config: weight length in dimension 1 (y)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_2;            // Config: weight length in dimension 2 (z)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_3;            // Config: weight length in dimension 3 (w)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_0;            // Config: input length in dimension 0 (x)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_1;            // Config: input length in dimension 1 (y)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_2;            // Config: input length in dimension 2 (z)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_3;            // Config: input length in dimension 3 (w)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_0;            // Config: output length in dimension 0 (x)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_1;            // Config: output length in dimension 1 (y)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_2;            // Config: output length in dimension 2 (z)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_3;            // Config: output length in dimension 3 (w)
+input  wire[    NMVU*BJUMP-1 : 0] wjump_0;            // Config: weight jump 0 (x)
+input  wire[    NMVU*BJUMP-1 : 0] wjump_1;            // Config: weight jump 1 (y)
+input  wire[    NMVU*BJUMP-1 : 0] wjump_2;            // Config: weight jump 2 (z)
+input  wire[    NMVU*BJUMP-1 : 0] wjump_3;            // Config: weight jump 3 (w)
+input  wire[    NMVU*BJUMP-1 : 0] ijump_0;            // Config: input jump 0 (x)
+input  wire[    NMVU*BJUMP-1 : 0] ijump_1;            // Config: input jump 1 (y)
+input  wire[    NMVU*BJUMP-1 : 0] ijump_2;            // Config: input jump 2 (z)
+input  wire[    NMVU*BJUMP-1 : 0] ijump_3;            // Config: input jump 3 (w)
+input  wire[    NMVU*BJUMP-1 : 0] ojump_0;            // Config: output jump 0 (x)
+input  wire[    NMVU*BJUMP-1 : 0] ojump_1;            // Config: output jump 1 (y)
+input  wire[    NMVU*BJUMP-1 : 0] ojump_2;            // Config: output jump 2 (z)
+input  wire[    NMVU*BJUMP-1 : 0] ojump_3;            // Config: output jump 3 (w)
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_0;            // Config: weight length 0 (x)
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_1;            // Config: weight length 1 (y)
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_2;            // Config: weight length 2 (z)
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_3;            // Config: weight length 3 (w)
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_0;            // Config: input length 0 (x)
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_1;            // Config: input length 1 (y)
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_2;            // Config: input length 2 (z)
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_3;            // Config: input length 3 (w)
+input  wire[  NMVU*BLENGTH-1 : 0] olength_0;            // Config: output length 0 (x)
+input  wire[  NMVU*BLENGTH-1 : 0] olength_1;            // Config: output length 1 (y)
+input  wire[  NMVU*BLENGTH-1 : 0] olength_2;            // Config: output length 2 (z)
+input  wire[  NMVU*BLENGTH-1 : 0] olength_3;            // Config: output length 3 (w)
 input  wire[ NMVU*BSCALERB-1 : 0] scaler_b;             // Config: multiplicative scaler (operand 'b')
 input  wire[   NMVU*NJUMPS-1 : 0] shacc_load_sel;       // Config: select jump trigger for shift/accumultor load
 
@@ -191,30 +191,30 @@ reg[   BBWADDR-1 : 0] wbaseaddr_q       [NMVU-1 : 0];           // Config: weigh
 reg[   BBDADDR-1 : 0] ibaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for input
 reg[   BBDADDR-1 : 0] obaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for output
 reg[      NMVU-1 : 0] omvusel_q         [NMVU-1 : 0];    		// Config: MVU selection bits for output
-reg[   BWBANKA-1 : 0] wstride_0_q       [NMVU-1 : 0];           // Config: weight stride in dimension 0 (x)
-reg[   BWBANKA-1 : 0] wstride_1_q       [NMVU-1 : 0];           // Config: weight stride in dimension 1 (y)
-reg[   BWBANKA-1 : 0] wstride_2_q       [NMVU-1 : 0];           // Config: weight stride in dimension 2 (z)
-reg[   BWBANKA-1 : 0] wstride_3_q       [NMVU-1 : 0];           // Config: weight stride in dimension 3 (w)
-reg[   BDBANKA-1 : 0] istride_0_q       [NMVU-1 : 0];           // Config: input stride in dimension 0 (x)
-reg[   BDBANKA-1 : 0] istride_1_q       [NMVU-1 : 0];           // Config: input stride in dimension 1 (y)
-reg[   BDBANKA-1 : 0] istride_2_q       [NMVU-1 : 0];           // Config: input stride in dimension 2 (z)
-reg[   BDBANKA-1 : 0] istride_3_q       [NMVU-1 : 0];           // Config: input stride in dimension 3 (w)
-reg[   BDBANKA-1 : 0] ostride_0_q       [NMVU-1 : 0];           // Config: output stride in dimension 0 (x)
-reg[   BDBANKA-1 : 0] ostride_1_q       [NMVU-1 : 0];           // Config: output stride in dimension 1 (y)
-reg[   BDBANKA-1 : 0] ostride_2_q       [NMVU-1 : 0];           // Config: output stride in dimension 2 (z)
-reg[   BDBANKA-1 : 0] ostride_3_q       [NMVU-1 : 0];           // Config: output stride in dimension 3 (w)
-reg[   BLENGTH-1 : 0] wlength_0_q       [NMVU-1 : 0];           // Config: weight length in dimension 0 (x)
-reg[   BLENGTH-1 : 0] wlength_1_q       [NMVU-1 : 0];           // Config: weight length in dimension 1 (y)
-reg[   BLENGTH-1 : 0] wlength_2_q       [NMVU-1 : 0];           // Config: weight length in dimension 2 (z)
-reg[   BLENGTH-1 : 0] wlength_3_q       [NMVU-1 : 0];           // Config: weight length in dimension 3 (w)
-reg[   BLENGTH-1 : 0] ilength_0_q       [NMVU-1 : 0];           // Config: input length in dimension 0 (x)
-reg[   BLENGTH-1 : 0] ilength_1_q       [NMVU-1 : 0];           // Config: input length in dimension 1 (y)
-reg[   BLENGTH-1 : 0] ilength_2_q       [NMVU-1 : 0];           // Config: input length in dimension 2 (z)
-reg[   BLENGTH-1 : 0] ilength_3_q       [NMVU-1 : 0];           // Config: input length in dimension 3 (w)
-reg[   BLENGTH-1 : 0] olength_0_q       [NMVU-1 : 0];           // Config: output length in dimension 0 (x)
-reg[   BLENGTH-1 : 0] olength_1_q       [NMVU-1 : 0];           // Config: output length in dimension 1 (y)
-reg[   BLENGTH-1 : 0] olength_2_q       [NMVU-1 : 0];           // Config: output length in dimension 2 (z)
-reg[   BLENGTH-1 : 0] olength_3_q       [NMVU-1 : 0];           // Config: output length in dimension 3 (w)
+reg[   BWBANKA-1 : 0] wjump_0_q         [NMVU-1 : 0];           // Config: weight jump 0
+reg[   BWBANKA-1 : 0] wjump_1_q         [NMVU-1 : 0];           // Config: weight jump 1
+reg[   BWBANKA-1 : 0] wjump_2_q         [NMVU-1 : 0];           // Config: weight jump 2
+reg[   BWBANKA-1 : 0] wjump_3_q         [NMVU-1 : 0];           // Config: weight jump 3
+reg[   BDBANKA-1 : 0] ijump_0_q         [NMVU-1 : 0];           // Config: input jump 0
+reg[   BDBANKA-1 : 0] ijump_1_q         [NMVU-1 : 0];           // Config: input jump 1
+reg[   BDBANKA-1 : 0] ijump_2_q         [NMVU-1 : 0];           // Config: input jump 2
+reg[   BDBANKA-1 : 0] ijump_3_q         [NMVU-1 : 0];           // Config: input jump 3
+reg[   BDBANKA-1 : 0] ojump_0_q         [NMVU-1 : 0];           // Config: output jump 0
+reg[   BDBANKA-1 : 0] ojump_1_q         [NMVU-1 : 0];           // Config: output jump 1
+reg[   BDBANKA-1 : 0] ojump_2_q         [NMVU-1 : 0];           // Config: output jump 2
+reg[   BDBANKA-1 : 0] ojump_3_q         [NMVU-1 : 0];           // Config: output jump 3
+reg[   BLENGTH-1 : 0] wlength_0_q       [NMVU-1 : 0];           // Config: weight length 0
+reg[   BLENGTH-1 : 0] wlength_1_q       [NMVU-1 : 0];           // Config: weight length 1
+reg[   BLENGTH-1 : 0] wlength_2_q       [NMVU-1 : 0];           // Config: weight length 2
+reg[   BLENGTH-1 : 0] wlength_3_q       [NMVU-1 : 0];           // Config: weight length 3
+reg[   BLENGTH-1 : 0] ilength_0_q       [NMVU-1 : 0];           // Config: input length 0
+reg[   BLENGTH-1 : 0] ilength_1_q       [NMVU-1 : 0];           // Config: input length 1
+reg[   BLENGTH-1 : 0] ilength_2_q       [NMVU-1 : 0];           // Config: input length 2
+reg[   BLENGTH-1 : 0] ilength_3_q       [NMVU-1 : 0];           // Config: input length 3
+reg[   BLENGTH-1 : 0] olength_0_q       [NMVU-1 : 0];           // Config: output length 0
+reg[   BLENGTH-1 : 0] olength_1_q       [NMVU-1 : 0];           // Config: output length 1
+reg[   BLENGTH-1 : 0] olength_2_q       [NMVU-1 : 0];           // Config: output length 2
+reg[   BLENGTH-1 : 0] olength_3_q       [NMVU-1 : 0];           // Config: output length 3
 reg[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];           // Config: multiplicative scaler (operand 'b')
 reg[    NJUMPS-1 : 0] shacc_load_sel_q  [NMVU-1 : 0];           // Config: select jump trigger for shift/accumultor load
 
@@ -396,18 +396,18 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             ibaseaddr_q[i]      <= 0;
             obaseaddr_q[i]      <= 0;
             omvusel_q[i]        <= 0;
-            wstride_0_q[i]      <= 0;
-            wstride_1_q[i]      <= 0;
-            wstride_2_q[i]      <= 0;
-            wstride_3_q[i]      <= 0;
-            istride_0_q[i]      <= 0;
-            istride_1_q[i]      <= 0;
-            istride_2_q[i]      <= 0;
-            istride_3_q[i]      <= 0;
-            ostride_0_q[i]      <= 0;
-            ostride_1_q[i]      <= 0;
-            ostride_2_q[i]      <= 0;
-            ostride_3_q[i]      <= 0;
+            wjump_0_q[i]      <= 0;
+            wjump_1_q[i]      <= 0;
+            wjump_2_q[i]      <= 0;
+            wjump_3_q[i]      <= 0;
+            ijump_0_q[i]      <= 0;
+            ijump_1_q[i]      <= 0;
+            ijump_2_q[i]      <= 0;
+            ijump_3_q[i]      <= 0;
+            ojump_0_q[i]      <= 0;
+            ojump_1_q[i]      <= 0;
+            ojump_2_q[i]      <= 0;
+            ojump_3_q[i]      <= 0;
             wlength_0_q[i]      <= 0;
             wlength_1_q[i]      <= 0;
             wlength_2_q[i]      <= 0;
@@ -434,18 +434,18 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 ibaseaddr_q[i]      <= ibaseaddr    [i*BBDADDR +: BBDADDR];
                 obaseaddr_q[i]      <= obaseaddr    [i*BBDADDR +: BBDADDR];
                 omvusel_q[i]        <= omvusel      [i*NMVU +: NMVU];
-                wstride_0_q[i]      <= wstride_0    [i*BSTRIDE +: BWBANKA];
-                wstride_1_q[i]      <= wstride_1    [i*BSTRIDE +: BWBANKA];
-                wstride_2_q[i]      <= wstride_2    [i*BSTRIDE +: BWBANKA];
-                wstride_3_q[i]      <= wstride_3    [i*BSTRIDE +: BWBANKA];
-                istride_0_q[i]      <= istride_0    [i*BSTRIDE +: BDBANKA];
-                istride_1_q[i]      <= istride_1    [i*BSTRIDE +: BDBANKA];
-                istride_2_q[i]      <= istride_2    [i*BSTRIDE +: BDBANKA];
-                istride_3_q[i]      <= istride_3    [i*BSTRIDE +: BDBANKA];
-                ostride_0_q[i]      <= ostride_0    [i*BSTRIDE +: BDBANKA];
-                ostride_1_q[i]      <= ostride_1    [i*BSTRIDE +: BDBANKA];
-                ostride_2_q[i]      <= ostride_2    [i*BSTRIDE +: BDBANKA];
-                ostride_3_q[i]      <= ostride_3    [i*BSTRIDE +: BDBANKA];
+                wjump_0_q[i]        <= wjump_0      [i*BJUMP +: BWBANKA];
+                wjump_1_q[i]        <= wjump_1      [i*BJUMP +: BWBANKA];
+                wjump_2_q[i]        <= wjump_2      [i*BJUMP +: BWBANKA];
+                wjump_3_q[i]        <= wjump_3      [i*BJUMP +: BWBANKA];
+                ijump_0_q[i]        <= ijump_0      [i*BJUMP +: BDBANKA];
+                ijump_1_q[i]        <= ijump_1      [i*BJUMP +: BDBANKA];
+                ijump_2_q[i]        <= ijump_2      [i*BJUMP +: BDBANKA];
+                ijump_3_q[i]        <= ijump_3      [i*BJUMP +: BDBANKA];
+                ojump_0_q[i]        <= ojump_0      [i*BJUMP +: BDBANKA];
+                ojump_1_q[i]        <= ojump_1      [i*BJUMP +: BDBANKA];
+                ojump_2_q[i]        <= ojump_2      [i*BJUMP +: BDBANKA];
+                ojump_3_q[i]        <= ojump_3      [i*BJUMP +: BDBANKA];
                 wlength_0_q[i]      <= wlength_0    [i*BLENGTH +: BLENGTH];
                 wlength_1_q[i]      <= wlength_1    [i*BLENGTH +: BLENGTH];
                 wlength_2_q[i]      <= wlength_2    [i*BLENGTH +: BLENGTH];
@@ -495,20 +495,20 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .clr        (inagu_clr[i]),
         .en         (run[i]),
         .iprecision (iprecision_q[i]),
-        .istride0   (istride_0_q[i]),
-        .istride1   (istride_1_q[i]),
-        .istride2   (istride_2_q[i]),
-        .istride3   (istride_3_q[i]),
+        .ijump0     (ijump_0_q[i]),
+        .ijump1     (ijump_1_q[i]),
+        .ijump2     (ijump_2_q[i]),
+        .ijump3     (ijump_3_q[i]),
         .ilength0   (ilength_0_q[i]),
         .ilength1   (ilength_1_q[i]),
         .ilength2   (ilength_2_q[i]),
         .ilength3   (ilength_3_q[i]),
         .ibaseaddr  (ibaseaddr_q[i]),
         .wprecision (wprecision_q[i]),
-        .wstride0   (wstride_0_q[i]),
-        .wstride1   (wstride_1_q[i]),
-        .wstride2   (wstride_2_q[i]),
-        .wstride3   (wstride_3_q[i]),
+        .wjump0     (wjump_0_q[i]),
+        .wjump1     (wjump_1_q[i]),
+        .wjump2     (wjump_2_q[i]),
+        .wjump3     (wjump_3_q[i]),
         .wlength0   (wlength_0_q[i]),
         .wlength1   (wlength_1_q[i]),
         .wlength2   (wlength_2_q[i]),

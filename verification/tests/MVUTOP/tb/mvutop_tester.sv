@@ -34,7 +34,7 @@ module mvutop_tester();
     localparam BPREC 	= 6;			// Bitwidth of the precision ports
     localparam BBWADDR	= 9;			// Bitwidth of the weight base address ports
     localparam BBDADDR	= 15;			// Bitwidth of the data base address ports
-    localparam BSTRIDE	= 15;			// Bitwidth of the stride ports
+    localparam BJUMP	= 15;			// Bitwidth of the jump ports
     localparam BLENGTH	= 15;			// Bitwidth of the length ports
     localparam BSCALERB = 16;           // Bitwidth of multiplicative scaler (operand 'b')
     localparam BSCALERP = 48;           // Bitwidth of the scaler output
@@ -84,18 +84,18 @@ module mvutop_tester();
     reg[  NMVU*BWBANKA-1 : 0] wrw_addr;         // Weight memory: write address
     reg[  NMVU*BWBANKW-1 : 0] wrw_word;	        // Weight memory: write word
     reg[          NMVU-1 : 0] wrw_en;           // Weight memory: write enable
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_0;        // Config: weight stride in dimension 0 (x)
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_1;        // Config: weight stride in dimension 1 (y)
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_2;        // Config: weight stride in dimension 2 (z)
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_3;        // Config: weight stride in dimension 3 (w)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_0;        // Config: input stride in dimension 0 (x)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_1;        // Config: input stride in dimension 1 (y)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_2;        // Config: input stride in dimension 2 (z)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_3;        // Config: input stride in dimension 3 (w)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_0;        // Config: output stride in dimension 0 (x)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_1;        // Config: output stride in dimension 1 (y)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_2;        // Config: output stride in dimension 2 (z)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_3;        // Config: output stride in dimension 2 (w)
+    reg[  NMVU*BJUMP-1 : 0] wjump_0;            // Config: weight jump in dimension 0 (x)
+    reg[  NMVU*BJUMP-1 : 0] wjump_1;            // Config: weight jump in dimension 1 (y)
+    reg[  NMVU*BJUMP-1 : 0] wjump_2;            // Config: weight jump in dimension 2 (z)
+    reg[  NMVU*BJUMP-1 : 0] wjump_3;            // Config: weight jump in dimension 3 (w)
+    reg[  NMVU*BJUMP-1 : 0] ijump_0;            // Config: input jump in dimension 0 (x)
+    reg[  NMVU*BJUMP-1 : 0] ijump_1;            // Config: input jump in dimension 1 (y)
+    reg[  NMVU*BJUMP-1 : 0] ijump_2;            // Config: input jump in dimension 2 (z)
+    reg[  NMVU*BJUMP-1 : 0] ijump_3;            // Config: input jump in dimension 3 (w)
+    reg[  NMVU*BJUMP-1 : 0] ojump_0;            // Config: output jump in dimension 0 (x)
+    reg[  NMVU*BJUMP-1 : 0] ojump_1;            // Config: output jump in dimension 1 (y)
+    reg[  NMVU*BJUMP-1 : 0] ojump_2;            // Config: output jump in dimension 2 (z)
+    reg[  NMVU*BJUMP-1 : 0] ojump_3;            // Config: output jump in dimension 2 (w)
     reg[  NMVU*BLENGTH-1 : 0] wlength_0;        // Config: weight length in dimension 0 (x)
     reg[  NMVU*BLENGTH-1 : 0] wlength_1;        // Config: weight length in dimension 1 (y)
     reg[  NMVU*BLENGTH-1 : 0] wlength_2;        // Config: weight length in dimension 2 (z)
@@ -143,18 +143,18 @@ module mvutop_tester();
             .ibaseaddr        (ibaseaddr),
             .obaseaddr        (obaseaddr),
             .omvusel          (omvusel),
-            .wstride_0        (wstride_0),
-            .wstride_1        (wstride_1),
-            .wstride_2        (wstride_2),
-            .wstride_3        (wstride_3),
-            .istride_0        (istride_0),
-            .istride_1        (istride_1),
-            .istride_2        (istride_2),
-            .istride_3        (istride_3),
-            .ostride_0        (ostride_0),
-            .ostride_1        (ostride_1),
-            .ostride_2        (ostride_2),
-            .ostride_3        (ostride_3),
+            .wjump_0          (wjump_0),
+            .wjump_1          (wjump_1),
+            .wjump_2          (wjump_2),
+            .wjump_3          (wjump_3),
+            .ijump_0          (ijump_0),
+            .ijump_1          (ijump_1),
+            .ijump_2          (ijump_2),
+            .ijump_3          (ijump_3),
+            .ojump_0          (ojump_0),
+            .ojump_1          (ojump_1),
+            .ojump_2          (ojump_2),
+            .ojump_3          (ojump_3),
             .wlength_0        (wlength_0),
             .wlength_1        (wlength_1),
             .wlength_2        (wlength_2),
@@ -280,18 +280,18 @@ task automatic runGEMV(
     ibaseaddr[mvu*BDBANKA +: BDBANKA] = iaddr;
     obaseaddr[mvu*BDBANKA +: BDBANKA] = {obank_sel, oword_sel};
     omvusel[mvu*NMVU +: NMVU] = omvu;                           // Set the output MVUs
-    wstride_0[mvu*BSTRIDE +: BSTRIDE] = -wprec*(m_w-1);         // Move back to tile 0 of current tile row
-    wstride_1[mvu*BSTRIDE +: BSTRIDE] = wprec;                  // move 1 tile ahead to next tile row
-    wstride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    wstride_3[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    istride_0[mvu*BSTRIDE +: BSTRIDE] = -iprec*(m_w-1);         // Move back to beginning vector 
-    istride_1[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    istride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    istride_3[mvu*BSTRIDE +: BSTRIDE] = -iprec*(m_w-1);         // Set the same as istride_0
-    ostride_0[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    ostride_1[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    ostride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    ostride_3[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
+    wjump_0[mvu*BJUMP +: BJUMP] = -wprec*(m_w-1);               // Move back to tile 0 of current tile row
+    wjump_1[mvu*BJUMP +: BJUMP] = wprec;                        // move 1 tile ahead to next tile row
+    wjump_2[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
+    wjump_3[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
+    ijump_0[mvu*BJUMP +: BJUMP] = -iprec*(m_w-1);               // Move back to beginning vector 
+    ijump_1[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
+    ijump_2[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
+    ijump_3[mvu*BJUMP +: BJUMP] = -iprec*(m_w-1);               // Set the same as ijump_0
+    ojump_0[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
+    ojump_1[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
+    ojump_2[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
+    ojump_3[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
     wlength_0[mvu*BLENGTH +: BLENGTH] = m_w-1;                  // Number tiles in width minus 1
     wlength_1[mvu*BLENGTH +: BLENGTH] = wprec*iprec-1;          // number bit combinations minus 1
     wlength_2[mvu*BLENGTH +: BLENGTH] = m_h-1;                  // Number tiles in height minus 1
@@ -567,18 +567,18 @@ initial begin
     ibaseaddr = 0;
     obaseaddr = 0;
     omvusel = 0;  
-    wstride_0 = 0;
-    wstride_1 = 0;
-    wstride_2 = 0;
-    wstride_3 = 0;
-    istride_0 = 0;
-    istride_1 = 0;
-    istride_2 = 0;
-    istride_3 = 0;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    ostride_3 = 0;
+    wjump_0 = 0;
+    wjump_1 = 0;
+    wjump_2 = 0;
+    wjump_3 = 0;
+    ijump_0 = 0;
+    ijump_1 = 0;
+    ijump_2 = 0;
+    ijump_3 = 0;
+    ojump_0 = 0;
+    ojump_1 = 0;
+    ojump_2 = 0;
+    ojump_3 = 0;
     wlength_0 = 0;
     wlength_1 = 0;
     wlength_2 = 0;
