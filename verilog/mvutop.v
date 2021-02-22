@@ -35,28 +35,32 @@ module mvutop(  clk,
                 wjump_1,
                 wjump_2,
                 wjump_3,
+                wjump_4,
                 ijump_0,
                 ijump_1,
                 ijump_2,
                 ijump_3,
+                ijump_4,
                 ojump_0,
                 ojump_1,
                 ojump_2,
                 ojump_3,
-                wlength_0,
+                ojump_4,
                 wlength_1,
                 wlength_2,
                 wlength_3,
-                ilength_0,
+                wlength_4,
                 ilength_1,
                 ilength_2,
                 ilength_3,
-                olength_0,
+                ilength_4,
                 olength_1,
                 olength_2,
                 olength_3,
+                olength_4,
                 scaler_b,
                 shacc_load_sel,
+                zigzag_step_sel,
 				wrw_addr,
 				wrw_word,
 				wrw_en,
@@ -136,32 +140,36 @@ input  wire[  NMVU*BBWADDR-1 : 0] wbaseaddr;            // Config: weight memory
 input  wire[  NMVU*BBDADDR-1 : 0] ibaseaddr;            // Config: data memory base address for input
 input  wire[  NMVU*BBDADDR-1 : 0] obaseaddr;            // Config: data memory base address for output
 input  wire[     NMVU*NMVU-1 : 0] omvusel;	    		// Config: MVU selector bits for output
-input  wire[    NMVU*BJUMP-1 : 0] wjump_0;            // Config: weight jump 0 (x)
-input  wire[    NMVU*BJUMP-1 : 0] wjump_1;            // Config: weight jump 1 (y)
-input  wire[    NMVU*BJUMP-1 : 0] wjump_2;            // Config: weight jump 2 (z)
-input  wire[    NMVU*BJUMP-1 : 0] wjump_3;            // Config: weight jump 3 (w)
-input  wire[    NMVU*BJUMP-1 : 0] ijump_0;            // Config: input jump 0 (x)
-input  wire[    NMVU*BJUMP-1 : 0] ijump_1;            // Config: input jump 1 (y)
-input  wire[    NMVU*BJUMP-1 : 0] ijump_2;            // Config: input jump 2 (z)
-input  wire[    NMVU*BJUMP-1 : 0] ijump_3;            // Config: input jump 3 (w)
-input  wire[    NMVU*BJUMP-1 : 0] ojump_0;            // Config: output jump 0 (x)
-input  wire[    NMVU*BJUMP-1 : 0] ojump_1;            // Config: output jump 1 (y)
-input  wire[    NMVU*BJUMP-1 : 0] ojump_2;            // Config: output jump 2 (z)
-input  wire[    NMVU*BJUMP-1 : 0] ojump_3;            // Config: output jump 3 (w)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_0;            // Config: weight length 0 (x)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_1;            // Config: weight length 1 (y)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_2;            // Config: weight length 2 (z)
-input  wire[  NMVU*BLENGTH-1 : 0] wlength_3;            // Config: weight length 3 (w)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_0;            // Config: input length 0 (x)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_1;            // Config: input length 1 (y)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_2;            // Config: input length 2 (z)
-input  wire[  NMVU*BLENGTH-1 : 0] ilength_3;            // Config: input length 3 (w)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_0;            // Config: output length 0 (x)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_1;            // Config: output length 1 (y)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_2;            // Config: output length 2 (z)
-input  wire[  NMVU*BLENGTH-1 : 0] olength_3;            // Config: output length 3 (w)
+input  wire[    NMVU*BJUMP-1 : 0] wjump_0;              // Config: weight jump 0
+input  wire[    NMVU*BJUMP-1 : 0] wjump_1;              // Config: weight jump 1)
+input  wire[    NMVU*BJUMP-1 : 0] wjump_2;              // Config: weight jump 2
+input  wire[    NMVU*BJUMP-1 : 0] wjump_3;              // Config: weight jump 3
+input  wire[    NMVU*BJUMP-1 : 0] wjump_4;              // Config: weight jump 4
+input  wire[    NMVU*BJUMP-1 : 0] ijump_0;              // Config: input jump 0
+input  wire[    NMVU*BJUMP-1 : 0] ijump_1;              // Config: input jump 1
+input  wire[    NMVU*BJUMP-1 : 0] ijump_2;              // Config: input jump 2
+input  wire[    NMVU*BJUMP-1 : 0] ijump_3;              // Config: input jump 3
+input  wire[    NMVU*BJUMP-1 : 0] ijump_4;              // Config: input jump 4
+input  wire[    NMVU*BJUMP-1 : 0] ojump_0;              // Config: output jump 0
+input  wire[    NMVU*BJUMP-1 : 0] ojump_1;              // Config: output jump 1
+input  wire[    NMVU*BJUMP-1 : 0] ojump_2;              // Config: output jump 2
+input  wire[    NMVU*BJUMP-1 : 0] ojump_3;              // Config: output jump 3
+input  wire[    NMVU*BJUMP-1 : 0] ojump_4;              // Config: output jump 4
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_1;            // Config: weight length 1
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_2;            // Config: weight length 2
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_3;            // Config: weight length 3
+input  wire[  NMVU*BLENGTH-1 : 0] wlength_4;            // Config: weight length 4
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_1;            // Config: input length 1
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_2;            // Config: input length 2
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_3;            // Config: input length 3
+input  wire[  NMVU*BLENGTH-1 : 0] ilength_4;            // Config: input length 4
+input  wire[  NMVU*BLENGTH-1 : 0] olength_1;            // Config: output length 1
+input  wire[  NMVU*BLENGTH-1 : 0] olength_2;            // Config: output length 2
+input  wire[  NMVU*BLENGTH-1 : 0] olength_3;            // Config: output length 3
+input  wire[  NMVU*BLENGTH-1 : 0] olength_4;            // Config: output length 4
 input  wire[ NMVU*BSCALERB-1 : 0] scaler_b;             // Config: multiplicative scaler (operand 'b')
 input  wire[   NMVU*NJUMPS-1 : 0] shacc_load_sel;       // Config: select jump trigger for shift/accumultor load
+input  wire[   NMVU*NJUMPS-1 : 0] zigzag_step_sel;      // Config: select jump trigger for stepping the zig-zag address generator
 
 input  wire[  NMVU*BWBANKA-1 : 0] wrw_addr;             // Weight memory: write address
 input  wire[  NMVU*BWBANKW-1 : 0] wrw_word;             // Weight memory: write word
@@ -195,28 +203,32 @@ reg[   BWBANKA-1 : 0] wjump_0_q         [NMVU-1 : 0];           // Config: weigh
 reg[   BWBANKA-1 : 0] wjump_1_q         [NMVU-1 : 0];           // Config: weight jump 1
 reg[   BWBANKA-1 : 0] wjump_2_q         [NMVU-1 : 0];           // Config: weight jump 2
 reg[   BWBANKA-1 : 0] wjump_3_q         [NMVU-1 : 0];           // Config: weight jump 3
+reg[   BWBANKA-1 : 0] wjump_4_q         [NMVU-1 : 0];           // Config: weight jump 4
 reg[   BDBANKA-1 : 0] ijump_0_q         [NMVU-1 : 0];           // Config: input jump 0
 reg[   BDBANKA-1 : 0] ijump_1_q         [NMVU-1 : 0];           // Config: input jump 1
 reg[   BDBANKA-1 : 0] ijump_2_q         [NMVU-1 : 0];           // Config: input jump 2
 reg[   BDBANKA-1 : 0] ijump_3_q         [NMVU-1 : 0];           // Config: input jump 3
+reg[   BDBANKA-1 : 0] ijump_4_q         [NMVU-1 : 0];           // Config: input jump 4
 reg[   BDBANKA-1 : 0] ojump_0_q         [NMVU-1 : 0];           // Config: output jump 0
 reg[   BDBANKA-1 : 0] ojump_1_q         [NMVU-1 : 0];           // Config: output jump 1
 reg[   BDBANKA-1 : 0] ojump_2_q         [NMVU-1 : 0];           // Config: output jump 2
 reg[   BDBANKA-1 : 0] ojump_3_q         [NMVU-1 : 0];           // Config: output jump 3
-reg[   BLENGTH-1 : 0] wlength_0_q       [NMVU-1 : 0];           // Config: weight length 0
+reg[   BDBANKA-1 : 0] ojump_4_q         [NMVU-1 : 0];           // Config: output jump 4
 reg[   BLENGTH-1 : 0] wlength_1_q       [NMVU-1 : 0];           // Config: weight length 1
 reg[   BLENGTH-1 : 0] wlength_2_q       [NMVU-1 : 0];           // Config: weight length 2
 reg[   BLENGTH-1 : 0] wlength_3_q       [NMVU-1 : 0];           // Config: weight length 3
-reg[   BLENGTH-1 : 0] ilength_0_q       [NMVU-1 : 0];           // Config: input length 0
+reg[   BLENGTH-1 : 0] wlength_4_q       [NMVU-1 : 0];           // Config: weight length 4
 reg[   BLENGTH-1 : 0] ilength_1_q       [NMVU-1 : 0];           // Config: input length 1
 reg[   BLENGTH-1 : 0] ilength_2_q       [NMVU-1 : 0];           // Config: input length 2
 reg[   BLENGTH-1 : 0] ilength_3_q       [NMVU-1 : 0];           // Config: input length 3
-reg[   BLENGTH-1 : 0] olength_0_q       [NMVU-1 : 0];           // Config: output length 0
+reg[   BLENGTH-1 : 0] ilength_4_q       [NMVU-1 : 0];           // Config: input length 4
 reg[   BLENGTH-1 : 0] olength_1_q       [NMVU-1 : 0];           // Config: output length 1
 reg[   BLENGTH-1 : 0] olength_2_q       [NMVU-1 : 0];           // Config: output length 2
 reg[   BLENGTH-1 : 0] olength_3_q       [NMVU-1 : 0];           // Config: output length 3
+reg[   BLENGTH-1 : 0] olength_4_q       [NMVU-1 : 0];           // Config: output length 4
 reg[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];           // Config: multiplicative scaler (operand 'b')
 reg[    NJUMPS-1 : 0] shacc_load_sel_q  [NMVU-1 : 0];           // Config: select jump trigger for shift/accumultor load
+reg[    NJUMPS-1 : 0] zigzag_step_sel_q [NMVU-1 : 0];           // Config: select jump trigger for stepping the zig-zag address generator
 
 /* Local Wires */
 
@@ -400,28 +412,32 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             wjump_1_q[i]      <= 0;
             wjump_2_q[i]      <= 0;
             wjump_3_q[i]      <= 0;
+            wjump_4_q[i]      <= 0;
             ijump_0_q[i]      <= 0;
             ijump_1_q[i]      <= 0;
             ijump_2_q[i]      <= 0;
             ijump_3_q[i]      <= 0;
+            ijump_4_q[i]      <= 0;
             ojump_0_q[i]      <= 0;
             ojump_1_q[i]      <= 0;
             ojump_2_q[i]      <= 0;
             ojump_3_q[i]      <= 0;
-            wlength_0_q[i]      <= 0;
+            ojump_4_q[i]      <= 0;
             wlength_1_q[i]      <= 0;
             wlength_2_q[i]      <= 0;
             wlength_3_q[i]      <= 0;
-            ilength_0_q[i]      <= 0;
+            wlength_4_q[i]      <= 0;
             ilength_1_q[i]      <= 0;
             ilength_2_q[i]      <= 0;
             ilength_3_q[i]      <= 0;
-            olength_0_q[i]      <= 0;
+            ilength_4_q[i]      <= 0;
             olength_1_q[i]      <= 0;
             olength_2_q[i]      <= 0;
-            scaler_b_q[i]       <= 0;
             olength_3_q[i]      <= 0;
+            olength_4_q[i]      <= 0;
+            scaler_b_q[i]       <= 0;
             shacc_load_sel_q[i] <= 5'b00100;                // For 5 jumps, select the j2 by default
+            zigzag_step_sel_q[i] <= 5'b00001;               // For 5 jumps, select the j0 by default
         end else begin
             if (start[i]) begin
                 mul_mode_q[i]       <= mul_mode     [i*2 +: 2];
@@ -446,20 +462,21 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 ojump_1_q[i]        <= ojump_1      [i*BJUMP +: BDBANKA];
                 ojump_2_q[i]        <= ojump_2      [i*BJUMP +: BDBANKA];
                 ojump_3_q[i]        <= ojump_3      [i*BJUMP +: BDBANKA];
-                wlength_0_q[i]      <= wlength_0    [i*BLENGTH +: BLENGTH];
                 wlength_1_q[i]      <= wlength_1    [i*BLENGTH +: BLENGTH];
                 wlength_2_q[i]      <= wlength_2    [i*BLENGTH +: BLENGTH];
                 wlength_3_q[i]      <= wlength_3    [i*BLENGTH +: BLENGTH];
-                ilength_0_q[i]      <= ilength_0    [i*BLENGTH +: BLENGTH];
+                wlength_4_q[i]      <= wlength_4    [i*BLENGTH +: BLENGTH];
                 ilength_1_q[i]      <= ilength_1    [i*BLENGTH +: BLENGTH];
                 ilength_2_q[i]      <= ilength_2    [i*BLENGTH +: BLENGTH];
                 ilength_3_q[i]      <= ilength_3    [i*BLENGTH +: BLENGTH];
-                olength_0_q[i]      <= olength_0    [i*BLENGTH +: BLENGTH];
+                ilength_4_q[i]      <= ilength_4    [i*BLENGTH +: BLENGTH];
                 olength_1_q[i]      <= olength_1    [i*BLENGTH +: BLENGTH];
                 olength_2_q[i]      <= olength_2    [i*BLENGTH +: BLENGTH];
-                scaler_b_q[i]       <= scaler_b     [i*BSCALERB +: BSCALERB];
                 olength_3_q[i]      <= olength_3    [i*BLENGTH +: BLENGTH];
+                olength_4_q[i]      <= olength_4    [i*BLENGTH +: BLENGTH];
+                scaler_b_q[i]       <= scaler_b     [i*BSCALERB +: BSCALERB];
                 shacc_load_sel_q[i] <= shacc_load_sel[i*NJUMPS +: NJUMPS];
+                zigzag_step_sel_q[i] <= zigzag_step_sel[i*NJUMPS +: NJUMPS];
             end
         end
     end
@@ -499,21 +516,24 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .ijump1     (ijump_1_q[i]),
         .ijump2     (ijump_2_q[i]),
         .ijump3     (ijump_3_q[i]),
-        .ilength0   (ilength_0_q[i]),
+        .ijump4     (ijump_4_q[i]),
         .ilength1   (ilength_1_q[i]),
         .ilength2   (ilength_2_q[i]),
         .ilength3   (ilength_3_q[i]),
+        .ilength4   (ilength_4_q[i]),
         .ibaseaddr  (ibaseaddr_q[i]),
         .wprecision (wprecision_q[i]),
         .wjump0     (wjump_0_q[i]),
         .wjump1     (wjump_1_q[i]),
         .wjump2     (wjump_2_q[i]),
         .wjump3     (wjump_3_q[i]),
-        .wlength0   (wlength_0_q[i]),
+        .wjump4     (wjump_4_q[i]),
         .wlength1   (wlength_1_q[i]),
         .wlength2   (wlength_2_q[i]),
         .wlength3   (wlength_3_q[i]),
+        .wlength4   (wlength_4_q[i]),
         .wbaseaddr  (wbaseaddr_q[i]),
+        .zigzag_step_sel(zigzag_step_sel_q[i]),
         .iaddr_out  (rdd_addr[i*BDBANKA +: BDBANKA]),
         .waddr_out  (rdw_addr[i*BWBANKA +: BWBANKA]),
         .imsb       (d_msb[i]),
@@ -524,7 +544,6 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .wagu_on_j2 (wagu_on_j2[i]),
         .wagu_on_j3 (wagu_on_j3[i]),
         .wagu_on_j4 (wagu_on_j4[i])
-        //.shacc_done (agu_shacc_done[i])
     );
 end endgenerate
 

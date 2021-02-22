@@ -84,32 +84,36 @@ module mvutop_tester();
     reg[  NMVU*BWBANKA-1 : 0] wrw_addr;         // Weight memory: write address
     reg[  NMVU*BWBANKW-1 : 0] wrw_word;	        // Weight memory: write word
     reg[          NMVU-1 : 0] wrw_en;           // Weight memory: write enable
-    reg[  NMVU*BJUMP-1 : 0] wjump_0;            // Config: weight jump in dimension 0 (x)
-    reg[  NMVU*BJUMP-1 : 0] wjump_1;            // Config: weight jump in dimension 1 (y)
-    reg[  NMVU*BJUMP-1 : 0] wjump_2;            // Config: weight jump in dimension 2 (z)
-    reg[  NMVU*BJUMP-1 : 0] wjump_3;            // Config: weight jump in dimension 3 (w)
-    reg[  NMVU*BJUMP-1 : 0] ijump_0;            // Config: input jump in dimension 0 (x)
-    reg[  NMVU*BJUMP-1 : 0] ijump_1;            // Config: input jump in dimension 1 (y)
-    reg[  NMVU*BJUMP-1 : 0] ijump_2;            // Config: input jump in dimension 2 (z)
-    reg[  NMVU*BJUMP-1 : 0] ijump_3;            // Config: input jump in dimension 3 (w)
-    reg[  NMVU*BJUMP-1 : 0] ojump_0;            // Config: output jump in dimension 0 (x)
-    reg[  NMVU*BJUMP-1 : 0] ojump_1;            // Config: output jump in dimension 1 (y)
-    reg[  NMVU*BJUMP-1 : 0] ojump_2;            // Config: output jump in dimension 2 (z)
-    reg[  NMVU*BJUMP-1 : 0] ojump_3;            // Config: output jump in dimension 2 (w)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_0;        // Config: weight length in dimension 0 (x)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_1;        // Config: weight length in dimension 1 (y)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_2;        // Config: weight length in dimension 2 (z)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_3;        // Config: weight length in dimension 2 (w)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_0;        // Config: input length in dimension 0 (x)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_1;        // Config: input length in dimension 1 (y)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_2;        // Config: input length in dimension 2 (z)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_3;        // Config: input length in dimension 2 (w)
-    reg[  NMVU*BLENGTH-1 : 0] olength_0;        // Config: output length in dimension 0 (x)
-    reg[  NMVU*BLENGTH-1 : 0] olength_1;        // Config: output length in dimension 1 (y)
-    reg[  NMVU*BLENGTH-1 : 0] olength_2;        // Config: output length in dimension 2 (z)
-    reg[  NMVU*BLENGTH-1 : 0] olength_3;        // Config: output length in dimension 2 (w)
+    reg[  NMVU*BJUMP-1 : 0] wjump_0;            // Config: weight jump 0
+    reg[  NMVU*BJUMP-1 : 0] wjump_1;            // Config: weight jump 1
+    reg[  NMVU*BJUMP-1 : 0] wjump_2;            // Config: weight jump 2
+    reg[  NMVU*BJUMP-1 : 0] wjump_3;            // Config: weight jump 3
+    reg[  NMVU*BJUMP-1 : 0] wjump_4;            // Config: weight jump 4
+    reg[  NMVU*BJUMP-1 : 0] ijump_0;            // Config: input jump 0
+    reg[  NMVU*BJUMP-1 : 0] ijump_1;            // Config: input jump 1
+    reg[  NMVU*BJUMP-1 : 0] ijump_2;            // Config: input jump 2
+    reg[  NMVU*BJUMP-1 : 0] ijump_3;            // Config: input jump 3
+    reg[  NMVU*BJUMP-1 : 0] ijump_4;            // Config: input jump 4
+    reg[  NMVU*BJUMP-1 : 0] ojump_0;            // Config: output jump 0
+    reg[  NMVU*BJUMP-1 : 0] ojump_1;            // Config: output jump 1
+    reg[  NMVU*BJUMP-1 : 0] ojump_2;            // Config: output jump 2
+    reg[  NMVU*BJUMP-1 : 0] ojump_3;            // Config: output jump 3
+    reg[  NMVU*BJUMP-1 : 0] ojump_4;            // Config: output jump 4
+    reg[  NMVU*BLENGTH-1 : 0] wlength_1;        // Config: weight length 1
+    reg[  NMVU*BLENGTH-1 : 0] wlength_2;        // Config: weight length 2
+    reg[  NMVU*BLENGTH-1 : 0] wlength_3;        // Config: weight length 3
+    reg[  NMVU*BLENGTH-1 : 0] wlength_4;        // Config: weight length 4
+    reg[  NMVU*BLENGTH-1 : 0] ilength_1;        // Config: input length 1
+    reg[  NMVU*BLENGTH-1 : 0] ilength_2;        // Config: input length 2
+    reg[  NMVU*BLENGTH-1 : 0] ilength_3;        // Config: input length 3
+    reg[  NMVU*BLENGTH-1 : 0] ilength_4;        // Config: input length 4
+    reg[  NMVU*BLENGTH-1 : 0] olength_1;        // Config: output length 1
+    reg[  NMVU*BLENGTH-1 : 0] olength_2;        // Config: output length 2
+    reg[  NMVU*BLENGTH-1 : 0] olength_3;        // Config: output length 3
+    reg[  NMVU*BLENGTH-1 : 0] olength_4;        // Config: output length 4
     reg[ NMVU*BSCALERB-1 : 0] scaler_b;         // Config: multiplicative scaler (operand 'b')
-    reg[   NMVU*NJUMPS-1 : 0] shacc_load_sel;   // Config: select jump trigger for shift/accumultor load    
+    reg[   NMVU*NJUMPS-1 : 0] shacc_load_sel;   // Config: select jump trigger for shift/accumultor load
+    reg[   NMVU*NJUMPS-1 : 0] zigzag_step_sel;  // Config: select jump trigger for stepping the zig-zag address generator  
 
     //
     // DUT
@@ -147,28 +151,32 @@ module mvutop_tester();
             .wjump_1          (wjump_1),
             .wjump_2          (wjump_2),
             .wjump_3          (wjump_3),
+            .wjump_4          (wjump_4),
             .ijump_0          (ijump_0),
             .ijump_1          (ijump_1),
             .ijump_2          (ijump_2),
             .ijump_3          (ijump_3),
+            .ijump_4          (ijump_4),
             .ojump_0          (ojump_0),
             .ojump_1          (ojump_1),
             .ojump_2          (ojump_2),
             .ojump_3          (ojump_3),
-            .wlength_0        (wlength_0),
+            .ojump_4          (ojump_4),
             .wlength_1        (wlength_1),
             .wlength_2        (wlength_2),
             .wlength_3        (wlength_3),
-            .ilength_0        (ilength_0),
+            .wlength_4        (wlength_4),
             .ilength_1        (ilength_1),
             .ilength_2        (ilength_2),
             .ilength_3        (ilength_3),
-            .olength_0        (olength_0),
+            .ilength_4        (ilength_4),
             .olength_1        (olength_1),
             .olength_2        (olength_2),
             .olength_3        (olength_3),
+            .olength_4        (olength_4),
             .scaler_b         (scaler_b),
             .shacc_load_sel   (shacc_load_sel),
+            .zigzag_step_sel  (zigzag_step_sel),
 			.wrw_addr         (wrw_addr),
 			.wrw_word         (wrw_word),
 			.wrw_en           (wrw_en),
@@ -280,34 +288,37 @@ task automatic runGEMV(
     ibaseaddr[mvu*BDBANKA +: BDBANKA] = iaddr;
     obaseaddr[mvu*BDBANKA +: BDBANKA] = {obank_sel, oword_sel};
     omvusel[mvu*NMVU +: NMVU] = omvu;                           // Set the output MVUs
-    wjump_0[mvu*BJUMP +: BJUMP] = -wprec*(m_w-1);               // Move back to tile 0 of current tile row
-    wjump_1[mvu*BJUMP +: BJUMP] = wprec;                        // move 1 tile ahead to next tile row
-    wjump_2[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
+    wjump_0[mvu*BJUMP +: BJUMP] = wprec;                        // move 1 tile ahead to next tile row
+    wjump_1[mvu*BJUMP +: BJUMP] = -wprec*(m_w-1);               // Move back to tile 0 of current tile row
+    wjump_2[mvu*BJUMP +: BJUMP] = wprec;                        // Move ahead one tile
     wjump_3[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
+    wjump_4[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
     ijump_0[mvu*BJUMP +: BJUMP] = -iprec*(m_w-1);               // Move back to beginning vector 
-    ijump_1[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
+    ijump_1[mvu*BJUMP +: BJUMP] = iprec;                        // Move ahead one tile
     ijump_2[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
-    ijump_3[mvu*BJUMP +: BJUMP] = -iprec*(m_w-1);               // Set the same as ijump_0
+    ijump_3[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
     ojump_0[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
     ojump_1[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
     ojump_2[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
     ojump_3[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
-    wlength_0[mvu*BLENGTH +: BLENGTH] = m_w-1;                  // Number tiles in width minus 1
+    ojump_4[mvu*BJUMP +: BJUMP] = 0;                            // Don't need this for GEMV
     wlength_1[mvu*BLENGTH +: BLENGTH] = wprec*iprec-1;          // number bit combinations minus 1
-    wlength_2[mvu*BLENGTH +: BLENGTH] = m_h-1;                  // Number tiles in height minus 1
+    wlength_2[mvu*BLENGTH +: BLENGTH] = m_w-1;                  // Number tiles in width minus 1
     wlength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-    ilength_0[mvu*BLENGTH +: BLENGTH] = m_h-1;                  // Number tiles in height minus 1
-    ilength_1[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    wlength_4[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    ilength_1[mvu*BLENGTH +: BLENGTH] = m_h-1;                  // Number tiles in height minus 1
     ilength_2[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
     ilength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-    olength_0[mvu*BLENGTH +: BLENGTH] = 1;                      // Write out sequentially
-    olength_1[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    ilength_4[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    olength_1[mvu*BLENGTH +: BLENGTH] = 1;                      // Write out sequentially
     olength_2[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
     olength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    olength_4[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
     d_signed[mvu] = isign;
     w_signed[mvu] = wsign;
     scaler_b[mvu*BSCALERB +: BSCALERB] = scaler;
-    shacc_load_sel[mvu*NJUMPS +: NJUMPS] = 5'b00100;            // Load the shift/accumulator on when weight address jump 2 happens
+    shacc_load_sel[mvu*NJUMPS +: NJUMPS] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
+    zigzag_step_sel[mvu*NJUMPS +: NJUMPS] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
     countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
 
     // Run the GEMV
@@ -571,28 +582,32 @@ initial begin
     wjump_1 = 0;
     wjump_2 = 0;
     wjump_3 = 0;
+    wjump_4 = 0;
     ijump_0 = 0;
     ijump_1 = 0;
     ijump_2 = 0;
     ijump_3 = 0;
+    ijump_4 = 0;
     ojump_0 = 0;
     ojump_1 = 0;
     ojump_2 = 0;
     ojump_3 = 0;
-    wlength_0 = 0;
+    ojump_4 = 0;
     wlength_1 = 0;
     wlength_2 = 0;
     wlength_3 = 0;
-    ilength_0 = 0;
+    wlength_4 = 0;
     ilength_1 = 0;
     ilength_2 = 0;
     ilength_3 = 0;
-    olength_0 = 0;
+    ilength_4 = 0;
     olength_1 = 0;
     olength_2 = 0;
     olength_3 = 0;
+    olength_4 = 0;
     scaler_b = 1;
     shacc_load_sel = 0;
+    zigzag_step_sel = 0;
     wrw_addr = 0;
     wrw_word = 0;
     wrw_en = 0;
@@ -640,7 +655,7 @@ initial begin
     //
     // Interconnect tests
     // 
-
+/*
     // Repeat the unsigned gemv tests, mvu0 -> mvu1
     print_banner("GEMV tests: mvu0 -> mvu1");
     gemvTests(.mvu(0), .omvu('b00000010), .scaler(1));
@@ -669,7 +684,7 @@ initial begin
     // Repeat the unsigned gemv tests, mvu4-> mvu5, mvu6
     print_banner("GEMV tests: mvu4 -> mvu5,6");
     gemvTests(.mvu(4), .omvu('b01100000), .scaler(1));
-
+*/
     
 
     print_banner($sformatf("Simulation done."));
