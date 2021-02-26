@@ -125,9 +125,9 @@ input  wire[         BJUMP-1 : 0] ojump[NMVU-1 : 0][NJUMPS-1 : 0];              
 input  wire[       BLENGTH-1 : 0] wlength[NMVU-1 : 0][NJUMPS-1 : 1];            // Config: weight lengths
 input  wire[       BLENGTH-1 : 0] ilength[NMVU-1 : 0][NJUMPS-1 : 1];            // Config: input length
 input  wire[       BLENGTH-1 : 0] olength[NMVU-1 : 0][NJUMPS-1 : 1];            // Config: output length
+input  wire[        NJUMPS-1 : 0] shacc_load_sel[NMVU-1 : 0];                   // Config: select jump trigger for shift/accumultor load
+input  wire[        NJUMPS-1 : 0] zigzag_step_sel[NMVU-1 : 0];                  // Config: select jump trigger for stepping the zig-zag address generator
 input  wire[ NMVU*BSCALERB-1 : 0] scaler_b;             // Config: multiplicative scaler (operand 'b')
-input  wire[   NMVU*NJUMPS-1 : 0] shacc_load_sel;       // Config: select jump trigger for shift/accumultor load
-input  wire[   NMVU*NJUMPS-1 : 0] zigzag_step_sel;      // Config: select jump trigger for stepping the zig-zag address generator
 
 input  wire[  NMVU*BWBANKA-1 : 0] wrw_addr;             // Weight memory: write address
 input  wire[  NMVU*BWBANKW-1 : 0] wrw_word;             // Weight memory: write word
@@ -372,8 +372,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 obaseaddr_q[i]      <= obaseaddr    [i*BBDADDR +: BBDADDR];
                 omvusel_q[i]        <= omvusel      [i*NMVU +: NMVU];
                 scaler_b_q[i]       <= scaler_b     [i*BSCALERB +: BSCALERB];
-                shacc_load_sel_q[i] <= shacc_load_sel[i*NJUMPS +: NJUMPS];
-                zigzag_step_sel_q[i] <= zigzag_step_sel[i*NJUMPS +: NJUMPS];
+                shacc_load_sel_q[i] <= shacc_load_sel[i];
+                zigzag_step_sel_q[i] <= zigzag_step_sel[i];
 
                 // Assign the jump parameters
                 for (int j = 0; j < NJUMPS; j++) begin

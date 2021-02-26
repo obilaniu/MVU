@@ -91,8 +91,8 @@ module mvutop_tester();
     reg[       BLENGTH-1 : 0] ilength[NMVU-1 : 0][NJUMPS-1 : 1];        // Config: input length 1
     reg[       BLENGTH-1 : 0] olength[NMVU-1 : 0][NJUMPS-1 : 1];        // Config: output length 1
     reg[ NMVU*BSCALERB-1 : 0] scaler_b;         // Config: multiplicative scaler (operand 'b')
-    reg[   NMVU*NJUMPS-1 : 0] shacc_load_sel;   // Config: select jump trigger for shift/accumultor load
-    reg[   NMVU*NJUMPS-1 : 0] zigzag_step_sel;  // Config: select jump trigger for stepping the zig-zag address generator  
+    reg[        NJUMPS-1 : 0] shacc_load_sel[NMVU-1 : 0];   // Config: select jump trigger for shift/accumultor load
+    reg[        NJUMPS-1 : 0] zigzag_step_sel[NMVU-1 : 0];  // Config: select jump trigger for stepping the zig-zag address generator  
 
     //
     // DUT
@@ -276,8 +276,8 @@ task automatic runGEMV(
     d_signed[mvu] = isign;
     w_signed[mvu] = wsign;
     scaler_b[mvu*BSCALERB +: BSCALERB] = scaler;
-    shacc_load_sel[mvu*NJUMPS +: NJUMPS] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
-    zigzag_step_sel[mvu*NJUMPS +: NJUMPS] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
+    shacc_load_sel[mvu] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
+    zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
     countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
 
     // Run the GEMV
@@ -538,8 +538,6 @@ initial begin
     obaseaddr = 0;
     omvusel = 0;  
     scaler_b = 1;
-    shacc_load_sel = 0;
-    zigzag_step_sel = 0;
     wrw_addr = 0;
     wrw_word = 0;
     wrw_en = 0;
@@ -559,6 +557,9 @@ initial begin
             ilength[m][i] = 0;
             olength[m][i] = 0;
         end
+
+        shacc_load_sel[m] = 0;
+        zigzag_step_sel[m] = 0;
     end
 
     #(`CLKPERIOD*10);
