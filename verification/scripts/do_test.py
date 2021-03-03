@@ -102,6 +102,8 @@ if __name__ == '__main__':
     clean = args['clean']
     silence = args['silence']
     verbosity = args['verbosity']
+    compileonly = args['compileonly']
+    elabonly = args['elabonly']
 
     if verbosity is None:
         verbosity = 'VERB_LOW'
@@ -170,6 +172,10 @@ if __name__ == '__main__':
                 cmd_to_run += "> /dev/null"
             util.run_command(cmd_to_run, split=False, verbosity=verbosity)
 
+        if compileonly:
+            util.print_banner("Stoping after compile (option -c set)", verbosity=verbosity)
+            sys.exit()
+
         util.print_banner("Creating snapshot", verbosity=verbosity)
         # cmd_to_run = "xelab {0} ".format(top_level)
         # import ipdb as pdb; pdb.set_trace()
@@ -183,6 +189,11 @@ if __name__ == '__main__':
         if args['timescale'] != None:
             cmd_to_run += "--timescale {} ".format(args['timescale'])
         util.run_command(cmd_to_run, split=False, verbosity=verbosity)
+
+        if elabonly:
+            util.print_banner("Stoping after elaboration (option -e set)", verbosity=verbosity)
+            sys.exit()
+
         util.print_banner("Running simulation", verbosity=verbosity)
         if gui:
             cmd_to_run = "xsim --g {0} ".format(top_level)
