@@ -34,7 +34,8 @@ def parse_args():
     parser.add_argument('-verbosity', '--verbosity', help='Print log verbosity: VERB_NONE, VERB_LOW, VERB_MEDIUM, VERB_HIGH, VERB_FULL, VERB_DEBUG', required=False)
     parser.add_argument('-timescale', '--timescale', help='Simulation timescale', required=False, default='1ps/1ps')
     parser.add_argument('--firmware', help='firmware file', required=False, default='test.hex')
-    args = parser.parse_args()
+    parser.add_argument('-c', '--compileonly', action='store_true', help='Only compile the source files', required=False)
+    parser.add_argument('-e', '--elabonly', action='store_true', help='Stop after elaboration step', required=False)    args = parser.parse_args()
     return vars(args)
 
 def get_rtl_files(f_file):
