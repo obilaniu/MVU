@@ -1,8 +1,7 @@
-`timescale 1 ns / 1 ps
 
 package utils;
 //==================================================================================================
-// Enum: print_verbosity
+// Enum: print_verbosity_t
 // Defines standard verbosity levels for reports.
 //
 //  VERB_NONE    Report is always printed. Verbosity level setting cannot disable it.
@@ -17,52 +16,86 @@ typedef enum {
     VERB_HIGH   = 300,
     VERB_FULL   = 400,
     VERB_DEBUG  = 500
-} print_verbosity;
+} print_verbosity_t;
+
+
 //==================================================================================================
-// Struct test_stats
+// Logger class, logs test string to a file
+class Logger; 
+    int fd;
+    bit log_time;
+    bit log_to_std_out;
+
+    function new (string file_name, bit log_time=1, bit log_to_std_out=1);
+          this.fd = $fopen(file_name,"w");
+          this.log_time = log_time;
+          this.log_to_std_out = log_to_std_out;
+    endfunction
+
+    function void print (string msg, string id="INFO", print_verbosity_t verbosity=VERB_LOW);
+        string time_stamp = this.log_time ? $sformatf("%t",$time()) : "";
+        string log;
+        if ($time()==0) begin
+            time_stamp = "0 ns";
+        end
+        log = $sformatf("[%5s] %12s %s ", id, time_stamp, msg);
+        if (verbosity<VERB_MEDIUM) begin
+            if (log_to_std_out == 1) begin
+                $display("%s", log);
+            end
+        end
+        // $display adds the newline char so we have to manually add it for 
+        // log into std
+        log = $sformatf("%s\n", log);
+        $fwrite(this.fd, log);
+    endfunction
+
+    function void print_banner (string msg, string id="INFO", print_verbosity_t verbosity=VERB_LOW);
+        string sep = "=======================================================================";
+        string log = $sformatf("%s\n[%5s]  %s \n%s", sep, id, msg, sep);
+        this.print(sep, id, verbosity);
+        this.print(msg, id, verbosity);
+        this.print(sep, id, verbosity);
+    endfunction
+
+endclass
+
+//==================================================================================================
+// Base class to construct verification components
+class BaseObj;
+    Logger logger;
+   function new (Logger logger);
+      this.logger = logger;
+   endfunction
+endclass
+
+//==================================================================================================
+// Struct test_stats_t
 // Defines a struct that holds test statistics 
 
 typedef struct packed
 {
     int unsigned pass_cnt;
     int unsigned fail_cnt;
-} test_stats;
-
-//==================================================================================================
-//
-//
-function automatic void resetTestStats(ref test_stats stats);
-    stats.pass_cnt = 0;
-    stats.fail_cnt = 0;
-    return;
-endfunction
+} test_stats_t;
 
 //==================================================================================================
 // Test print macro
 // Defines a macro to print 
-`define __print__(ID,MSG,VERBOSITY) \
+`define test_print(ID,MSG,VERBOSITY) \
    begin \
-        if (VERBOSITY<VERB_MEDIUM) \
-            $display("[%5s][t=%10d]  %s ", ID, $time(), MSG); \
+            $display($sformatf("[%5s]  %s ", ID, MSG)); \
    end
-
-function void print(string MSG, string ID="INFO", print_verbosity VERBOSITY=VERB_LOW);
-    `__print__(ID, MSG, VERBOSITY);
-endfunction
 
 //==================================================================================================
 // Print Banner macro
 // Defines a macro to print a banner that bolds the msg
-`define __print_banner__(ID,MSG,VERBOSITY) \
+`define print_banner(ID,MSG,VERBOSITY) \
    begin \
-        `__print__(ID,"=======================================================================",VERBOSITY) \
-        `__print__(ID,MSG,VERBOSITY) \
-        `__print__(ID,"=======================================================================",VERBOSITY) \
+        `test_print(ID,"=======================================================================",VERBOSITY) \
+        `test_print(ID,MSG,VERBOSITY) \
+        `test_print(ID,"=======================================================================",VERBOSITY) \
    end
-
-function void print_banner(string MSG, string ID="INFO", print_verbosity VERBOSITY=VERB_LOW);
-    `__print_banner__(ID, MSG, VERBOSITY);
-endfunction
 
 //==================================================================================================
 // Macro to set bits of a vector t
@@ -86,11 +119,18 @@ endfunction
 
 //==================================================================================================
 // A function to report results
-function void print_result(test_stats test_stat, print_verbosity verbosity);
-    `__print_banner__("INFO", "Test results", verbosity)
-    `__print__("INFO", $sformatf("Number of passed tests = %0d", test_stat.pass_cnt), verbosity)
-    `__print__("INFO", $sformatf("Number of failed tests = %0d\n", test_stat.fail_cnt), verbosity)
-
+function void print_result(test_stats_t test_stat, print_verbosity_t verbosity=VERB_LOW, Logger logger=null, string id="INFO");
+    if (logger == null) begin
+        `print_banner("INFO", "Test results", verbosity)
+        `test_print("INFO", $sformatf("Total Number of tests  = %0d", test_stat.pass_cnt+test_stat.fail_cnt), verbosity)
+        `test_print("INFO", $sformatf("Number of passed tests = %0d", test_stat.pass_cnt), verbosity)
+        `test_print("INFO", $sformatf("Number of failed tests = %0d\n", test_stat.fail_cnt), verbosity)
+    end else begin
+        logger.print_banner("Test results", id, verbosity);
+        logger.print($sformatf("Total Number of tests  = %0d", test_stat.pass_cnt+test_stat.fail_cnt));
+        logger.print($sformatf("Number of passed tests = %0d", test_stat.pass_cnt));
+        logger.print($sformatf("Number of failed tests = %0d", test_stat.fail_cnt));
+    end
 endfunction : print_result
 
 //==================================================================================================
@@ -103,7 +143,7 @@ function void print_matrix_from_array(inout integer array, integer row_len, inte
             array_shape_str = {array_shape_str, $sformatf("%2h ",array[elcnt])};
             elcnt++;
         end
-        `__print__("INFO", $sformatf("%s", array_shape_str), VERB_LOW)
+        `test_print("INFO", $sformatf("%s", array_shape_str), VERB_LOW)
         array_shape_str = "";
     end
 endfunction : print_matrix_from_array
