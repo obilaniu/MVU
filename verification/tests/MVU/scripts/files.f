@@ -1,3 +1,4 @@
+../../../../build/ip/xilinx/bram2m_xilinx/simulation/blk_mem_gen_v8_4.v
 ../../../ip/xilinx/bram64k_64x1024_xilinx.v
 ../../../ip/xilinx/bram2m_xilinx.v
 ../../3RD_PARTY_IP/rtl/altera_mf.v
@@ -12,5 +13,6 @@
 ../../../../verilog/shacc.v
 ../../../../verilog/vvp.v
 ../../../../verilog/quantser.v
+../../../../verilog/fixedpointscaler.v
 ../../../lib/utils/utils.sv
 ../tb/mvu_tester.sv

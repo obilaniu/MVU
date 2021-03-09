@@ -62,7 +62,7 @@ always @(wri_word or wrd_word or wrc_word or wr_muxcode) begin
         2'b00: wr_word = wri_word;
         2'b01: wr_word = wrd_word;
         2'b10: wr_word = wrc_word;
-        default: wr_word = {w{1'bx}};
+        default: wr_word = {w{1'b0}};
     endcase
 end
     
