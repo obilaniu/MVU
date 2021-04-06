@@ -6,144 +6,14 @@
 //
 //
  
+import mvu_pkg::*;
+
 `timescale 1 ps / 1 ps
 /**** Module ****/
-module mvutop(  clk,
-                rst_n,
-                start,
-                done,
-                irq,
-                ic_clr,
-                mul_mode,
-                d_signed,
-                w_signed,
-                shacc_clr,
-                max_en,
-                max_clr,
-                max_pool,
-                quant_clr,
-                quant_msbidx,
-                countdown,
-                wprecision,
-                iprecision,
-                oprecision,
-                wbaseaddr,
-                ibaseaddr,
-                obaseaddr,
-                omvusel,
-                wjump,
-                ijump,
-                ojump,
-                wlength,
-                ilength,
-                olength,
-                scaler_b,
-                shacc_load_sel,
-                zigzag_step_sel,
-				wrw_addr,
-				wrw_word,
-				wrw_en,
-                rdc_en,
-                rdc_grnt,
-                rdc_addr,
-                rdc_word,
-                wrc_en,
-                wrc_grnt,
-                wrc_addr,
-                wrc_word);
+module mvutop( mvu_interface.system_interface intf);
 
-
-/* Parameters */
-parameter  NMVU    =  8;   /* Number of MVUs. Ideally a Power-of-2. */
-parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
-parameter  NDBANK  = 32;   /* Number of N-bit, 1024-element Data BANK. */
-
-localparam BMVUA   = $clog2(NMVU);  /* Bitwidth of MVU          Address */
-localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
-localparam BWBANKW = 4096;          // Bitwidth of Weights BANK Word
-localparam BDBANKA = 15;            /* Bitwidth of Data    BANK Address */
-localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
-
-localparam BACC    = 27;            /* Bitwidth of Accumulators */
-localparam BSCALERP = 48;               // Bitwidth of the scaler output
-
-// Quantizer parameters
-localparam BQMSBIDX = $clog2(BSCALERP); // Bitwidth of the quantizer MSB location specifier
-localparam BQBOUT   = $clog2(BSCALERP); // Bitwidth of the quantizer 
-localparam QBWOUTBD = $clog2(BSCALERP); // Bitwidth of the quantizer bit-depth out specifier
-
-// Other Parameters
-localparam BCNTDWN	    = 29;			// Bitwidth of the countdown ports
-localparam BPREC 	    = 6;			// Bitwidth of the precision ports
-localparam BBWADDR	    = 9;			// Bitwidth of the weight base address ports
-localparam BBDADDR	    = 15;			// Bitwidth of the data base address ports
-localparam BJUMP	    = 15;			// Bitwidth of the jump ports
-localparam BLENGTH	    = 15;			// Bitwidth of the length ports
-localparam BSCALERB     = 16;           // Bitwidth of the scaler parameter
-localparam VVPSTAGES    = 3;            // Number of stages in the VVP pipeline
-localparam SCALERLATENCY = 3;           // Number of stages in the scaler pipeline
-localparam MAXPOOLSTAGES = 1;           // Number of max pool pipeline stages
-localparam MEMRDLATENCY = 2;            // Memory read latency
-localparam NJUMPS       = 5;            // Number of address jump parameters available
-
-
-//
-// Port definitions
-//
-
-input wire                        clk;
-input wire                        rst_n;                // Global reset
-
-input  wire[          NMVU-1 : 0] start;                // Start the MVU job
-output wire[          NMVU-1 : 0] done;                 // Indicates if a job is done
-output wire[          NMVU-1 : 0] irq;                  // Interrupt request
-
-input  wire                       ic_clr;				// Interconnect: clear
-
-input  wire[        2*NMVU-1 : 0] mul_mode;             // Config: multiply mode
-input  wire[          NMVU-1 : 0] d_signed;             // Config: input data signed
-input  wire[          NMVU-1 : 0] w_signed;             // Config: weights signed
-input  wire[          NMVU-1 : 0] shacc_clr;            // Control: accumulator clear
-input  wire[          NMVU-1 : 0] max_en;               // Config: max pool enable
-input  wire[          NMVU-1 : 0] max_clr;              // Config: max pool clear
-input  wire[          NMVU-1 : 0] max_pool;	            // Config: max pool mode
-
-input  wire[          NMVU-1 : 0] quant_clr;            // Quantizer: clear
-input  wire[ NMVU*BQMSBIDX-1 : 0] quant_msbidx;         // Quantizer: bit position index of the MSB
-
-input  wire[  NMVU*BCNTDWN-1 : 0] countdown;            // Config: number of clocks to countdown for given task
-input  wire[    NMVU*BPREC-1 : 0] wprecision;           // Config: weight precision
-input  wire[    NMVU*BPREC-1 : 0] iprecision;           // Config: input precision
-input  wire[    NMVU*BPREC-1 : 0] oprecision;           // Config: output precision
-input  wire[  NMVU*BBWADDR-1 : 0] wbaseaddr;            // Config: weight memory base address
-input  wire[  NMVU*BBDADDR-1 : 0] ibaseaddr;            // Config: data memory base address for input
-input  wire[  NMVU*BBDADDR-1 : 0] obaseaddr;            // Config: data memory base address for output
-input  wire[     NMVU*NMVU-1 : 0] omvusel;	    		// Config: MVU selector bits for output
-input  wire[         BJUMP-1 : 0] wjump[NMVU-1 : 0][NJUMPS-1 : 0];              // Config: weight jumps
-input  wire[         BJUMP-1 : 0] ijump[NMVU-1 : 0][NJUMPS-1 : 0];              // Config: input jumps
-input  wire[         BJUMP-1 : 0] ojump[NMVU-1 : 0][NJUMPS-1 : 0];              // Config: output jumps
-input  wire[       BLENGTH-1 : 0] wlength[NMVU-1 : 0][NJUMPS-1 : 1];            // Config: weight lengths
-input  wire[       BLENGTH-1 : 0] ilength[NMVU-1 : 0][NJUMPS-1 : 1];            // Config: input length
-input  wire[       BLENGTH-1 : 0] olength[NMVU-1 : 0][NJUMPS-1 : 1];            // Config: output length
-input  wire[        NJUMPS-1 : 0] shacc_load_sel[NMVU-1 : 0];                   // Config: select jump trigger for shift/accumultor load
-input  wire[        NJUMPS-1 : 0] zigzag_step_sel[NMVU-1 : 0];                  // Config: select jump trigger for stepping the zig-zag address generator
-input  wire[ NMVU*BSCALERB-1 : 0] scaler_b;             // Config: multiplicative scaler (operand 'b')
-
-input  wire[  NMVU*BWBANKA-1 : 0] wrw_addr;             // Weight memory: write address
-input  wire[  NMVU*BWBANKW-1 : 0] wrw_word;             // Weight memory: write word
-input  wire[          NMVU-1 : 0] wrw_en;               // Weight memory: write enable
-
-input  wire[          NMVU-1 : 0] rdc_en;               // Data memory: controller read enable
-output wire[          NMVU-1 : 0] rdc_grnt;             // Data memory: controller read grant
-input  wire[  NMVU*BDBANKA-1 : 0] rdc_addr;             // Data memory: controller read address
-output wire[  NMVU*BDBANKW-1 : 0] rdc_word;             // Data memory: controller read word
-input  wire[          NMVU-1 : 0] wrc_en;               // Data memory: controller write enable
-output wire[          NMVU-1 : 0] wrc_grnt;             // Data memory: controller write grant
-input  wire[       BDBANKA-1 : 0] wrc_addr;             // Data memory: controller write address
-input  wire[       BDBANKW-1 : 0] wrc_word;             // Data memory: controller write word
 
 genvar i;
-
 
 // Local registers
 reg[      NMVU-1 : 0] start_q;                                  // Delayed start signal
@@ -257,7 +127,7 @@ interconn #(
     .W(BDBANKW),
     .BADDR(BDBANKA)
 ) ic (
-    .clk(clk),
+    .clk(intf.clk),
     .clr(ic_clr_int),
     .send_to(ic_send_to),
     .send_en(ic_send_en),
@@ -299,18 +169,18 @@ assign run_acc          = run;                              // No stalls for now
 assign shacc_load       = shacc_done | shacc_load_start;    // Load accumulator with current output of MVP's
 
 // Clear signals (just connect to global reset for now)
-assign ic_clr_int       = !rst_n | ic_clr;
-assign controller_clr   = {NMVU{!rst_n}};
-assign inagu_clr        = {NMVU{!rst_n}} | start_q;
-assign outagu_clr       = {NMVU{!rst_n}};
-assign shacc_clr_int    = {NMVU{!rst_n}} | shacc_clr;       // Clear the accumulator
-assign scaler_clr       = {NMVU{!rst_n}};
-assign quant_clr_int    = {NMVU{!rst_n}} | quant_clr;
+assign ic_clr_int       = !intf.rst_n | intf.ic_clr;
+assign controller_clr   = {NMVU{!intf.rst_n}};
+assign inagu_clr        = {NMVU{!intf.rst_n}} | start_q;
+assign outagu_clr       = {NMVU{!intf.rst_n}};
+assign shacc_clr_int    = {NMVU{!intf.rst_n}} | intf.shacc_clr;       // Clear the accumulator
+assign scaler_clr       = {NMVU{!intf.rst_n}};
+assign quant_clr_int    = {NMVU{!intf.rst_n}} | intf.quant_clr;
 
 // Quantizer and output control signals
 assign quant_start      = maxpool_done;
 assign outstep          = quant_step;
-assign quant_ctrl_clr   = {NMVU{!rst_n}} | quant_clr;
+assign quant_ctrl_clr   = {NMVU{!intf.rst_n}} | intf.quant_clr;
 
 // MVU Data Memory control
 generate for(i = 0; i < NMVU; i = i + 1) begin: wrd_en_array
@@ -319,18 +189,18 @@ end endgenerate
 
 
 // Delayed start signal to sync with the parameter buffer registers
-always @(posedge clk) begin
-    if (~rst_n) begin
+always @(posedge intf.clk) begin
+    if (~intf.rst_n) begin
         start_q <= 0;
     end else begin
-        start_q <= start;
+        start_q <= intf.start;
     end
 end
 
 // Clock in the input parameters when the start signal is asserted
 generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
-    always @(posedge clk) begin
-        if (~rst_n) begin
+    always @(posedge intf.clk) begin
+        if (~intf.rst_n) begin
             mul_mode_q[i]       <= 0;
             quant_msbidx_q[i]   <= 0;
             countdown_q[i]      <= 0;
@@ -360,33 +230,33 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             end
 
         end else begin
-            if (start[i]) begin
-                mul_mode_q[i]       <= mul_mode     [i*2 +: 2];
-                quant_msbidx_q[i]   <= quant_msbidx [i*BQMSBIDX +: BQMSBIDX];
-                countdown_q[i]      <= countdown    [i*BCNTDWN +: BCNTDWN];
-                wprecision_q[i]     <= wprecision   [i*BPREC +: BPREC];
-                iprecision_q[i]     <= iprecision   [i*BPREC +: BPREC];
-                oprecision_q[i]     <= oprecision   [i*BPREC +: BPREC];
-                wbaseaddr_q[i]      <= wbaseaddr    [i*BBWADDR +: BBWADDR];
-                ibaseaddr_q[i]      <= ibaseaddr    [i*BBDADDR +: BBDADDR];
-                obaseaddr_q[i]      <= obaseaddr    [i*BBDADDR +: BBDADDR];
-                omvusel_q[i]        <= omvusel      [i*NMVU +: NMVU];
-                scaler_b_q[i]       <= scaler_b     [i*BSCALERB +: BSCALERB];
-                shacc_load_sel_q[i] <= shacc_load_sel[i];
-                zigzag_step_sel_q[i] <= zigzag_step_sel[i];
+            if (intf.start[i]) begin
+                mul_mode_q[i]           <= intf.mul_mode     [i*2 +: 2];
+                quant_msbidx_q[i]       <= intf.quant_msbidx [i*BQMSBIDX +: BQMSBIDX];
+                countdown_q[i]          <= intf.countdown    [i*BCNTDWN +: BCNTDWN];
+                wprecision_q[i]         <= intf.wprecision   [i*BPREC +: BPREC];
+                iprecision_q[i]         <= intf.iprecision   [i*BPREC +: BPREC];
+                oprecision_q[i]         <= intf.oprecision   [i*BPREC +: BPREC];
+                wbaseaddr_q[i]          <= intf.wbaseaddr    [i*BBWADDR +: BBWADDR];
+                ibaseaddr_q[i]          <= intf.ibaseaddr    [i*BBDADDR +: BBDADDR];
+                obaseaddr_q[i]          <= intf.obaseaddr    [i*BBDADDR +: BBDADDR];
+                omvusel_q[i]            <= intf.omvusel      [i*NMVU +: NMVU];
+                scaler_b_q[i]           <= intf.scaler_b     [i*BSCALERB +: BSCALERB];
+                shacc_load_sel_q[i]     <= intf.shacc_load_sel[i];
+                zigzag_step_sel_q[i]    <= intf.zigzag_step_sel[i];
 
                 // Assign the jump parameters
                 for (int j = 0; j < NJUMPS; j++) begin
-                    wjump_q[i][j]        <= wjump[i][j];
-                    ijump_q[i][j]        <= ijump[i][j];
-                    ojump_q[i][j]        <= ojump[i][j];
+                    wjump_q[i][j] <= intf.wjump[i][j];
+                    ijump_q[i][j] <= intf.ijump[i][j];
+                    ojump_q[i][j] <= intf.ojump[i][j];
                 end
 
                 // Assign the length parameters
                 for (int j = 1; j < NJUMPS; j++) begin
-                    wlength_q[i][j] <= wlength[i][j];
-                    ilength_q[i][j] <= ilength[i][j];
-                    olength_q[i][j] <= olength[i][j];
+                    wlength_q[i][j] <= intf.wlength[i][j];
+                    ilength_q[i][j] <= intf.ilength[i][j];
+                    olength_q[i][j] <= intf.olength[i][j];
                 end
             end
         end
@@ -399,14 +269,14 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: controllerarray
     controller #(
         .BCNTDWN    (BCNTDWN)
     ) controller_unit (
-        .clk        (clk),
+        .clk        (intf.clk),
         .clr        (controller_clr[i]),
         .start      (start_q[i]),
         .countdown  (countdown_q[i]),
         .step       (step[i]),
         .run        (run[i]),
-        .done       (done[i]),
-        .irq        (irq[i])
+        .done       (intf.done[i]),
+        .irq        (intf.irq[i])
     );
 end endgenerate
 
@@ -419,7 +289,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .BWBANKA    (BWBANKA),
         .BWLENGTH   (BLENGTH)
     ) inagu_unit (
-        .clk        (clk),
+        .clk        (intf.clk),
         .clr        (inagu_clr[i]),
         .en         (run[i]),
         .iprecision (iprecision_q[i]),
@@ -446,22 +316,22 @@ generate for(i = 0; i < NMVU; i = i+1) begin:outaguarray
             .BDBANKA    (BDBANKA)
         ) outaguunit
         (
-            .clk        (clk                                ),
+            .clk        (intf.clk                            ),
             .clr        (outagu_clr[i]                      ),
-            .step       (outstep[i]),
-            .load       (outagu_load[i]),
-            .baseaddr   (obaseaddr[i*BBDADDR +:	BBDADDR]    ),
+            .step       (outstep[i]                         ),
+            .load       (outagu_load[i]                     ),
+            .baseaddr   (intf.obaseaddr[i*BBDADDR +: BBDADDR]),
             .addrout    (wrd_addr[i*BDBANKA  +: BDBANKA]    )
         );
 end endgenerate
 
 // Quantizer Controllers
 generate for(i = 0; i < NMVU; i = i+1) begin: quantser_ctrlarray
-    assign quant_bwout[i*BPREC +: BQBOUT] = oprecision[i*BPREC +: BQBOUT];
+    assign quant_bwout[i*BPREC +: BQBOUT] = intf.oprecision[i*BPREC +: BQBOUT];
     quantser_ctrl #(
         .BWOUT      (BSCALERP)
     ) quantser_ctrl_unit (
-        .clk        (clk),
+        .clk        (intf.clk),
         .clr        (quant_ctrl_clr[i]),
         .bwout      (quant_bwout[i*BPREC +: BQBOUT]),
         .start      (quant_start[i]),
@@ -472,7 +342,7 @@ generate for(i = 0; i < NMVU; i = i+1) begin: quantser_ctrlarray
 end endgenerate
 
 // Negate the input to the accumulators when one or both data/weights are signed and is on an MSB
-assign neg_acc = (d_signed & d_msb) ^ (w_signed & w_msb);
+assign neg_acc = (intf.d_signed & d_msb) ^ (intf.w_signed & w_msb);
 
 // Trigger when the shacc should load
 generate for(i = 0; i < NMVU; i = i+1) begin: triggers
@@ -506,8 +376,8 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     shiftreg #(
         .N      (VVPSTAGES + MEMRDLATENCY + 1)
     ) shacc_load_delayarrayunit (
-        .clk    (clk), 
-        .clr    (~rst_n),
+        .clk    (intf.clk), 
+        .clr    (~intf.rst_n),
         .step   (1'b1),
         .in     (start_q[i]),
         .out    (shacc_load_start[i])
@@ -516,8 +386,8 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     shiftreg #(
         .N      (VVPSTAGES + MEMRDLATENCY + 0)
     ) neg_acc_delayarrayunit (
-        .clk    (clk), 
-        .clr    (~rst_n),
+        .clk    (intf.clk), 
+        .clr    (~intf.rst_n),
         .step   (1'b1),
         .in     (neg_acc[i]),
         .out    (neg_acc_dly[i])
@@ -526,8 +396,8 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     shiftreg #(
         .N      (VVPSTAGES + MEMRDLATENCY + 0)
     ) shacc_sh_delayarrayunit (
-        .clk    (clk), 
-        .clr    (~rst_n),
+        .clk    (intf.clk), 
+        .clr    (~intf.rst_n),
         .step   (1'b1),
         .in     (agu_sh_out[i]),
         .out    (shacc_sh[i])
@@ -536,8 +406,8 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     shiftreg #(
         .N      (VVPSTAGES + MEMRDLATENCY + 1)
     ) shacc_acc_delayarrayunit (
-        .clk    (clk), 
-        .clr    (~rst_n),
+        .clk    (intf.clk), 
+        .clr    (~intf.rst_n),
         .step   (1'b1),
         .in     (run_acc[i]),
         .out    (shacc_acc[i])
@@ -546,8 +416,8 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     shiftreg #(
         .N      (VVPSTAGES + MEMRDLATENCY + 1)      // TODO: find a better way to re-time this
     ) acc_done_delayarrayunit (
-        .clk    (clk), 
-        .clr    (~rst_n),
+        .clk    (intf.clk), 
+        .clr    (~intf.rst_n),
         .step   (1'b1),
         .in     (agu_shacc_done[i]),
         .out    (shacc_done[i])
@@ -556,8 +426,8 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     shiftreg #(
         .N      (SCALERLATENCY+MAXPOOLSTAGES)
     ) maxpool_done_delayarrayunit (
-        .clk    (clk),
-        .clr    (~rst_n),
+        .clk    (intf.clk),
+        .clr    (~intf.rst_n),
         .step   (1'b1),
         .in     (shacc_done[i]),
         .out    (maxpool_done[i])
@@ -566,8 +436,8 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     shiftreg #(
         .N      (VVPSTAGES+MEMRDLATENCY+SCALERLATENCY+MAXPOOLSTAGES + 1)
     ) outagu_load_delayarrayunit (
-        .clk    (clk),
-        .clr    (~rst_n),
+        .clk    (intf.clk),
+        .clr    (~intf.rst_n),
         .step   (1'b1),
         .in     (start_q[i]),
         .out    (outagu_load[i])
@@ -583,50 +453,50 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .NDBANK         (NDBANK)
         ) mvunit
         (
-            .clk            (clk                                    ),
+            .clk            (intf.clk                                ),
             .mul_mode       (mul_mode_q[i]                          ),
             .neg_acc        (neg_acc_dly[i]                         ),
             .shacc_clr      (shacc_clr_int[i]                       ),
             .shacc_load     (shacc_load[i]                          ),
             .shacc_acc      (shacc_acc[i]                           ),
-            .shacc_sh		(shacc_sh[i]							),
+            .shacc_sh       (shacc_sh[i]                            ),
             .scaler_clr     (scaler_clr[i]                          ),
             .scaler_b       (scaler_b_q[i]                          ),
-            .max_en			(max_en[i]								),
-            .max_clr		(max_clr[i]								),
-            .max_pool		(max_pool[i]							),
-            .quant_clr		(quant_clr_int[i]	    				),
-            .quant_msbidx   (quant_msbidx_q[i]	                    ),
+            .max_en         (intf.max_en[i]                          ),
+            .max_clr        (intf.max_clr[i]                         ),
+            .max_pool       (intf.max_pool[i]                        ),
+            .quant_clr      (quant_clr_int[i]                       ),
+            .quant_msbidx   (quant_msbidx_q[i]                      ),
             .quant_load     (quant_load[i]                          ),
-            .quant_step 	(quant_step[i]							),
-            .rdw_addr		(rdw_addr[i*BWBANKA +: BWBANKA]			),
-			.wrw_addr		(wrw_addr[i*BWBANKA +: BWBANKA]			),
-			.wrw_word		(wrw_word[i*BWBANKW +: BWBANKW]			),
-			.wrw_en			(wrw_en[i]								),
-            .rdd_en			(rdd_en[i]								),
-            .rdd_grnt		(rdd_grnt[i]							),
-            .rdd_addr		(rdd_addr[i*BDBANKA +: BDBANKA]			),
-            .wrd_en			(wrd_en[i]								),
-            .wrd_grnt		(wrd_grnt[i]							),
-            .wrd_addr		(wrd_addr[i*BDBANKA +: BDBANKA]			),
-            .rdi_en			(rdi_en[i]								),
-            .rdi_grnt		(rdi_grnt[i]							),
-            .rdi_addr		(rdi_addr[i*BDBANKA +: BDBANKA]			),
-            .rdi_word		(rdi_word[i*BDBANKW +: BDBANKW]			),
-            .wri_en			(wri_en[i]								),
-            .wri_grnt		(wri_grnt[i]							),
-            .wri_addr		(wri_addr[i*BDBANKA +: BDBANKA]			),
-            .wri_word		(wri_word[i*BDBANKW +: BDBANKW]			),
-            .rdc_en			(rdc_en[i]								),
-            .rdc_grnt		(rdc_grnt[i]							),
-            .rdc_addr		(rdc_addr[i*BDBANKA +: BDBANKA]			),
-            .rdc_word		(rdc_word[i*BDBANKW +: BDBANKW]			),
-            .wrc_en			(wrc_en[i]								),
-            .wrc_grnt		(wrc_grnt[i]							),
-            .wrc_addr		(wrc_addr[BDBANKA-1: 0]					),
-        	.wrc_word		(wrc_word[BDBANKW-1 : 0]				),
+            .quant_step     (quant_step[i]                          ),
+            .rdw_addr       (rdw_addr[i*BWBANKA +: BWBANKA]         ),
+            .wrw_addr       (intf.wrw_addr[i*BWBANKA +: BWBANKA]     ),
+            .wrw_word       (intf.wrw_word[i*BWBANKW +: BWBANKW]     ),
+            .wrw_en         (intf.wrw_en[i]                          ),
+            .rdd_en         (rdd_en[i]                              ),
+            .rdd_grnt       (rdd_grnt[i]                            ),
+            .rdd_addr       (rdd_addr[i*BDBANKA +: BDBANKA]         ),
+            .wrd_en         (wrd_en[i]                              ),
+            .wrd_grnt       (wrd_grnt[i]                            ),
+            .wrd_addr       (wrd_addr[i*BDBANKA +: BDBANKA]         ),
+            .rdi_en         (rdi_en[i]                              ),
+            .rdi_grnt       (rdi_grnt[i]                            ),
+            .rdi_addr       (rdi_addr[i*BDBANKA +: BDBANKA]         ),
+            .rdi_word       (rdi_word[i*BDBANKW +: BDBANKW]         ),
+            .wri_en         (wri_en[i]                              ),
+            .wri_grnt       (wri_grnt[i]                            ),
+            .wri_addr       (wri_addr[i*BDBANKA +: BDBANKA]         ),
+            .wri_word       (wri_word[i*BDBANKW +: BDBANKW]         ),
+            .rdc_en         (intf.rdc_en[i]                          ),
+            .rdc_grnt       (intf.rdc_grnt[i]                        ),
+            .rdc_addr       (intf.rdc_addr[i*BDBANKA +: BDBANKA]     ),
+            .rdc_word       (intf.rdc_word[i*BDBANKW +: BDBANKW]     ),
+            .wrc_en         (intf.wrc_en[i]                          ),
+            .wrc_grnt       (intf.wrc_grnt[i]                        ),
+            .wrc_addr       (intf.wrc_addr[BDBANKA-1: 0]             ),
+            .wrc_word       (intf.wrc_word[BDBANKW-1 : 0]            ),
             .mvu_word_out   (mvu_word_out[i*BDBANKW +: BDBANKW]     )
-		);
+                );
 end endgenerate
 
 
