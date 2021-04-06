@@ -23,26 +23,26 @@ module mvutop_tester();
     parameter  NDBANK  = 32;   /* Number of 2N-bit, 512-element Data BANK. */
     localparam BMVUA   = $clog2(NMVU);  /* Bitwidth of MVU          Address */
     localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
-	localparam BWBANKW = 4096;			// Bitwidth of Weights BANK Word
+    localparam BWBANKW = 4096;          // Bitwidth of Weights BANK Word
     localparam BDBANKABS = $clog2(NDBANK);  /* Bitwidth of Data    BANK Address Bank Select */
     localparam BDBANKAWS = 10;              /* Bitwidth of Data    BANK Address Word Select */
     localparam BDBANKA   = BDBANKABS+ BDBANKAWS;    /* Bitwidth of Data    BANK Address */
     localparam BDBANKW = N;             /* Bitwidth of Data    BANK Word */
-	
-	// Other Parameters
-    localparam BCNTDWN	= 29;			// Bitwidth of the countdown ports
-    localparam BPREC 	= 6;			// Bitwidth of the precision ports
-    localparam BBWADDR	= 9;			// Bitwidth of the weight base address ports
-    localparam BBDADDR	= 15;			// Bitwidth of the data base address ports
-    localparam BSTRIDE	= 15;			// Bitwidth of the stride ports
-    localparam BLENGTH	= 15;			// Bitwidth of the length ports
+    
+    // Other Parameters
+    localparam BCNTDWN  = 29;           // Bitwidth of the countdown ports
+    localparam BPREC    = 6;            // Bitwidth of the precision ports
+    localparam BBWADDR  = 9;            // Bitwidth of the weight base address ports
+    localparam BBDADDR  = 15;           // Bitwidth of the data base address ports
+    localparam BSTRIDE  = 15;           // Bitwidth of the stride ports
+    localparam BLENGTH  = 15;           // Bitwidth of the length ports
     localparam BSCALERB = 16;           // Bitwidth of multiplicative scaler (operand 'b')
     localparam BSCALERP = 48;           // Bitwidth of the scaler output
     localparam NJUMPS   = 5;            // Number of address jumps supported
 
     localparam BACC    = 27;            /* Bitwidth of Accumulators */
 
-	// Quantizer parameters
+    // Quantizer parameters
     localparam BQMSBIDX = $clog2(BSCALERP); // Bitwidth of the quantizer MSB location specifier
     localparam BQBOUT   = $clog2(BSCALERP); // Bitwitdh of the quantizer 
 
@@ -69,7 +69,7 @@ module mvutop_tester();
     reg [     BDBANKA-1 : 0] wrc_addr    ;//input  wrc_addr;
     reg [     BDBANKW-1 : 0] wrc_word    ;//input  wrc_word;
 
-	reg [         NMVU-1 : 0] quant_clr;        // Quantizer: clear
+    reg [         NMVU-1 : 0] quant_clr;        // Quantizer: clear
     reg [NMVU*BQMSBIDX-1 : 0] quant_msbidx;     // Quantizer: bit position index of the MSB
 
     reg[  NMVU*BCNTDWN-1 : 0] countdown;        // Config: number of clocks to countdown for given task
@@ -79,10 +79,10 @@ module mvutop_tester();
     reg[  NMVU*BBWADDR-1 : 0] wbaseaddr;        // Config: weight memory base address
     reg[  NMVU*BBDADDR-1 : 0] ibaseaddr;        // Config: data memory base address for input
     reg[  NMVU*BBDADDR-1 : 0] obaseaddr;        // Config: data memory base address for output
-    reg[     NMVU*NMVU-1 : 0] omvusel;	 		// Config: MVU selector bits for output
+    reg[     NMVU*NMVU-1 : 0] omvusel;          // Config: MVU selector bits for output
 
     reg[  NMVU*BWBANKA-1 : 0] wrw_addr;         // Weight memory: write address
-    reg[  NMVU*BWBANKW-1 : 0] wrw_word;	        // Weight memory: write word
+    reg[  NMVU*BWBANKW-1 : 0] wrw_word;         // Weight memory: write word
     reg[          NMVU-1 : 0] wrw_en;           // Weight memory: write enable
     reg[  NMVU*BSTRIDE-1 : 0] wstride_0;        // Config: weight stride in dimension 0 (x)
     reg[  NMVU*BSTRIDE-1 : 0] wstride_1;        // Config: weight stride in dimension 1 (y)
@@ -133,8 +133,8 @@ module mvutop_tester();
             .max_en           (max_en       ),
             .max_clr          (max_clr      ),
             .max_pool         (max_pool     ),
-            .quant_clr        (quant_clr	),
-    		.quant_msbidx     (quant_msbidx ),
+            .quant_clr        (quant_clr    ),
+            .quant_msbidx     (quant_msbidx ),
             .countdown        (countdown),
             .wprecision       (wprecision),
             .iprecision       (iprecision),
@@ -169,9 +169,9 @@ module mvutop_tester();
             .olength_3        (olength_3),
             .scaler_b         (scaler_b),
             .shacc_load_sel   (shacc_load_sel),
-			.wrw_addr         (wrw_addr),
-			.wrw_word         (wrw_word),
-			.wrw_en           (wrw_en),
+            .wrw_addr         (wrw_addr),
+            .wrw_word         (wrw_word),
+            .wrw_en           (wrw_en),
             .rdc_en           (rdc_en),
             .rdc_grnt         (rdc_grnt),
             .rdc_addr         (rdc_addr),
@@ -557,7 +557,7 @@ initial begin
     wrc_en = 0;
     wrc_addr = 0;
     wrc_word = 0;
-	quant_clr = 0;
+    quant_clr = 0;
     quant_msbidx = 0;
     countdown = 0;
     wprecision = 0;

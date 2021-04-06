@@ -2,7 +2,7 @@ import utils::*;
 import testbench_pkg::*;
 import mvu_pkg::*;
 
-class testbench_base extends BaseObj;
+class mvu_testbench_base extends BaseObj;
 
     string firmware;
     virtual mvu_interface intf;
