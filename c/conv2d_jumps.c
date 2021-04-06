@@ -11,6 +11,7 @@ const int m = 10;                                   // Spacing between dimension
 // Convolution parameters
 //
 
+/*
 // Case 1: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 2x2 bits
 const int iprec = 2;                                // Input data precision
 const int wprec = 2;                                // Weight precision
@@ -26,6 +27,7 @@ const int Pl = 0;                                   // Zero-padding in on the le
 const int Pr = 0;                                   // Zero-padding in on the right in the width dimension
 const int Pt = 0;                                   // Zero-padding in on the top in the height dimension
 const int Pb = 0;                                   // Zero-padding in on the bottom in the height dimension
+*/
 
 
 // Case 2: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 1x1 bits 
@@ -59,6 +61,23 @@ const int Sw = 1;                                   // Filter horizontal (width)
 const int Pw = 1;                                   // Zero-padding in width dimension
 const int Ph = 1;                                   // Zero-padding in height dimension
 */
+
+// Case 4: 3x3 conv, 32x32 feature map, 2 channel blocks in, 2 channel blocks out, 8x8 bits
+const int iprec = 8;                                // Input data precision
+const int wprec = 8;                                // Weight precision
+const int oprec = 8;                                // Output precision
+const int W = 32;                                   // Input width
+const int H = 32;                                   // Input height
+const int C = 1;                                    // Input channel blocks
+const int Fw = 3;                                   // Filter kernel width
+const int Fh = 3;                                   // Filter kernel height
+const int Fc = 1;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Sw = 1;                                   // Filter horizontal (width) stride
+const int Pl = 1;                                   // Zero-padding in on the left in the width dimension
+const int Pr = 1;                                   // Zero-padding in on the right in the width dimension
+const int Pt = 1;                                   // Zero-padding in on the top in the height dimension
+const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
+
 
 // Tensors
 int i_t[H][W][C][iprec];                            // Input tensor
