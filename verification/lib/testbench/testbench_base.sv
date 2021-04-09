@@ -159,7 +159,7 @@ class testbench_base extends BaseObj;
         intf.d_signed[mvu] = isign;
         intf.w_signed[mvu] = wsign;
         intf.scaler_b[mvu*BSCALERB +: BSCALERB] = scaler;
-        intf.shacc_load_sel[mvu] = 5'b00100;            // Load the shift/accumulator on when weight address jump 2 happens
+        intf.shacc_load_sel[mvu] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
         intf.zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
         intf.countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
 

@@ -346,26 +346,7 @@ assign neg_acc = (intf.d_signed & d_msb) ^ (intf.w_signed & w_msb);
 
 // Trigger when the shacc should load
 generate for(i = 0; i < NMVU; i = i+1) begin: triggers
-    always @(shacc_load_sel_q, wagu_on_j) begin
-        if (run[i]) begin
-            case (shacc_load_sel_q[i])
-                5'b00001:
-                    agu_shacc_done[i] = wagu_on_j[i][0];
-                5'b00010:
-                    agu_shacc_done[i] = wagu_on_j[i][1];
-                5'b00100:
-                    agu_shacc_done[i] = wagu_on_j[i][2];
-                5'b01000:
-                    agu_shacc_done[i] = wagu_on_j[i][3];
-                5'b10000:
-                    agu_shacc_done[i] = wagu_on_j[i][4];
-                default:
-                    agu_shacc_done[i] = 1'b0;
-            endcase
-        end else begin
-            agu_shacc_done[i] = 1'b0;
-        end
-    end
+    assign agu_shacc_done[i] = run[i] && (wagu_on_j[i] & shacc_load_sel_q[i]);
 end endgenerate
 
 

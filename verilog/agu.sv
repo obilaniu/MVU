@@ -52,28 +52,28 @@ parameter NJUMPS    = 5;              // Number of jumps
 
 
 // Ports
-input  wire                         clk;                // Clock
-input  wire                         clr;                // Clear
-input  wire                         step;               // Step
-input  wire [      BWADDR-1 : 0]    j[NJUMPS-1 : 0];    // Address jumps
-input  wire [    BWLENGTH-1 : 0]    l[NJUMPS-1 : 1];    // Lengths 
-output reg  [      BWADDR-1 : 0]    addr_out;           // Address generated
-output wire                         z_out[NJUMPS-1 : 1];// Signals when jump length X counter 
-output wire [      NJUMPS-1 : 0]    on_j;               // Signals when and which jump occurs
+input  logic                         clk;                // Clock
+input  logic                         clr;                // Clear
+input  logic                         step;               // Step
+input  logic [      BWADDR-1 : 0]    j[NJUMPS-1 : 0];    // Address jumps
+input  logic [    BWLENGTH-1 : 0]    l[NJUMPS-1 : 1];    // Lengths 
+output logic [      BWADDR-1 : 0]    addr_out;           // Address generated
+output logic                         z_out[NJUMPS-1 : 1];// Signals when jump length X counter 
+output logic [      NJUMPS-1 : 0]    on_j;               // Signals when and which jump occurs
 
 
 
-/* Local wires */
-wire                            z[NJUMPS-1 : 1];
+/* Local logics */
+logic                            z[NJUMPS-1 : 1];
 
 
-/* Local registers */
-reg        [    BWLENGTH-1 : 0] i[NJUMPS-1 : 1];
+/* Local logicisters */
+logic        [    BWLENGTH-1 : 0] i[NJUMPS-1 : 1];
 
 
 
 //
-// Wire Assignments
+// logic Assignments
 //
 
 // zX signals are checks for zero on the iX counters
@@ -89,11 +89,21 @@ assign z_out[3] = step & z[3];
 assign z_out[4] = step & z[4];
 
 // on_jX signals indicate when a jump occurs
-assign on_j[4] = step;                            // Always happening
-assign on_j[3] = step & z[4];
-assign on_j[2] = step & z[3] & z[4];
-assign on_j[1] = step & z[2] & z[3] & z[4];
-assign on_j[0] = step & z[1] & z[2] & z[3] & z[4];
+always_comb begin
+    if (step) begin
+        if (z[1] & z[2] & z[3] & z[4]) begin
+            on_j = 1 << 0;
+        end else if (z[2] & z[3] & z[4]) begin
+            on_j = 1 << 1;
+        end else if (z[3] & z[4]) begin
+            on_j = 1 << 2;
+        end else if (z[4]) begin
+            on_j = 1 << 3;
+        end else begin
+            on_j = 1 << 4;
+        end
+    end
+end
 
 
 // Index decrement & Address Bump logic
