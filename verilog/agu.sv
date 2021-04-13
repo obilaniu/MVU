@@ -102,6 +102,8 @@ always_comb begin
         end else begin
             on_j = 1 << 4;
         end
+    end else begin
+        on_j = 0;
     end
 end
 
