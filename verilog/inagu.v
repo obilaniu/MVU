@@ -2,7 +2,7 @@
 // Address generation for the input data
 //
 //
-
+`timescale 1ns/1ps
 
 module inagu(
     clk,

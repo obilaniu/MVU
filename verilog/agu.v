@@ -1,6 +1,7 @@
 /**
  * Address Generation Unit (AGU)
  */
+`timescale 1ns/1ps
 
 /**** Module ****/
 module agu( clk,

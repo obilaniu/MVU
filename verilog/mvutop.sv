@@ -6,11 +6,11 @@
 //
 //
  
-import mvu_pkg::*;
 
-`timescale 1 ps / 1 ps
+
+`timescale 1ns/1ps
 /**** Module ****/
-module mvutop( mvu_interface.system_interface intf);
+module mvutop import mvu_pkg::*; ( mvu_interface.system_interface intf);
 
 
 genvar i;
