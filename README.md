@@ -30,3 +30,45 @@ Currently, the primary subcommand of interest is `train`. Its arguments are list
 - `-b N` sets the batch size.
 - `--opt OPTIMIZERSPEC` selects an optimizer. You should probably use `--opt adam`.
 - `--cuda <DEVICENUM>` requests accelerated execution on the specified CUDA GPU.
+
+
+## Running RTL Simulation and Synthesis:
+
+# How to Run:
+
+First make sure the Vivado is sourced, example for Vivado 2019.1: 
+    
+    source /opt/Xilinx/Vivado/2019.1/settings64.sh
+
+Then make sure you have fusesoc installed:
+
+    python3 -m pip install fusesoc
+
+Then add `pito` to your fusesoc libraries:
+    
+    git clone https://github.com/obilaniu/MVU.git
+    cd MVU
+    fusesoc library add mvu .
+
+Then run simulation (No GUI):
+   
+    fusesoc run --target=sim mvu
+
+For synthesis:
+    
+    fusesoc run --target=synth mvu
+
+To open sim in GUI mode:
+
+    cd build/mvu_0/sim-vivado/ 
+    make run-gui
+
+And for synthesis:
+
+    cd build/mvu_0/synth-vivado/ 
+    make build-gui
+
+
+This should open the project for you. Make sure you have run simulation or synthesis atleast once, otherwise fusesoc would not create a 
+project file for you.
+
