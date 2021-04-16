@@ -129,34 +129,38 @@ class testbench_base extends BaseObj;
         intf.ibaseaddr[mvu*BDBANKA +: BDBANKA] = iaddr;
         intf.obaseaddr[mvu*BDBANKA +: BDBANKA] = {obank_sel, oword_sel};
         intf.omvusel[mvu*NMVU +: NMVU]         = omvu;                   // Set the output MVUs
-        intf.wstride_0[mvu*BSTRIDE +: BSTRIDE] = -wprec*(m_w-1);         // Move back to tile 0 of current tile row
-        intf.wstride_1[mvu*BSTRIDE +: BSTRIDE] = wprec;                  // move 1 tile ahead to next tile row
-        intf.wstride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-        intf.wstride_3[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-        intf.istride_0[mvu*BSTRIDE +: BSTRIDE] = -iprec*(m_w-1);         // Move back to beginning vector 
-        intf.istride_1[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-        intf.istride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-        intf.istride_3[mvu*BSTRIDE +: BSTRIDE] = -iprec*(m_w-1);         // Set the same as istride_0
-        intf.ostride_0[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-        intf.ostride_1[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-        intf.ostride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-        intf.ostride_3[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-        intf.wlength_0[mvu*BLENGTH +: BLENGTH] = m_w-1;                  // Number tiles in width minus 1
-        intf.wlength_1[mvu*BLENGTH +: BLENGTH] = wprec*iprec-1;          // number bit combinations minus 1
-        intf.wlength_2[mvu*BLENGTH +: BLENGTH] = m_h-1;                  // Number tiles in height minus 1
-        intf.wlength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-        intf.ilength_0[mvu*BLENGTH +: BLENGTH] = m_h-1;                  // Number tiles in height minus 1
-        intf.ilength_1[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-        intf.ilength_2[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-        intf.ilength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-        intf.olength_0[mvu*BLENGTH +: BLENGTH] = 1;                      // Write out sequentially
-        intf.olength_1[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-        intf.olength_2[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-        intf.olength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+        intf.wjump[mvu][0] = wprec;                        // move 1 tile ahead to next tile row
+        intf.wjump[mvu][1] = -wprec*(m_w-1);               // Move back to tile 0 of current tile row
+        intf.wjump[mvu][2] = wprec;                        // Move ahead one tile
+        intf.wjump[mvu][3] = 0;                            // Don't need this for GEMV
+        intf.wjump[mvu][4] = 0;                            // Don't need this for GEMV
+        intf.ijump[mvu][0] = -iprec*(m_w-1);               // Move back to beginning vector 
+        intf.ijump[mvu][1] = iprec;                        // Move ahead one tile
+        intf.ijump[mvu][2] = 0;                            // Don't need this for GEMV
+        intf.ijump[mvu][3] = 0;                            // Don't need this for GEMV
+        intf.ijump[mvu][4] = 0;                            // Don't need this for GEMV
+        intf.ojump[mvu][0] = 0;                            // Don't need this for GEMV
+        intf.ojump[mvu][1] = 0;                            // Don't need this for GEMV
+        intf.ojump[mvu][2] = 0;                            // Don't need this for GEMV
+        intf.ojump[mvu][3] = 0;                            // Don't need this for GEMV
+        intf.ojump[mvu][4] = 0;                            // Don't need this for GEMV
+        intf.wlength[mvu][1] = wprec*iprec-1;              // number bit combinations minus 1
+        intf.wlength[mvu][2] = m_w-1;                      // Number tiles in width minus 1
+        intf.wlength[mvu][3] = 0;                          // Don't need this for GEMV
+        intf.wlength[mvu][4] = 0;                          // Don't need this for GEMV
+        intf.ilength[mvu][1] = m_h-1;                      // Number tiles in height minus 1
+        intf.ilength[mvu][2] = 0;                          // Don't need this for GEMV
+        intf.ilength[mvu][3] = 0;                          // Don't need this for GEMV
+        intf.ilength[mvu][4] = 0;                          // Don't need this for GEMV
+        intf.olength[mvu][1] = 1;                          // Write out sequentially
+        intf.olength[mvu][2] = 0;                          // Don't need this for GEMV
+        intf.olength[mvu][3] = 0;                          // Don't need this for GEMV
+        intf.olength[mvu][4] = 0;                          // Don't need this for GEMV
         intf.d_signed[mvu] = isign;
         intf.w_signed[mvu] = wsign;
         intf.scaler_b[mvu*BSCALERB +: BSCALERB] = scaler;
-        intf.shacc_load_sel[mvu*NJUMPS +: NJUMPS] = 5'b00100;            // Load the shift/accumulator on when weight address jump 2 happens
+        intf.shacc_load_sel[mvu] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
+        intf.zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
         intf.countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
 
         // Run the GEMV
@@ -199,33 +203,29 @@ class testbench_base extends BaseObj;
         intf.wbaseaddr = 0;
         intf.ibaseaddr = 0;
         intf.obaseaddr = 0;
-        intf.omvusel = 0;  
-        intf.wstride_0 = 0;
-        intf.wstride_1 = 0;
-        intf.wstride_2 = 0;
-        intf.wstride_3 = 0;
-        intf.istride_0 = 0;
-        intf.istride_1 = 0;
-        intf.istride_2 = 0;
-        intf.istride_3 = 0;
-        intf.ostride_0 = 0;
-        intf.ostride_1 = 0;
-        intf.ostride_2 = 0;
-        intf.ostride_3 = 0;
-        intf.wlength_0 = 0;
-        intf.wlength_1 = 0;
-        intf.wlength_2 = 0;
-        intf.wlength_3 = 0;
-        intf.ilength_0 = 0;
-        intf.ilength_1 = 0;
-        intf.ilength_2 = 0;
-        intf.ilength_3 = 0;
-        intf.olength_0 = 0;
-        intf.olength_1 = 0;
-        intf.olength_2 = 0;
-        intf.olength_3 = 0;
+        intf.omvusel = 0;
+
+        // Initialize arrays
+        for (int m = 0; m < NMVU; m++) begin
+            // Initialize jumps
+            for (int i = 0; i < NJUMPS; i++) begin
+                intf.wjump[m][i] = 0;
+                intf.ijump[m][i] = 0;
+                intf.ojump[m][i] = 0;
+            end
+
+            // Initizalize lengths
+            for (int i = 1; i < NJUMPS; i++) begin
+                intf.wlength[m][i] = 0;
+                intf.ilength[m][i] = 0;
+                intf.olength[m][i] = 0;
+            end
+
+            intf.shacc_load_sel[m] = 0;
+            intf.zigzag_step_sel[m] = 0;
+        end
+        
         intf.scaler_b = 1;
-        intf.shacc_load_sel = 0;
         intf.wrw_addr = 0;
         intf.wrw_word = 0;
         intf.wrw_en = 0;

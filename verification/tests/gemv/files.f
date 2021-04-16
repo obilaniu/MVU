@@ -24,8 +24,8 @@
 ../../../verilog/quantser.v
 ../../../verilog/quantser_ctrl.v
 ../../../verilog/outagu.v
-../../../verilog/inagu.v
-../../../verilog/agu.v
+../../../verilog/inagu.sv
+../../../verilog/agu.sv
 ../../../verilog/zigzagu.v
 ../../../verilog/controller.v
 ../../../verilog/shiftreg.v
