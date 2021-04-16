@@ -22,32 +22,15 @@ interface mvu_interface(input logic clk);
     logic[  NMVU*BBDADDR-1 : 0] ibaseaddr;            // Config: data memory base address for input
     logic[  NMVU*BBDADDR-1 : 0] obaseaddr;            // Config: data memory base address for output
     logic[     NMVU*NMVU-1 : 0] omvusel;                      // Config: MVU selector bits for output
-    logic[  NMVU*BSTRIDE-1 : 0] wstride_0;            // Config: weight stride in dimension 0 (x)
-    logic[  NMVU*BSTRIDE-1 : 0] wstride_1;            // Config: weight stride in dimension 1 (y)
-    logic[  NMVU*BSTRIDE-1 : 0] wstride_2;            // Config: weight stride in dimension 2 (z)
-    logic[  NMVU*BSTRIDE-1 : 0] wstride_3;            // Config: weight stride in dimension 3 (w)
-    logic[  NMVU*BSTRIDE-1 : 0] istride_0;            // Config: input stride in dimension 0 (x)
-    logic[  NMVU*BSTRIDE-1 : 0] istride_1;            // Config: input stride in dimension 1 (y)
-    logic[  NMVU*BSTRIDE-1 : 0] istride_2;            // Config: input stride in dimension 2 (z)
-    logic[  NMVU*BSTRIDE-1 : 0] istride_3;            // Config: input stride in dimension 3 (w)
-    logic[  NMVU*BSTRIDE-1 : 0] ostride_0;            // Config: output stride in dimension 0 (x)
-    logic[  NMVU*BSTRIDE-1 : 0] ostride_1;            // Config: output stride in dimension 1 (y)
-    logic[  NMVU*BSTRIDE-1 : 0] ostride_2;            // Config: output stride in dimension 2 (z)
-    logic[  NMVU*BSTRIDE-1 : 0] ostride_3;            // Config: output stride in dimension 3 (w)
-    logic[  NMVU*BLENGTH-1 : 0] wlength_0;            // Config: weight length in dimension 0 (x)
-    logic[  NMVU*BLENGTH-1 : 0] wlength_1;            // Config: weight length in dimension 1 (y)
-    logic[  NMVU*BLENGTH-1 : 0] wlength_2;            // Config: weight length in dimension 2 (z)
-    logic[  NMVU*BLENGTH-1 : 0] wlength_3;            // Config: weight length in dimension 3 (w)
-    logic[  NMVU*BLENGTH-1 : 0] ilength_0;            // Config: input length in dimension 0 (x)
-    logic[  NMVU*BLENGTH-1 : 0] ilength_1;            // Config: input length in dimension 1 (y)
-    logic[  NMVU*BLENGTH-1 : 0] ilength_2;            // Config: input length in dimension 2 (z)
-    logic[  NMVU*BLENGTH-1 : 0] ilength_3;            // Config: input length in dimension 3 (w)
-    logic[  NMVU*BLENGTH-1 : 0] olength_0;            // Config: output length in dimension 0 (x)
-    logic[  NMVU*BLENGTH-1 : 0] olength_1;            // Config: output length in dimension 1 (y)
-    logic[  NMVU*BLENGTH-1 : 0] olength_2;            // Config: output length in dimension 2 (z)
-    logic[  NMVU*BLENGTH-1 : 0] olength_3;            // Config: output length in dimension 3 (w)
-    logic[ NMVU*BSCALERB-1 : 0] scaler_b;             // Config: multiplicative scaler (operand 'b')
-    logic[   NMVU*NJUMPS-1 : 0] shacc_load_sel;       // Config: select jump trigger for shift/accumultor load
+    logic[         BJUMP-1 : 0] wjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: weight jumps
+    logic[         BJUMP-1 : 0] ijump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: input jumps
+    logic[         BJUMP-1 : 0] ojump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: output jumps
+    logic[       BLENGTH-1 : 0] wlength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: weight lengths
+    logic[       BLENGTH-1 : 0] ilength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: input length
+    logic[       BLENGTH-1 : 0] olength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: output length
+    logic[ NMVU*BSCALERB-1 : 0] scaler_b;                                   // Config: multiplicative scaler (operand 'b')
+    logic[        NJUMPS-1 : 0] shacc_load_sel[NMVU-1 : 0];                 // Config: select jump trigger for shift/accumultor load
+    logic[        NJUMPS-1 : 0] zigzag_step_sel[NMVU-1 : 0];                // Config: select jump trigger for stepping the zig-zag address generator  
     logic[  NMVU*BWBANKA-1 : 0] wrw_addr;             // Weight memory: write address
     logic[  NMVU*BWBANKW-1 : 0] wrw_word;             // Weight memory: write word
     logic[          NMVU-1 : 0] wrw_en;               // Weight memory: write enable
@@ -88,32 +71,15 @@ modport  tb_interface (
                         input  ibaseaddr,
                         input  obaseaddr,
                         input  omvusel,
-                        input  wstride_0,
-                        input  wstride_1,
-                        input  wstride_2,
-                        input  wstride_3,
-                        input  istride_0,
-                        input  istride_1,
-                        input  istride_2,
-                        input  istride_3,
-                        input  ostride_0,
-                        input  ostride_1,
-                        input  ostride_2,
-                        input  ostride_3,
-                        input  wlength_0,
-                        input  wlength_1,
-                        input  wlength_2,
-                        input  wlength_3,
-                        input  ilength_0,
-                        input  ilength_1,
-                        input  ilength_2,
-                        input  ilength_3,
-                        input  olength_0,
-                        input  olength_1,
-                        input  olength_2,
-                        input  olength_3,
+                        input  wjump,
+                        input  ijump,
+                        input  ojump,
+                        input  wlength,
+                        input  ilength,
+                        input  olength,
                         input  scaler_b,
                         input  shacc_load_sel,
+                        input  zigzag_step_sel,
                         input  wrw_addr,
                         input  wrw_word,
                         input  wrw_en,
@@ -154,32 +120,15 @@ modport  system_interface (
                            input  ibaseaddr,
                            input  obaseaddr,
                            input  omvusel,
-                           input  wstride_0,
-                           input  wstride_1,
-                           input  wstride_2,
-                           input  wstride_3,
-                           input  istride_0,
-                           input  istride_1,
-                           input  istride_2,
-                           input  istride_3,
-                           input  ostride_0,
-                           input  ostride_1,
-                           input  ostride_2,
-                           input  ostride_3,
-                           input  wlength_0,
-                           input  wlength_1,
-                           input  wlength_2,
-                           input  wlength_3,
-                           input  ilength_0,
-                           input  ilength_1,
-                           input  ilength_2,
-                           input  ilength_3,
-                           input  olength_0,
-                           input  olength_1,
-                           input  olength_2,
-                           input  olength_3,
+                           input  wjump,
+                           input  ijump,
+                           input  ojump,
+                           input  wlength,
+                           input  ilength,
+                           input  olength,
                            input  scaler_b,
                            input  shacc_load_sel,
+                           input  zigzag_step_sel,
                            input  wrw_addr,
                            input  wrw_word,
                            input  wrw_en,

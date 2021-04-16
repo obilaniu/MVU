@@ -18,12 +18,12 @@
 ../../../../verilog/quantser.v
 ../../../../verilog/quantser_ctrl.v
 ../../../../verilog/outagu.v
-../../../../verilog/inagu.v
-../../../../verilog/agu.v
+../../../../verilog/inagu.sv
+../../../../verilog/agu.sv
 ../../../../verilog/zigzagu.v
 ../../../../verilog/controller.v
 ../../../../verilog/shiftreg.v
 ../../../../verilog/fixedpointscaler.v
-../../../../verilog/mvutop.v
+../../../../verilog/mvutop.sv
 ../../../lib/utils/utils.sv
 ../tb/mvutop_tester.sv
