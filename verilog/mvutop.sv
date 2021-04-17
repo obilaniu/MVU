@@ -5,7 +5,9 @@
 // * For wlength_X and ilength_X parameters, the value to assign is actual_length - 1.
 //
 //
- 
+
+`include "mvu_inf.svh"
+
 import mvu_pkg::*;
 
 `timescale 1 ps / 1 ps
