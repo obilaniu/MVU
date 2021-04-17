@@ -5,7 +5,7 @@ source common.tcl
 
 # Set some directories
 set xcisrcpath ../ip/xilinx
-set buildpath ../build/ip/xilinx
+set buildpath ../ip/build/ip/xilinx
 set verifyippath ../verification/ip/xilinx
 file mkdir $buildpath
 
@@ -34,7 +34,7 @@ proc genIPFiles {ipname} {
     set locked [get_property IS_LOCKED [get_ips $ipname]]
     set upgrade [get_property UPGRADE_VERSIONS [get_ips $ipname]]
     if {$locked && $upgrade != ""} {
-    	upgrade_ip [get_ips $ipname]]
+    	upgrade_ip [get_ips $ipname]
     }
     generate_target -force all [get_ips $ipname]
     #catch { config_ip_cache -export [get_ips -all $ipname] }
