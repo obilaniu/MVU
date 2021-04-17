@@ -1,5 +1,6 @@
+`include "testbench_base.sv"
 
-class gemv_tester extends testbench_base;
+class gemv_tester extends mvu_testbench_base;
 
     function new(Logger logger, virtual mvu_interface intf);
         super.new(logger, intf);
