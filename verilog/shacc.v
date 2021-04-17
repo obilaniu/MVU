@@ -2,7 +2,7 @@
  * Shifter-Accumulator.
  */
 
-`timescale 1 ps / 1 ps
+`timescale 1ns/1ps
 /**** Module shacc ****/
 module shacc(clk, clr, load, acc, sh, I, O);
 

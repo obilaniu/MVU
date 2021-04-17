@@ -31,6 +31,7 @@
 //devices manufactured by Altera and sold by Altera or its 
 //authorized distributors.  Please refer to the applicable 
 //agreement for further details.
+`timescale 1ns/1ps
 
 module bram64k (
 	clock,

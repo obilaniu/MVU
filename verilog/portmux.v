@@ -1,9 +1,7 @@
 /**
  * Port Multiplexer
  */
-
-
-`timescale 1 ps / 1 ps
+`timescale 1ns/1ps
 /**** Module portmux ****/
 module portmux(cselIC, cselMVU, cselCtrl,
                addrIC, addrMVU, addrCtrl,

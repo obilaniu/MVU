@@ -5,14 +5,12 @@
 // * For wlength_X and ilength_X parameters, the value to assign is actual_length - 1.
 //
 //
+`timescale 1ns/1ps
 
 `include "mvu_inf.svh"
 
-import mvu_pkg::*;
-
-`timescale 1 ps / 1 ps
 /**** Module ****/
-module mvutop( mvu_interface.system_interface intf);
+module mvutop import mvu_pkg::*; ( mvu_interface.system_interface intf);
 
 
 genvar i;
