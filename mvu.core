@@ -30,6 +30,41 @@ filesets:
                 file_type: systemVerilogSource
             - verilog/mvutop.sv:
                 file_type: systemVerilogSource
+    synth:
+        file_type: verilogSource
+        files:
+            - verification/lib/mvu/mvu_pkg.sv:
+                file_type: systemVerilogSource
+            - verification/lib/mvu/mvu_inf.svh:
+                is_include_file: true
+            - ip/build/ip/xilinx/bram64k_64x1024_xilinx/simulation/blk_mem_gen_v8_4.v
+            - ip/build/ip/xilinx/bram64k_64x1024_xilinx/sim/bram64k_64x1024_xilinx.v
+            - ip/build/ip/xilinx/bram2m_xilinx/simulation/blk_mem_gen_v8_4.v
+            - ip/build/ip/xilinx/bram2m_xilinx/sim/bram2m_xilinx.v
+            - verilog/bram64k.v
+            - verilog/bank64k.v
+            - verilog/bram2m.v
+            - verilog/cdru.v
+            - verilog/cdwu.v
+            - verilog/maxpool.v
+            - verilog/mvp.v
+            - verilog/mvu.v
+            - verilog/shacc.v
+            - verilog/vvp.v
+            - verilog/interconn.v
+            - verilog/quantser.v
+            - verilog/quantser_ctrl.v
+            - verilog/outagu.v
+            - verilog/zigzagu.v
+            - verilog/controller.v
+            - verilog/shiftreg.v
+            - verilog/fixedpointscaler.v
+            - verilog/inagu.sv:
+                file_type: systemVerilogSource
+            - verilog/agu.sv:
+                file_type: systemVerilogSource
+            - verilog/mvutop.sv:
+                file_type: systemVerilogSource
     tb:
         file_type: systemVerilogSource
         files:
@@ -73,6 +108,7 @@ targets:
         tools:
           vivado:
             part: xcku115-flva1517-2-e
+        parameters: [XILINX]
         toplevel: [mvutop]
 parameters:
     XILINX:
