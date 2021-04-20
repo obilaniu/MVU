@@ -1,4 +1,4 @@
-
+`include "testbench_base.sv"
 
 class gemv_tester extends mvu_testbench_base;
 

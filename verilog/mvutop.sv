@@ -5,10 +5,10 @@
 // * For wlength_X and ilength_X parameters, the value to assign is actual_length - 1.
 //
 //
- 
-
-
 `timescale 1ns/1ps
+
+`include "mvu_inf.svh"
+
 /**** Module ****/
 module mvutop import mvu_pkg::*; ( mvu_interface.system_interface intf);
 
@@ -26,7 +26,7 @@ logic[     BPREC-1 : 0] oprecision_q      [NMVU-1 : 0];           // Config: out
 logic[   BBWADDR-1 : 0] wbaseaddr_q       [NMVU-1 : 0];           // Config: weight memory base address
 logic[   BBDADDR-1 : 0] ibaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for input
 logic[   BBDADDR-1 : 0] obaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for output
-logic[      NMVU-1 : 0] omvusel_q         [NMVU-1 : 0];    		// Config: MVU selection bits for output
+logic[      NMVU-1 : 0] omvusel_q         [NMVU-1 : 0];           // Config: MVU selection bits for output
 logic[   BWBANKA-1 : 0] wjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: weight jumps
 logic[   BDBANKA-1 : 0] ijump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: input jumps
 logic[   BDBANKA-1 : 0] ojump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: output jump

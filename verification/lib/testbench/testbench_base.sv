@@ -1,3 +1,6 @@
+`include "testbench_macros.svh"
+`include "testbench_config.sv"
+
 import utils::*;
 import testbench_pkg::*;
 import mvu_pkg::*;

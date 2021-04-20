@@ -1,7 +1,8 @@
-import utils::*;
-import testbench_pkg::*;
+`timescale 1ns/1ps
+`include "gemv_tester.sv"
+`include "mvu_inf.svh"
 
-module testbench_top();
+module testbench_top import utils::*;import testbench_pkg::*; ();
 //==================================================================================================
 // Test variables
     Logger logger;
