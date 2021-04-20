@@ -5,7 +5,7 @@ source common.tcl
 
 # Set some directories
 set xcisrcpath ../ip/xilinx
-set buildpath ../ip/build/ip/xilinx
+set buildpath ../ip/build/xilinx
 set verifyippath ../verification/ip/xilinx
 file mkdir $buildpath
 
