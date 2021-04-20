@@ -44,11 +44,16 @@ Then make sure you have fusesoc installed:
 
     python3 -m pip install fusesoc
 
-Then add `pito` to your fusesoc libraries:
+Then add `mvu` to your fusesoc libraries:
     
     git clone https://github.com/obilaniu/MVU.git
     cd MVU
     fusesoc library add mvu .
+	
+Generate the required IP components. For Xilinx Vivado, do the following:
+
+    cd tclscripts
+    vivado -mode batch -nolog -nojournal -source gen_xilinx_ip.tcl
 
 Then run simulation (No GUI):
    
