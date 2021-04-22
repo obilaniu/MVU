@@ -25,14 +25,20 @@ logic[     BPREC-1 : 0] iprecision_q      [NMVU-1 : 0];           // Config: inp
 logic[     BPREC-1 : 0] oprecision_q      [NMVU-1 : 0];           // Config: output precision
 logic[   BBWADDR-1 : 0] wbaseaddr_q       [NMVU-1 : 0];           // Config: weight memory base address
 logic[   BBDADDR-1 : 0] ibaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for input
+logic[   BSBANKA-1 : 0] sbaseaddr_q       [NMVU-1 : 0];           // Config: scaler memory base address
+logic[   BBBANKA-1 : 0] bbaseaddr_q       [NMVU-1 : 0];           // Config: bias memory base address
 logic[   BBDADDR-1 : 0] obaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for output
 logic[      NMVU-1 : 0] omvusel_q         [NMVU-1 : 0];           // Config: MVU selection bits for output
 logic[   BWBANKA-1 : 0] wjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: weight jumps
 logic[   BDBANKA-1 : 0] ijump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: input jumps
+logic[   BSBANKA-1 : 0] sjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: scalar jump
+logic[   BBBANKA-1 : 0] bjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: bias jump
 logic[   BDBANKA-1 : 0] ojump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: output jump
-logic[   BLENGTH-1 : 0] wlength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: weight length 1
-logic[   BLENGTH-1 : 0] ilength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: input length 1
-logic[   BLENGTH-1 : 0] olength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: output length 1
+logic[   BLENGTH-1 : 0] wlength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: weight length
+logic[   BLENGTH-1 : 0] ilength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: input length
+logic[   BLENGTH-1 : 0] slength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: scalar length
+logic[   BLENGTH-1 : 0] blength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: bias length
+logic[   BLENGTH-1 : 0] olength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: output length
 logic[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];           // Config: multiplicative scaler (operand 'b')
 logic[    NJUMPS-1 : 0] shacc_load_sel_q  [NMVU-1 : 0];           // Config: select jump trigger for shift/accumultor load
 logic[    NJUMPS-1 : 0] zigzag_step_sel_q [NMVU-1 : 0];           // Config: select jump trigger for stepping the zig-zag address generator
@@ -49,6 +55,14 @@ logic[NMVU*BDBANKA-1 : 0] rdd_addr;
 logic[        NMVU-1 : 0] wrd_en;
 logic[        NMVU-1 : 0] wrd_grnt;
 logic[NMVU*BDBANKA-1 : 0] wrd_addr;
+
+// MVU Scaler and Bias memory control
+logic[        NMVU-1 : 0] rds_en;                        // Scaler memory: read enable
+logic[NMVU*BSBANKA-1 : 0] rds_addr;                      // Scaler memory: read address
+logic[     BSBANKA-1 : 0] rds_addr_offset [NMVU-1 : 0];  // Scaler memory: read address offset from scaler mem AGU
+logic[        NMVU-1 : 0] rdb_en;                        // Bias memory: read enable
+logic[NMVU*BBBANKA-1 : 0] rdb_addr;                      // Bias memory: read address
+logic[     BBBANKA-1 : 0] rdb_addr_offset [NMVU-1 : 0];  // Bias memory: read address offset from bias mem AGU
 
 // Interconnect
 logic                     ic_clr_int;
@@ -111,7 +125,13 @@ logic[        NMVU-1 : 0] shacc_done;        // Accumulator done control
 logic[        NMVU-1 : 0] maxpool_done;      // Max pool done control
 logic[        NMVU-1 : 0] outagu_clr;        // Clear the output AGU
 logic[        NMVU-1 : 0] outagu_load;       // Load the output AGU base address
-logic[      NJUMPS-1 : 0] wagu_on_j[NMVU-1 : 0];      // Indicates when a weight address jump X 
+logic[      NJUMPS-1 : 0] wagu_on_j[NMVU-1 : 0];      // Indicates when a weight address jump X
+logic[        NMVU-1 : 0] scaleragu_step;    // Steps the scaler memory AGU
+logic[        NMVU-1 : 0] biasagu_step;      // Steps the bias memory AGU
+logic[        NMVU-1 : 0] scaleragu_clr;     // Clears the state of the Scaler memory AGU
+logic[        NMVU-1 : 0] biasagu_clr;       // Clears the state of the bias memory AGU
+logic[        NMVU-1 : 0] scaleragu_clr_dly; // Clears the state of the Scaler memory AGU
+logic[        NMVU-1 : 0] biasagu_clr_dly;   // Clears the state of the bias memory AGU
 
 
 /*
@@ -174,6 +194,8 @@ assign controller_clr   = {NMVU{!intf.rst_n}};
 assign inagu_clr        = {NMVU{!intf.rst_n}} | start_q;
 assign outagu_clr       = {NMVU{!intf.rst_n}};
 assign shacc_clr_int    = {NMVU{!intf.rst_n}} | intf.shacc_clr;       // Clear the accumulator
+assign scaleragu_clr    = {NMVU{!intf.rst_n}} | scaleragu_clr_dly;
+assign biasagu_clr      = {NMVU{!intf.rst_n}} | biasagu_clr_dly;
 assign scaler_clr       = {NMVU{!intf.rst_n}};
 assign quant_clr_int    = {NMVU{!intf.rst_n}} | intf.quant_clr;
 
@@ -219,6 +241,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             for (int j = 0; j < NJUMPS; j++) begin
                 wjump_q[i][j] <= 0;
                 ijump_q[i][j] <= 0;
+                sjump_q[i][j] <= 0;
+                bjump_q[i][j] <= 0;
                 ojump_q[i][j] <= 0;
             end
 
@@ -226,6 +250,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             for (int j = 1; j < NJUMPS; j++) begin
                 wlength_q[i][j] <= 0;
                 ilength_q[i][j] <= 0;
+                slength_q[i][j] <= 0;
+                blength_q[i][j] <= 0;
                 olength_q[i][j] <= 0;
             end
 
@@ -249,6 +275,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 for (int j = 0; j < NJUMPS; j++) begin
                     wjump_q[i][j] <= intf.wjump[i][j];
                     ijump_q[i][j] <= intf.ijump[i][j];
+                    sjump_q[i][j] <= intf.sjump[i][j];
+                    bjump_q[i][j] <= intf.bjump[i][j];
                     ojump_q[i][j] <= intf.ojump[i][j];
                 end
 
@@ -256,6 +284,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 for (int j = 1; j < NJUMPS; j++) begin
                     wlength_q[i][j] <= intf.wlength[i][j];
                     ilength_q[i][j] <= intf.ilength[i][j];
+                    slength_q[i][j] <= intf.slength[i][j];
+                    blength_q[i][j] <= intf.blength[i][j];
                     olength_q[i][j] <= intf.olength[i][j];
                 end
             end
@@ -308,6 +338,42 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
         .sh_out     (agu_sh_out[i]),
         .wagu_on_j  (wagu_on_j[i])
     );
+end endgenerate
+
+// Scaler and Bias memory address generation units
+generate for(i = 0; i < NMVU; i = i+1) begin: scalarbiasaguarray
+
+    agu #(
+        .BWADDR     (BSBANKA),
+        .BWLENGTH   (BLENGTH)
+    ) scaleragu_unit (
+        .clk        (intf.clk),
+        .clr        (scaleragu_clr[i]),
+        .step       (scaleragu_step[i]),
+        .l          (slength_q[i]),
+        .j          (sjump_q[i]),            // TODO: come up with better numbering scheme
+        .addr_out   (rds_addr_offset[i]),
+        .z_out      (),
+        .on_j       ()
+    );
+
+    agu #(
+        .BWADDR     (BBBANKA),
+        .BWLENGTH   (BLENGTH)
+    ) biasagu_unit (
+        .clk        (intf.clk),
+        .clr        (scaleragu_clr[i]),
+        .step       (scaleragu_step[i]),
+        .l          (blength_q[i]),
+        .j          (bjump_q[i]),            // TODO: come up with better numbering scheme
+        .addr_out   (rdb_addr_offset[i]),
+        .z_out      (),
+        .on_j       ()
+    );
+
+    assign rds_addr[i*BSBANKA +: BSBANKA] = sbaseaddr_q[i] + rds_addr_offset[i];
+    assign rdb_addr[i*BBBANKA +: BBBANKA] = bbaseaddr_q[i] + rdb_addr_offset[i];
+
 end endgenerate
 
 // Output address generators
@@ -405,6 +471,26 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     );
 
     shiftreg #(
+        .N      (VVPSTAGES + MEMRDLATENCY)      // TODO: find a better way to re-time this
+    ) scaleragu_step_delayarrayunit (
+        .clk    (intf.clk), 
+        .clr    (~intf.rst_n),
+        .step   (1'b1),
+        .in     (agu_shacc_done[i]),
+        .out    (scaleragu_step[i])
+    );
+
+    shiftreg #(
+        .N      (VVPSTAGES + MEMRDLATENCY)      // TODO: find a better way to re-time this
+    ) scaleragu_clr_delayarrayunit (
+        .clk    (intf.clk), 
+        .clr    (~intf.rst_n),
+        .step   (1'b1),
+        .in     (start_q[i]),
+        .out    (scaleragu_clr_dly[i])
+    );
+
+    shiftreg #(
         .N      (SCALERLATENCY+MAXPOOLSTAGES)
     ) maxpool_done_delayarrayunit (
         .clk    (intf.clk),
@@ -434,7 +520,7 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .NDBANK         (NDBANK)
         ) mvunit
         (
-            .clk            (intf.clk                                ),
+            .clk            (intf.clk                               ),
             .mul_mode       (mul_mode_q[i]                          ),
             .neg_acc        (neg_acc_dly[i]                         ),
             .shacc_clr      (shacc_clr_int[i]                       ),
@@ -443,17 +529,17 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .shacc_sh       (shacc_sh[i]                            ),
             .scaler_clr     (scaler_clr[i]                          ),
             .scaler_b       (scaler_b_q[i]                          ),
-            .max_en         (intf.max_en[i]                          ),
-            .max_clr        (intf.max_clr[i]                         ),
-            .max_pool       (intf.max_pool[i]                        ),
+            .max_en         (intf.max_en[i]                         ),
+            .max_clr        (intf.max_clr[i]                        ),
+            .max_pool       (intf.max_pool[i]                       ),
             .quant_clr      (quant_clr_int[i]                       ),
             .quant_msbidx   (quant_msbidx_q[i]                      ),
             .quant_load     (quant_load[i]                          ),
             .quant_step     (quant_step[i]                          ),
             .rdw_addr       (rdw_addr[i*BWBANKA +: BWBANKA]         ),
-            .wrw_addr       (intf.wrw_addr[i*BWBANKA +: BWBANKA]     ),
-            .wrw_word       (intf.wrw_word[i*BWBANKW +: BWBANKW]     ),
-            .wrw_en         (intf.wrw_en[i]                          ),
+            .wrw_addr       (intf.wrw_addr[i*BWBANKA +: BWBANKA]    ),
+            .wrw_word       (intf.wrw_word[i*BWBANKW +: BWBANKW]    ),
+            .wrw_en         (intf.wrw_en[i]                         ),
             .rdd_en         (rdd_en[i]                              ),
             .rdd_grnt       (rdd_grnt[i]                            ),
             .rdd_addr       (rdd_addr[i*BDBANKA +: BDBANKA]         ),
@@ -468,16 +554,26 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .wri_grnt       (wri_grnt[i]                            ),
             .wri_addr       (wri_addr[i*BDBANKA +: BDBANKA]         ),
             .wri_word       (wri_word[i*BDBANKW +: BDBANKW]         ),
-            .rdc_en         (intf.rdc_en[i]                          ),
-            .rdc_grnt       (intf.rdc_grnt[i]                        ),
-            .rdc_addr       (intf.rdc_addr[i*BDBANKA +: BDBANKA]     ),
-            .rdc_word       (intf.rdc_word[i*BDBANKW +: BDBANKW]     ),
-            .wrc_en         (intf.wrc_en[i]                          ),
-            .wrc_grnt       (intf.wrc_grnt[i]                        ),
-            .wrc_addr       (intf.wrc_addr[BDBANKA-1: 0]             ),
-            .wrc_word       (intf.wrc_word[BDBANKW-1 : 0]            ),
-            .mvu_word_out   (mvu_word_out[i*BDBANKW +: BDBANKW]     )
-                );
+            .rdc_en         (intf.rdc_en[i]                         ),
+            .rdc_grnt       (intf.rdc_grnt[i]                       ),
+            .rdc_addr       (intf.rdc_addr[i*BDBANKA +: BDBANKA]    ),
+            .rdc_word       (intf.rdc_word[i*BDBANKW +: BDBANKW]    ),
+            .wrc_en         (intf.wrc_en[i]                         ),
+            .wrc_grnt       (intf.wrc_grnt[i]                       ),
+            .wrc_addr       (intf.wrc_addr[BDBANKA-1: 0]            ),
+            .wrc_word       (intf.wrc_word[BDBANKW-1 : 0]           ),
+            .mvu_word_out   (mvu_word_out[i*BDBANKW +: BDBANKW]     ),
+            .rds_en         (rds_en[i]                              ),
+            .rds_addr       (rds_addr[i*BSBANKA +: BSBANKA]         ),
+            .wrs_en         (intf.wrs_en[i]                         ),
+            .wrs_addr       (intf.wrs_addr                          ),
+            .wrs_word       (intf.wrs_word                          ),
+            .rdb_en         (rdb_en[i]                              ),
+            .rdb_addr       (rdb_addr[i*BBBANKA +: BBBANKA]         ),
+            .wrb_en         (intf.wrb_en[i]                         ),
+            .wrb_addr       (intf.wrb_addr                          ),
+            .wrb_word       (intf.wrb_word                          )
+        );
 end endgenerate
 
 

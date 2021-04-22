@@ -20,13 +20,19 @@ interface mvu_interface(input logic clk);
     logic[    NMVU*BPREC-1 : 0] oprecision;           // Config: output precision
     logic[  NMVU*BBWADDR-1 : 0] wbaseaddr;            // Config: weight memory base address
     logic[  NMVU*BBDADDR-1 : 0] ibaseaddr;            // Config: data memory base address for input
+    logic[  NMVU*BSBANKA-1 : 0] sbaseaddr;            // Config: scaler memory base address
+    logic[  NMVU*BBBANKA-1 : 0] bbaseaddr;            // Config: bias memory base address
     logic[  NMVU*BBDADDR-1 : 0] obaseaddr;            // Config: data memory base address for output
     logic[     NMVU*NMVU-1 : 0] omvusel;                      // Config: MVU selector bits for output
     logic[         BJUMP-1 : 0] wjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: weight jumps
     logic[         BJUMP-1 : 0] ijump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: input jumps
+    logic[         BJUMP-1 : 0] sjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: scalar jumps
+    logic[         BJUMP-1 : 0] bjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: bias jumps
     logic[         BJUMP-1 : 0] ojump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: output jumps
     logic[       BLENGTH-1 : 0] wlength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: weight lengths
     logic[       BLENGTH-1 : 0] ilength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: input length
+    logic[       BLENGTH-1 : 0] slength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: scalar length
+    logic[       BLENGTH-1 : 0] blength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: bias length
     logic[       BLENGTH-1 : 0] olength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: output length
     logic[ NMVU*BSCALERB-1 : 0] scaler_b;                                   // Config: multiplicative scaler (operand 'b')
     logic[        NJUMPS-1 : 0] shacc_load_sel[NMVU-1 : 0];                 // Config: select jump trigger for shift/accumultor load
@@ -42,7 +48,12 @@ interface mvu_interface(input logic clk);
     logic[          NMVU-1 : 0] wrc_grnt;             // Data memory: controller write grant
     logic[       BDBANKA-1 : 0] wrc_addr;             // Data memory: controller write address
     logic[       BDBANKW-1 : 0] wrc_word;             // Data memory: controller write word
-
+    logic[          NMVU-1 : 0] wrs_en;               // Scaler memory: write enable
+    logic[       BSBANKA-1 : 0] wrs_addr;             // Scaler memory: write address
+    logic[       BSBANKW-1 : 0] wrs_word;             // Scaler memory: write word
+    logic[          NMVU-1 : 0] wrb_en;               // Bias memory: write enable
+    logic[       BBBANKA-1 : 0] wrb_addr;             // Bias memory: write address
+    logic[       BBBANKW-1 : 0] wrb_word;             // Bias memory: write word
 
 //=================================================
 // Modport for Testbench interface 
@@ -69,13 +80,19 @@ modport  tb_interface (
                         input  oprecision,
                         input  wbaseaddr,
                         input  ibaseaddr,
+                        input  sbaseaddr,
+                        input  bbaseaddr,
                         input  obaseaddr,
                         input  omvusel,
                         input  wjump,
                         input  ijump,
+                        input  sjump,
+                        input  bjump,
                         input  ojump,
                         input  wlength,
                         input  ilength,
+                        input  slength,
+                        input  blength,
                         input  olength,
                         input  scaler_b,
                         input  shacc_load_sel,
@@ -90,7 +107,13 @@ modport  tb_interface (
                         input  wrc_en,
                         output wrc_grnt,
                         input  wrc_addr,
-                        input  wrc_word
+                        input  wrc_word,
+                        input  wrs_en,
+                        input  wrs_addr,
+                        input  wrs_word,
+                        input  wrb_en,
+                        input  wrb_addr,
+                        input  wrb_word
 );
 
 //=================================================
@@ -118,13 +141,19 @@ modport  system_interface (
                            input  oprecision,
                            input  wbaseaddr,
                            input  ibaseaddr,
+                           input  sbaseaddr,
+                           input  bbaseaddr,
                            input  obaseaddr,
                            input  omvusel,
                            input  wjump,
                            input  ijump,
+                           input  sjump,
+                           input  bjump,
                            input  ojump,
                            input  wlength,
                            input  ilength,
+                           input  slength,
+                           input  blength,
                            input  olength,
                            input  scaler_b,
                            input  shacc_load_sel,
@@ -139,7 +168,13 @@ modport  system_interface (
                            input  wrc_en,
                            output wrc_grnt,
                            input  wrc_addr,
-                           input  wrc_word
+                           input  wrc_word,
+                           input  wrs_en,
+                           input  wrs_addr,
+                           input  wrs_word,
+                           input  wrb_en,
+                           input  wrb_addr,
+                           input  wrb_word
 );
 
 endinterface

@@ -3,7 +3,8 @@ package mvu_pkg;
 // Parameters 
 localparam NMVU    =  8;   // Number of MVUs. Ideally a Power-of-2. 
 localparam N       = 64;   // N x N matrix-vector product size. Power-of-2. 
-localparam NDBANK  = 32;   // Number of N-bit, 1024-element Data BANK. 
+localparam NDBANK  = 32;   // Number of N-bit, 1024-element Data BANK.
+localparam  BBIAS   = 32;   // Bitwidth of bias values 
 
 localparam BMVUA   = $clog2(NMVU);  // Bitwidth of MVU          Address 
 localparam BWBANKA = 9;             // Bitwidth of Weights BANK Address 
@@ -34,6 +35,12 @@ localparam MEMRDLATENCY  = 2;  // Memory read latency
 localparam NJUMPS        = 5;  // Number of address jump parameters available
 
 localparam BDBANKABS = $clog2(NDBANK);  // Bitwidth of Data    BANK Address Bank Select 
-localparam BDBANKAWS = 10;              // Bitwidth of Data    BANK Address Word Select 
+localparam BDBANKAWS = 10;              // Bitwidth of Data    BANK Address Word Select
+
+// Scalar and Bias memory bank parameters
+localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
+localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word
+localparam BBBANKA     = 6;             // Bitwidth of Scaler BANK address
+localparam BBBANKW     = BBIAS*N;       // Bitwidth of Scaler BANK word
 
 endpackage
