@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 /**
  * Zig-Zag Address Generation Unit (Zig-ZAGU)
  */

@@ -11,7 +11,7 @@
  */
 
 
-`timescale 1 ps / 1 ps
+`timescale 1ns/1ps
 
  module fixedpointscaler #(
      BA     = 27,

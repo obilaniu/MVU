@@ -2,7 +2,7 @@
  * Max-Pooling
  */
 
-`timescale 1 ps / 1 ps
+`timescale 1ns/1ps
 /**** Module ****/
 module maxpool(clk, max_clr, max_pool, I, O);
 

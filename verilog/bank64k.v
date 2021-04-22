@@ -4,6 +4,7 @@
  * 128-bit-wide access, 64kbit (8KB) total.
  */
 
+`timescale 1ns/1ps
 
 /**** Module bank64k ****/
 module bank64k(clk,
