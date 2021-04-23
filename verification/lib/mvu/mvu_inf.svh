@@ -26,12 +26,12 @@ interface mvu_interface(input logic clk);
     logic[     NMVU*NMVU-1 : 0] omvusel;                      // Config: MVU selector bits for output
     logic[         BJUMP-1 : 0] wjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: weight jumps
     logic[         BJUMP-1 : 0] ijump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: input jumps
-    logic[         BJUMP-1 : 0] sjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: scalar jumps
+    logic[         BJUMP-1 : 0] sjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: scaler jumps
     logic[         BJUMP-1 : 0] bjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: bias jumps
     logic[         BJUMP-1 : 0] ojump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: output jumps
     logic[       BLENGTH-1 : 0] wlength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: weight lengths
     logic[       BLENGTH-1 : 0] ilength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: input length
-    logic[       BLENGTH-1 : 0] slength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: scalar length
+    logic[       BLENGTH-1 : 0] slength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: scaler length
     logic[       BLENGTH-1 : 0] blength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: bias length
     logic[       BLENGTH-1 : 0] olength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: output length
     logic[ NMVU*BSCALERB-1 : 0] scaler_b;                                   // Config: multiplicative scaler (operand 'b')

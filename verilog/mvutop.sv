@@ -31,12 +31,12 @@ logic[   BBDADDR-1 : 0] obaseaddr_q       [NMVU-1 : 0];           // Config: dat
 logic[      NMVU-1 : 0] omvusel_q         [NMVU-1 : 0];           // Config: MVU selection bits for output
 logic[   BWBANKA-1 : 0] wjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: weight jumps
 logic[   BDBANKA-1 : 0] ijump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: input jumps
-logic[   BSBANKA-1 : 0] sjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: scalar jump
+logic[   BSBANKA-1 : 0] sjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: scaler jump
 logic[   BBBANKA-1 : 0] bjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: bias jump
 logic[   BDBANKA-1 : 0] ojump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: output jump
 logic[   BLENGTH-1 : 0] wlength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: weight length
 logic[   BLENGTH-1 : 0] ilength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: input length
-logic[   BLENGTH-1 : 0] slength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: scalar length
+logic[   BLENGTH-1 : 0] slength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: scaler length
 logic[   BLENGTH-1 : 0] blength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: bias length
 logic[   BLENGTH-1 : 0] olength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: output length
 logic[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];           // Config: multiplicative scaler (operand 'b')
@@ -178,6 +178,8 @@ assign rdi_addr         = 0;
 //assign wri_grnt         = 0;
 
 assign rdd_en           = run;                              // MVU reads when running
+assign rds_en           = run;
+assign rdb_en           = run;
 
 // TODO: WIRE THESE UP TO SOMETHING USEFUL
 assign outload          = 0;
@@ -231,6 +233,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             oprecision_q[i]     <= 0;
             wbaseaddr_q[i]      <= 0;
             ibaseaddr_q[i]      <= 0;
+            sbaseaddr_q[i]      <= 0;
+            bbaseaddr_q[i]      <= 0;
             obaseaddr_q[i]      <= 0;
             omvusel_q[i]        <= 0;
             scaler_b_q[i]       <= 0;
@@ -265,6 +269,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 oprecision_q[i]         <= intf.oprecision   [i*BPREC +: BPREC];
                 wbaseaddr_q[i]          <= intf.wbaseaddr    [i*BBWADDR +: BBWADDR];
                 ibaseaddr_q[i]          <= intf.ibaseaddr    [i*BBDADDR +: BBDADDR];
+                sbaseaddr_q[i]          <= intf.sbaseaddr    [i*BSBANKA +: BSBANKA];
+                bbaseaddr_q[i]          <= intf.bbaseaddr    [i*BBBANKA +: BBBANKA];
                 obaseaddr_q[i]          <= intf.obaseaddr    [i*BBDADDR +: BBDADDR];
                 omvusel_q[i]            <= intf.omvusel      [i*NMVU +: NMVU];
                 scaler_b_q[i]           <= intf.scaler_b     [i*BSCALERB +: BSCALERB];
@@ -341,7 +347,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: inaguarray
 end endgenerate
 
 // Scaler and Bias memory address generation units
-generate for(i = 0; i < NMVU; i = i+1) begin: scalarbiasaguarray
+generate for(i = 0; i < NMVU; i = i+1) begin: scalerbiasaguarray
 
     agu #(
         .BWADDR     (BSBANKA),
