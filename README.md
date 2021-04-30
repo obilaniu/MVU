@@ -1,40 +1,20 @@
-# Low-Precision Ternary Arithmetic for Neural Networks
+# MVU - Matrix-Vector Units for Quantized Neural Network Acceleration
 
-## Dependencies:
+A fully-pipelined hardware accelerator for quantized neural networks. 
 
-- PyTorch 0.2.0
-- PyTorch Vision 0.1.9
+Supported operations:
+1. Arbitrary fixed-point precision matrix-vector multiplication
+1. Scaling of matrix-vector products at high-precision fixed-point
+1. MaxPool and ReLU activation
+1. Quantization/truncation of output
 
-## Downloading & Installing
+The overall design implements an array of MVU elements (nominally 8) that can move data between each other via an crossbar interconnect.
 
-The repository includes as a Git submodule a reference to a personal collection of
-code snippets called CodeSnips. The python portion of it must be installed as a
-Python package.
+See paper: [Bit-Slicing FPGA Accelerator for Quantized Neural Networks, ISCAS 2019](https://ieeexplore.ieee.org/document/8702332)
 
-    git clone --recursive 'git@bitbucket.org:obilaniu/lowprecision.git' LowPrecision
-    cd 3rdparty/CodeSnips/python
-    python setup.py install --no-deps --upgrade --force --user
-
-## Running
-
-The primary entry point for all purposes is `experiments/run.py`. The script has a few subcommands, which are listed when passing `--help` as an argument.
-
-Currently, the primary subcommand of interest is `train`. Its arguments are listed with `run.py train --help`. Among the more notable ones:
-
-- `-w WORKDIR` indicates a self-contained _working directory_ within which an experiment is run. The directory is created if it does not yet exist. All snapshots, logs and other artifacts will be kept in the workspace directory.
-- `-d DATADIR` indicates a directory where the dataset is either found or may be downloaded.
-- `-s SEED` is an integer that serves as the PRNG seed for this experiment.
-- `--model MODEL` selects from a menu of available models.
-- `--dataset DATASET` selects from a menu of available datasets.
-- `-n N` sets the number of epochs to run the experiment for.
-- `-b N` sets the batch size.
-- `--opt OPTIMIZERSPEC` selects an optimizer. You should probably use `--opt adam`.
-- `--cuda <DEVICENUM>` requests accelerated execution on the specified CUDA GPU.
-
+Developed in conjuction with the [BARVINN](https://github.com/hossein1387/Accelerator) project, which connects the MVU array to a RISC-V-based controller called [pito-riscv](https://github.com/hossein1387/pito_riscv)
 
 ## Running RTL Simulation and Synthesis:
-
-# How to Run:
 
 First make sure the Vivado is sourced, example for Vivado 2019.1: 
     
@@ -76,4 +56,3 @@ And for synthesis:
 
 This should open the project for you. Make sure you have run simulation or synthesis atleast once, otherwise fusesoc would not create a 
 project file for you.
-
