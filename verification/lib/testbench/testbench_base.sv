@@ -318,6 +318,9 @@ class mvu_testbench_base extends BaseObj;
 
             intf.shacc_load_sel[m] = 0;
             intf.zigzag_step_sel[m] = 0;
+
+            intf.usescaler_mem[m] = 0;
+            intf.usebias_mem[m] = 0;
         end
         
         intf.scaler_b = 1;

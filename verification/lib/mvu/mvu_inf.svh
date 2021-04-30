@@ -35,6 +35,8 @@ interface mvu_interface(input logic clk);
     logic[       BLENGTH-1 : 0] blength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: bias length
     logic[       BLENGTH-1 : 0] olength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: output length
     logic[ NMVU*BSCALERB-1 : 0] scaler_b;                                   // Config: multiplicative scaler (operand 'b')
+    logic                       usescaler_mem[NMVU-1 : 0];                  // Config: use scalar mem if 1; otherwise use the scaler_b input for scaling
+    logic                       usebias_mem[NMVU-1 : 0];                    // Config: use the bias memory if 1; if not, not bias is added in the scaler
     logic[        NJUMPS-1 : 0] shacc_load_sel[NMVU-1 : 0];                 // Config: select jump trigger for shift/accumultor load
     logic[        NJUMPS-1 : 0] zigzag_step_sel[NMVU-1 : 0];                // Config: select jump trigger for stepping the zig-zag address generator  
     logic[  NMVU*BWBANKA-1 : 0] wrw_addr;             // Weight memory: write address
@@ -95,6 +97,8 @@ modport  tb_interface (
                         input  blength,
                         input  olength,
                         input  scaler_b,
+                        input  usescaler_mem,
+                        input  usebias_mem,
                         input  shacc_load_sel,
                         input  zigzag_step_sel,
                         input  wrw_addr,
@@ -156,6 +160,8 @@ modport  system_interface (
                            input  blength,
                            input  olength,
                            input  scaler_b,
+                           input  usescaler_mem,
+                           input  usebias_mem,
                            input  shacc_load_sel,
                            input  zigzag_step_sel,
                            input  wrw_addr,

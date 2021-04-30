@@ -53,6 +53,8 @@ module mvu( clk,
             shacc_sh,
             scaler_clr,
             scaler_b,
+            usescaler_mem,
+            usebias_mem,
             max_en,
             max_clr,
             max_pool,
@@ -142,6 +144,8 @@ input  wire                 shacc_acc;
 input  wire                 shacc_sh;
 input  wire                 scaler_clr;             // Scaler: clear/reset
 input  wire[BSCALERB-1 : 0] scaler_b;               // Scaler: multiplier operand
+input  wire                 usescaler_mem;
+input  wire                 usebias_mem;
 input  wire                 max_en;
 input  wire                 max_clr;
 input  wire                 max_pool;
@@ -230,8 +234,10 @@ wire[BDBANKW*NDBANK-1 : 0] rdd_words_t;
 wire[BDBANKW*NDBANK-1 : 0] rdi_words_t;
 wire[BDBANKW*NDBANK-1 : 0] rdc_words_t;
 
-wire[BSBANKW-1 : 0]        rds_word;               // Scaler memory: read word
-wire[BBBANKW-1 : 0]        rdb_word;               // Bias memory: read word
+wire[BSBANKW-1 : 0]        rds_word;                // Scaler memory: read word
+wire[BBBANKW-1 : 0]        rdb_word;                // Bias memory: read word
+wire[BSCALERB-1 : 0]       scaler_mult_op[N-1 : 0]; // Scaler input multiplier operand
+wire[BBIAS-1 : 0]          scaler_post_op[N-1 : 0]; // Scaler input postadd operand
 
 
 
@@ -320,6 +326,10 @@ end endgenerate
 
 /* Scalers */
 generate for (i=0; i < N; i=i+1) begin: scalerarray
+    
+    assign scaler_mult_op[i] = usescaler_mem ? rds_word[i*BSCALERB +: BSCALERB] : scaler_b;
+    assign scaler_post_op[i] = usebias_mem ? rdb_word[i*BBIAS +: BSCALERC] : 0;
+
     fixedpointscaler #(
         .BA(BSCALERA),
         .BB(BSCALERB),
@@ -330,8 +340,8 @@ generate for (i=0; i < N; i=i+1) begin: scalerarray
         .clk(clk),
         .clr(scaler_clr),
         .a(shacc_out[i]),
-        .b(rds_word[i*BSCALERB +: BSCALERB]),
-        .c(rdb_word[i*BBIAS +: BSCALERC]),
+        .b(scaler_mult_op[i]),
+        .c(scaler_post_op[i]),
         .d({BSCALERD{1'b0}}),
         .p(scaler_out[i])
     );

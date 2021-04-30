@@ -39,9 +39,11 @@ logic[   BLENGTH-1 : 0] ilength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           
 logic[   BLENGTH-1 : 0] slength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: scaler length
 logic[   BLENGTH-1 : 0] blength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: bias length
 logic[   BLENGTH-1 : 0] olength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: output length
-logic[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];           // Config: multiplicative scaler (operand 'b')
-logic[    NJUMPS-1 : 0] shacc_load_sel_q  [NMVU-1 : 0];           // Config: select jump trigger for shift/accumultor load
-logic[    NJUMPS-1 : 0] zigzag_step_sel_q [NMVU-1 : 0];           // Config: select jump trigger for stepping the zig-zag address generator
+logic[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];                         // Config: multiplicative scaler (operand 'b')
+logic                   usescaler_mem_q   [NMVU-1 : 0];                         // Config: use scalar mem if 1; otherwise use the scaler_b input for scaling
+logic                   usebias_mem_q     [NMVU-1 : 0];                         // Config: use the bias memory if 1; if not, not bias is added in the scaler
+logic[    NJUMPS-1 : 0] shacc_load_sel_q  [NMVU-1 : 0];                         // Config: select jump trigger for shift/accumultor load
+logic[    NJUMPS-1 : 0] zigzag_step_sel_q [NMVU-1 : 0];                         // Config: select jump trigger for stepping the zig-zag address generator
 
 /* Local Wires */
 
@@ -178,8 +180,11 @@ assign rdi_addr         = 0;
 //assign wri_grnt         = 0;
 
 assign rdd_en           = run;                              // MVU reads when running
-assign rds_en           = run;
-assign rdb_en           = run;
+
+generate for(i=0; i < NMVU; i = i+1) begin
+    assign rds_en[i] = run[i] & usescaler_mem_q[i];            // No need to read from scaler mem if not using
+    assign rdb_en[i] = run[i] & usebias_mem_q[i];              // No need to read from bias mem if not using
+end endgenerate
 
 // TODO: WIRE THESE UP TO SOMETHING USEFUL
 assign outload          = 0;
@@ -238,6 +243,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
             obaseaddr_q[i]      <= 0;
             omvusel_q[i]        <= 0;
             scaler_b_q[i]       <= 0;
+            usescaler_mem_q[i]  <= 0;
+            usebias_mem_q[i]    <= 0;
             shacc_load_sel_q[i] <= 5'b00100;                // For 5 jumps, select the j2 by default
             zigzag_step_sel_q[i] <= 5'b00001;               // For 5 jumps, select the j0 by default
 
@@ -274,6 +281,8 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 obaseaddr_q[i]          <= intf.obaseaddr    [i*BBDADDR +: BBDADDR];
                 omvusel_q[i]            <= intf.omvusel      [i*NMVU +: NMVU];
                 scaler_b_q[i]           <= intf.scaler_b     [i*BSCALERB +: BSCALERB];
+                usescaler_mem_q[i]      <= intf.usescaler_mem[i];
+                usebias_mem_q[i]        <= intf.usebias_mem[i];
                 shacc_load_sel_q[i]     <= intf.shacc_load_sel[i];
                 zigzag_step_sel_q[i]    <= intf.zigzag_step_sel[i];
 
@@ -535,6 +544,8 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .shacc_sh       (shacc_sh[i]                            ),
             .scaler_clr     (scaler_clr[i]                          ),
             .scaler_b       (scaler_b_q[i]                          ),
+            .usescaler_mem  (usescaler_mem_q[i]                     ),
+            .usebias_mem    (usebias_mem_q[i]                       ),
             .max_en         (intf.max_en[i]                         ),
             .max_clr        (intf.max_clr[i]                        ),
             .max_pool       (intf.max_pool[i]                       ),
