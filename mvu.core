@@ -1,0 +1,122 @@
+CAPI=2:
+name : ::mvu:0
+description: Matrix Vector Unit engine Low-Precision Arithmetic in Neural Networks
+
+filesets:
+    rtl:
+        file_type: verilogSource
+        files:
+            - verilog/bram64k.v
+            - verilog/bank64k.v
+            - verilog/bram2m.v
+            - verilog/cdru.v
+            - verilog/cdwu.v
+            - verilog/maxpool.v
+            - verilog/mvp.v
+            - verilog/mvu.v
+            - verilog/shacc.v
+            - verilog/vvp.v
+            - verilog/interconn.v
+            - verilog/quantser.v
+            - verilog/quantser_ctrl.v
+            - verilog/outagu.v
+            - verilog/zigzagu.v
+            - verilog/controller.v
+            - verilog/shiftreg.v
+            - verilog/fixedpointscaler.v
+            - verilog/inagu.sv:
+                file_type: systemVerilogSource
+            - verilog/agu.sv:
+                file_type: systemVerilogSource
+            - verilog/mvutop.sv:
+                file_type: systemVerilogSource
+    synth:
+        file_type: verilogSource
+        files:
+            - verification/lib/mvu/mvu_pkg.sv:
+                file_type: systemVerilogSource
+            - verification/lib/mvu/mvu_inf.svh:
+                is_include_file: true
+            - verilog/bram64k.v
+            - verilog/bank64k.v
+            - verilog/bram2m.v
+            - verilog/cdru.v
+            - verilog/cdwu.v
+            - verilog/maxpool.v
+            - verilog/mvp.v
+            - verilog/mvu.v
+            - verilog/shacc.v
+            - verilog/vvp.v
+            - verilog/interconn.v
+            - verilog/quantser.v
+            - verilog/quantser_ctrl.v
+            - verilog/outagu.v
+            - verilog/zigzagu.v
+            - verilog/controller.v
+            - verilog/shiftreg.v
+            - verilog/fixedpointscaler.v
+            - verilog/inagu.sv:
+                file_type: systemVerilogSource
+            - verilog/agu.sv:
+                file_type: systemVerilogSource
+            - verilog/mvutop.sv:
+                file_type: systemVerilogSource
+    synth_xilinx:
+        file_type: xci
+        files:
+            - ip/build/xilinx/bram2m_xilinx/bram2m_xilinx.xci
+            - ip/build/xilinx/bram64k_64x1024_xilinx/bram64k_64x1024_xilinx.xci
+            - mvu.xdc:
+                file_type: xdc
+    tb:
+        file_type: systemVerilogSource
+        files:
+            - verification/lib/testbench/testbench_macros.svh:
+                is_include_file: true
+            - verification/lib/testbench/testbench_pkg.sv
+            - verification/lib/mvu/mvu_pkg.sv
+            - verification/lib/utils/utils.sv
+            - verification/lib/mvu/mvu_inf.svh:
+                is_include_file: true
+            - verification/lib/testbench/testbench_config.sv
+            - verification/lib/testbench/testbench_base.sv
+            - verification/tests/gemv/gemv_tester.sv:
+                is_include_file: true
+            - verification/lib/testbench/testbench_top.sv
+            - ip/build/xilinx/bram64k_64x1024_xilinx/simulation/blk_mem_gen_v8_4.v:
+                file_type: verilogSource
+            - ip/build/xilinx/bram64k_64x1024_xilinx/sim/bram64k_64x1024_xilinx.v:
+                file_type: verilogSource
+            - ip/build/xilinx/bram2m_xilinx/simulation/blk_mem_gen_v8_4.v:
+                file_type: verilogSource
+            - ip/build/xilinx/bram2m_xilinx/sim/bram2m_xilinx.v:
+                file_type: verilogSource
+targets:
+    sim:
+        default_tool: xsim 
+        filesets:
+            - tb
+            - rtl
+        description: Simulate the design
+        tools: 
+            xsim:
+                xelab_options: [--debug, typical, -L, secureip, -L, unisims_ver, -L, unimacro_ver, -L, work.glbl, -L, blk_mem_gen_v8_4_3, --timescale, 1ns/1ps]
+        parameters: [XILINX]
+        toplevel: testbench_top
+    synth:
+        description: Synthesize the design for an FPGA board
+        filesets:
+            - synth
+            - synth_xilinx
+        default_tool: vivado
+        tools:
+          vivado:
+            part: xcku115-flva1517-2-e
+            pnr: none
+        parameters: [XILINX]
+        toplevel: [mvutop]
+parameters:
+    XILINX:
+        datatype  : int
+        default   : 1
+        paramtype : vlogdefine

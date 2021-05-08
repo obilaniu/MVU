@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-
+#!/usr/bin/env python3
+#xelab bank64k_tester  -L blk_mem_gen_v8_4_3
 import os
 import sys
 import argparse
@@ -12,7 +12,7 @@ simulator = None
 result_dir = "../results"
 # Use / to indicate that you are deleting a directory and not a file.
 # Everything else is intrepreted as a file type.
-files_to_clean = ["jou", "vcd", "pb", ".Xil/", "xsim.dir/", "log", "wdb"]
+files_to_clean = ["jou", "vcd", "pb", ".Xil/", "xsim.dir/", "log", "wdb", "str"]
 #=======================================================================
 # Utility Funcs
 #=======================================================================
@@ -27,13 +27,15 @@ def parse_args():
     parser.add_argument('-g', '--gui', action='store_true', help=' gui mode supported in cadence irun only', required= False)
     parser.add_argument('-w', '--waveform', action='store_true', help=' compile with waveform information', required= False)
     parser.add_argument('-v', '--svseed', help=' sv seed supported in cadence irun and Xilinx xsim only', required= False)
-    parser.add_argument('-c', '--compileonly', action='store_true', help='Only compile the source files', required=False)
-    parser.add_argument('-e', '--elabonly', action='store_true', help='Stop after elaboration step', required=False)
-    parser.add_argument('-coverage', '--coverage', action='store_true', help='add coverage supported in cadence irun only', required= False)
+    parser.add_argument('--coverage', action='store_true', help='add coverage supported in cadence irun only', required= False)
     parser.add_argument('-d', '--debug', action='store_true', help='create debug info supported in cadence irun only', required= False)
     parser.add_argument('-clean', '--clean', action='store_true', help='clean project', required= False)
     parser.add_argument('-silence', '--silence', action='store_true', help=' Silence mode (no log will be printed)', required= False, default=False)
     parser.add_argument('-verbosity', '--verbosity', help='Print log verbosity: VERB_NONE, VERB_LOW, VERB_MEDIUM, VERB_HIGH, VERB_FULL, VERB_DEBUG', required=False)
+    parser.add_argument('-timescale', '--timescale', help='Simulation timescale', required=False, default='1ns/1ps')
+    parser.add_argument('--firmware', help='firmware file', required=False, default='test.hex')
+    parser.add_argument('-c', '--compileonly', action='store_true', help='Only compile the source files', required=False)
+    parser.add_argument('-e', '--elabonly', action='store_true', help='Stop after elaboration step', required=False)    
     args = parser.parse_args()
     return vars(args)
 
@@ -64,16 +66,19 @@ def get_vlogmacros(f_file):
         macros = f.readlines()
         for macro in macros:
             if macro != "":
-                vlogmacros += " -d " + macro
+                macro = macro.replace("\n", "")
+                vlogmacros += " -d " + macro + " "
     return vlogmacros
 
 def get_libs(f_file):
+    # import ipdb as pdb; pdb.set_trace()
     libs = ""
     with open(f_file, 'r') as f:
         libslist = f.readlines()
         for lib in libslist:
             if lib != "":
-                libs += " -L " + lib
+                lib = lib.replace("\n", "")
+                libs += " -L " + lib + " "
     return libs
 
 
@@ -96,11 +101,11 @@ if __name__ == '__main__':
     debug = args['debug']
     waveform = args['waveform']
     clean = args['clean']
-    # import ipdb as pdb; pdb.set_trace()
     silence = args['silence']
     verbosity = args['verbosity']
     compileonly = args['compileonly']
     elabonly = args['elabonly']
+
     if verbosity is None:
         verbosity = 'VERB_LOW'
     if util.get_platform(verbosity=verbosity) != "linux":
@@ -137,6 +142,9 @@ if __name__ == '__main__':
     if simulator.lower() == "xilinx":
         # For Xilinx tools we need to specify top level for creating snapshots which is needed
         # by simulator and synthesis tools
+        if not('XILINX_VIVADO' in os.environ):
+            util.print_log("Xilinx Vivado simulator was not found, forgot to source it?", "ERROR", verbosity="VERB_LOW")
+            sys.exit()
         if top_level == None:
             util.print_log("Top level was not specified", "ERROR", verbosity="VERB_LOW")
             sys.exit()
@@ -170,13 +178,17 @@ if __name__ == '__main__':
             sys.exit()
 
         util.print_banner("Creating snapshot", verbosity=verbosity)
-        cmd_to_run = "xelab {0} ".format(top_level)
+        # cmd_to_run = "xelab {0} ".format(top_level)
+        # import ipdb as pdb; pdb.set_trace()
+        cmd_to_run = "xelab -debug typical -L secureip -L unisims_ver -L unimacro_ver {0} ".format(top_level)
         if libs_file:
             cmd_to_run += libs
         if waveform:
             cmd_to_run += " --debug all "
         if silence:
             cmd_to_run += "> /dev/null"
+        if args['timescale'] != None:
+            cmd_to_run += "--timescale {} ".format(args['timescale'])
         util.run_command(cmd_to_run, split=False, verbosity=verbosity)
 
         if elabonly:
@@ -190,6 +202,8 @@ if __name__ == '__main__':
             cmd_to_run = "xsim -R {0} ".format(top_level)
         if svseed:
             cmd_to_run += "-sv_seed {0} ".format(svseed)
+        if args['firmware'] != None:
+            cmd_to_run += "-testplusarg firmware={} ".format(args['firmware'])
         if silence:
             cmd_to_run += "> /dev/null"
         util.run_command(cmd_to_run, split=False, verbosity=verbosity)

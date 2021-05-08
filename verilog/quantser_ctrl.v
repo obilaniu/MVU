@@ -3,8 +3,6 @@
 //
 
 `timescale 1 ns / 1 ps
-
-
 module quantser_ctrl #(
     parameter BWOUT     = 32,               // Max output bitwidth
     parameter BWBWOUT   = $clog2(BWOUT)     // Bitwidth of the bwout port

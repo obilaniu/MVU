@@ -86,6 +86,7 @@
 *.rlx
 *.Xil
 *.wcfg
+ip/build
 #
 .vscode/tasks.json
 
@@ -93,3 +94,6 @@
 verification/ip/xilinx/
 conv2d_jumps
 .vscode/launch.json
+
+# Fusesoc
+fusesoc.conf
