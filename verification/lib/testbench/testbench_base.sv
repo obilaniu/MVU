@@ -173,7 +173,9 @@ class mvu_testbench_base extends BaseObj;
         int m_h,            // Matrix height
         logic isign = 0,    // True if input data are signed
         logic wsign = 0,    // True if weights are signed
-        int scaler = 1
+        int scaler = 1,
+        logic usescalarmem = 0,
+        logic usebiasmem = 0
     );
 
         logic [BDBANKABS-1 : 0]     obank_sel = obank;
@@ -233,24 +235,34 @@ class mvu_testbench_base extends BaseObj;
         intf.countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
 
         // Scaler and bias memory parameters
-        intf.sjump[mvu][0] = 1;
-        intf.sjump[mvu][1] = 0;
-        intf.sjump[mvu][2] = 0;
-        intf.sjump[mvu][3] = 0;
-        intf.sjump[mvu][4] = 0;
-        intf.bjump[mvu][0] = 1;
-        intf.bjump[mvu][1] = 0;
-        intf.bjump[mvu][2] = 0;
-        intf.bjump[mvu][3] = 0;
-        intf.bjump[mvu][4] = 0;
-        intf.slength[mvu][1] = m_h-1;
-        intf.slength[mvu][2] = 0;
-        intf.slength[mvu][3] = 0;
-        intf.slength[mvu][4] = 0;
-        intf.blength[mvu][1] = m_h-1;
-        intf.blength[mvu][2] = 0;
-        intf.blength[mvu][3] = 0;
-        intf.blength[mvu][4] = 0;
+        if (usescalarmem) begin
+            intf.usescaler_mem[mvu] = 1;
+            intf.sjump[mvu][0] = 1;
+            intf.sjump[mvu][1] = 0;
+            intf.sjump[mvu][2] = 0;
+            intf.sjump[mvu][3] = 0;
+            intf.sjump[mvu][4] = 0;
+            intf.slength[mvu][1] = 0;
+            intf.slength[mvu][2] = 0;
+            intf.slength[mvu][3] = 0;
+            intf.slength[mvu][4] = 0;
+        end else begin
+            intf.usescaler_mem[mvu] = 0;
+        end
+        if (usebiasmem) begin
+            intf.usebias_mem[mvu] = 1;
+            intf.bjump[mvu][0] = 1;
+            intf.bjump[mvu][1] = 0;
+            intf.bjump[mvu][2] = 0;
+            intf.bjump[mvu][3] = 0;
+            intf.bjump[mvu][4] = 0;
+            intf.blength[mvu][1] = 0;
+            intf.blength[mvu][2] = 0;
+            intf.blength[mvu][3] = 0;
+            intf.blength[mvu][4] = 0;           
+        end else begin
+            intf.usebias_mem[mvu] = 0;
+        end
 
         // Run the GEMV
         intf.start[mvu] = 1'b1;

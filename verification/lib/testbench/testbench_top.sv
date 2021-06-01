@@ -1,5 +1,6 @@
 `timescale 1ns/1ps
-`include "gemv_tester.sv"
+//`include "gemv_tester.sv"
+`include "scalar_bias_tester.sv"
 `include "mvu_inf.svh"
 
 module testbench_top import utils::*;import testbench_pkg::*; ();
@@ -12,7 +13,8 @@ module testbench_top import utils::*;import testbench_pkg::*; ();
     mvu_interface mvu_inf(clk);
     mvutop mvu(mvu_inf.system_interface);
     // base_tester tb;
-    gemv_tester tb;
+    // gemv_tester tb;
+    scalar_bias_tester tb;
 
     initial begin
         logger = new(sim_log_file);
