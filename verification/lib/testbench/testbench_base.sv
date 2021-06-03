@@ -164,13 +164,13 @@ class mvu_testbench_base extends BaseObj;
         int omsb,
         int iaddr,
         int waddr,
-        int saddr,
-        int baddr,
         byte omvu,          // output mvus
         int obank,
         int oaddr,
         int m_w,            // Matrix width / vector length
         int m_h,            // Matrix height
+        int saddr = 0,
+        int baddr = 0,
         logic isign = 0,    // True if input data are signed
         logic wsign = 0,    // True if weights are signed
         int scaler = 1,
