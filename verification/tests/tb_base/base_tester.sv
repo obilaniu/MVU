@@ -1,5 +1,7 @@
 
-class base_tester extends testbench_base;
+`include "testbench_base.sv"
+
+class base_tester extends mvu_testbench_base;
 
     function new(Logger logger, virtual mvu_interface inf);
         super.new(logger, inf);
