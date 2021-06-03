@@ -15,8 +15,8 @@ class scalar_bias_tester extends mvu_testbench_base;
 
         logger.print_banner("Scalar and bias tests with GEMV");
 
-        // TEST 1
-        // Expected result: accumulators get to value d2305 in first half (quantized to b10), 
+        // TEST 1: Basic test
+        // Expected result: output to get to value d2305 in first half (quantized to b10), 
         // then d3458 in second half (quantized to b11)
         // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff)
         // (i.e. first half: d3*d3*d64*d2*d2+1 = d2305, second half: d3*d3*d64*d2*d3+2 = d3458)
@@ -32,7 +32,7 @@ class scalar_bias_tester extends mvu_testbench_base;
                 .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(1), .oaddr(0), 
                 .m_w(2), .m_h(2), .usescalarmem(1), .usebiasmem(1));
 
-        // TEST 2
+        // TEST 2: additional basic test
         // Expected result: accumulators get to value d1728, then scaled by [4,5,6] and biased by [3,4,5]
         // Output to memory will be [b011, b100, b101]
         // (i.e. [0000000000000000, hffffffffffffffff, hffffffffffffffff, hffffffffffffffff, 0000000000000000, 0000000000000000, 
@@ -53,7 +53,7 @@ class scalar_bias_tester extends mvu_testbench_base;
                 .m_w(3), .m_h(3), .saddr(0), .baddr(0), .usescalarmem(1), .usebiasmem(1));
 
 
-        // TEST 3
+        // TEST 3: Verify fixed scalar still works
         // Don't use the scalar and bias memories. Instead, use a fixed scaler value.
         // Expected result: accumulators get to value d384, then multipled by 2 to get d768, output to data memory is b011 for each element
         // (i.e. [0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, ...)
@@ -68,114 +68,43 @@ class scalar_bias_tester extends mvu_testbench_base;
                 .iaddr(0), .waddr(0), .omvu(omvu), .obank(3), .oaddr(0), 
                 .m_w(3), .m_h(3), .scaler(2));
 
-    endtask
+        // TEST 4: Signed scalar test
+        // Expected result: output get to value -d2303 in first half (quantized to b101), 
+        // then -d3454 in second half (quantized to b100)
+        // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, 0000000000000000)
+        // (i.e. first half: d3*d3*d64*d2*-d2+1 = -d2303, second half: d3*d3*d64*d2*-d3+2 = -d3454)
+        // Result output to bank 1 starting at address 0
+        logger.print("TEST scalar/bias 1: matrix-vector mult: 2x2 x 2 tiles, 2x2 => 2 bit precision, input=all 1's, scalars=[-2,-3], bias=[1,2]");
+        writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0000), .size(4), .stride(1));
+        writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h0), .size(8), .stride(1));
+        writeScalersRepeat(.mvu(mvu), .word({BSBANKW/BSCALERB{-16'd2}}), .startaddr('h0), .size(1), .stride(1));
+        writeScalersRepeat(.mvu(mvu), .word({BSBANKW/BSCALERB{-16'd3}}), .startaddr('h1), .size(1), .stride(1));
+        writeBiasesRepeat(.mvu(mvu), .word({BBBANKW/BBIAS{32'h00000001}}), .startaddr('h0), .size(1), .stride(1));
+        writeBiasesRepeat(.mvu(mvu), .word({BBBANKW/BBIAS{32'h00000002}}), .startaddr('h1), .size(1), .stride(1));
+        runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .oprec(3), .omsb(12), 
+                .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(4), .oaddr(0), 
+                .m_w(2), .m_h(2), .usescalarmem(1), .usebiasmem(1));
 
-    //
-    // Test signed Matrix-Vector multiplication (gemv signed)
-    //
-    task gemvSignedTests(int mvu, int omvu, int scaler);
-
-        logger.print_banner("Matrix-vector signed multiplication (GEMV) test");
-
-        // Expected result: accumulators get to value hffffffffffffff80, output to data memory is b10 for each element
-        // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
-        // (i.e. d1*-d1*d64*d2 = -d128 = 32'hffffffffffffff80)
-        // Result output to bank 10 starting at address 0
-        logger.print("TEST gemv signed 1: matrix-vector mult: 2x2 x 2 tiles, 2u X 2s => 2 bit precision, input: d=1, w=-1");
-        writeDataRepeat(.mvu(mvu), .word('h0000000000000000), .startaddr('h0000), .size(2), .stride(2));      // MSB=0 \
-        writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0001), .size(2), .stride(2));      // LSB=1 - = b01 = d1
-        writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h0), .size(8));            // MSB=1, LSB=1 => b11 = -d1
-        runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(2), .omsb(7), 
-                .iaddr(0), .waddr(0), .omvu(omvu), .obank(10), .oaddr(0), 
-                .m_w(2), .m_h(2), .isign(0), .wsign(1), .scaler(scaler));
-     
-
-
-        // Expected result: accumulators get to value hfffffffffffffd00, output to data memory is b10 for each element
-        // (i.e. [hffffffffffffffff, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
-        // (i.e. -d2*d3*d64*d2 = -d768 = 32'hfffffffffffffd00)
-        // Result output to bank 11 starting at address 0
-        logger.print("TEST gemv signed 2: matrix-vector mult: 2x2 x 2 tiles, 2s X 2u => 2 bit precision, input: d=-2, w=3");
-        writeDataRepeat(mvu, 'hffffffffffffffff, 'h0000, 2, 2);      // MSB=1 \
-        writeDataRepeat(mvu, 'h0000000000000000, 'h0001, 2, 2);      // LSB=0 - = b10 = -d2
-        writeWeightsRepeat(mvu, {BWBANKW{1'b1}}, 'h0, 8);            // MSB=1, LSB=1 => b11 = d3
-        runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(2), .omsb(10), 
-                .iaddr(0), .waddr(0), .omvu(omvu), .obank(11), .oaddr(0), 
-                .m_w(2), .m_h(2), .isign(1), .wsign(0), .scaler(scaler)); 
-
-
-        // Expected result: accumulators get to value h0000000000000100, output to data memory is b01 for each element
-        // (i.e. [0000000000000000, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
-        // (i.e. -d2*-d1*d64*d2 = d256 = 32'h0000000000000100)
-        // Result output to bank 12 starting at address 0
-        logger.print("TEST gemv signed 3: matrix-vector mult: 2x2 x 2 tiles, 2s X 2s => 2 bit precision, input: d=-2, w=-1");
-        writeDataRepeat(mvu, 'hffffffffffffffff, 'h0000, 2, 2);      // MSB=1 \
-        writeDataRepeat(mvu, 'h0000000000000000, 'h0001, 2, 2);      // LSB=0 - = b10 = -d2
-        writeWeightsRepeat(mvu, {BWBANKW{1'b1}}, 'h0, 8);            // MSB=1, LSB=1 => b11 = d3
-        runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(2), .omsb(9), 
-            .iaddr(0), .waddr(0), .omvu(omvu), .obank(12), .oaddr(0), 
-            .m_w(2), .m_h(2), .isign(1), .wsign(1), .scaler(scaler)); 
-
-        // Expected result: accumulators get to value hfffffffffffffd00, output to data memory is b110 for each element
-        // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, ...)
-        // (i.e. d3*-d2*d64*d2 = -d768 = 32'hfffffffffffffd00)
-        // Result output to bank 13 starting at address 0
-        logger.print("TEST gemv signed 4: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: d=3, w=-2");
-        writeDataRepeat(mvu, 'h0000000000000000, 'h0000, 2, 3);      // MSB  =0 \
-        writeDataRepeat(mvu, 'hffffffffffffffff, 'h0001, 2, 3);      // MSB-1=1 - = b011 = d3
-        writeDataRepeat(mvu, 'hffffffffffffffff, 'h0002, 2, 3);      // LSB  =1 /
-        writeWeightsRepeat(mvu, {BWBANKW{1'b1}}, 'h0, 4, 2);         // MSB  =1 \
-        writeWeightsRepeat(mvu, {BWBANKW{1'b0}}, 'h1, 4, 2);         // LSB  =0 - = b10 = -d2
-        runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(11), 
-           .iaddr(0), .waddr(0), .omvu(omvu), .obank(13), .oaddr(0), 
-           .m_w(2), .m_h(2), .isign(1), .wsign(1), .scaler(scaler)); 
-
-        // Expected result: accumulators get to value hffffffffffffff00, output to data memory is b110 for each element
-        // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
-        // (i.e. (d3*-d2*d32 + d2*d1*d32)*d2 = -d256 = 32'hffffffffffffff00)
-        // Result output to bank 14 starting at address 0
-        logger.print("TEST gemv signed 5: matrix-vector mult: 2x2 x 2 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}");
-        writeDataRepeat(mvu, 'h0000000000000000, 'h0000, 2, 3);      // MSB  ={0,0}... \
-        writeDataRepeat(mvu, 'hffffffffffffffff, 'h0001, 2, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
-        writeDataRepeat(mvu, 'haaaaaaaaaaaaaaaa, 'h0002, 2, 3);      // LSB  ={1,0}... /
-        writeWeightsRepeat(mvu, {BWBANKW/2{2'b10}}, 'h0, 4, 2);      // MSB  ={1,0}... \
-        writeWeightsRepeat(mvu, {BWBANKW/2{2'b01}}, 'h1, 4, 2);      // LSB  ={0,1}... - = {b10,b01} = {-d2, d1}
-        runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(9), 
-           .iaddr(0), .waddr(0), .omvu(omvu), .obank(14), .oaddr(0), 
-           .m_w(2), .m_h(2), .isign(1), .wsign(1), .scaler(scaler)); 
-
-
-        // Expected result: accumulators get to value hfffffffffffffe7d, output to data memory is b100 for each element
-        // (i.e. [hffffffffffffffff, 0000000000000000, 0000000000000000, ...)
-        // (i.e. (d3*-d2*d32 + d2*d1*d31 + d1*d1*d1)*d3 = -d387 = 32'hfffffffffffffe7d)
-        // Result output to bank 15 starting at address 0
-        logger.print("TEST gemv signed 6: matrix-vector mult: 3x3 x 3 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
-        writeDataRepeat(mvu, 'h0000000000000000, 'h0000, 3, 3);      // MSB  ={0,0}... \
-        writeDataRepeat(mvu, 'hfffffffffffffffe, 'h0001, 3, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
-        writeDataRepeat(mvu, 'haaaaaaaaaaaaaaab, 'h0002, 3, 3);      // LSB  ={1,0}... /
-        writeWeightsRepeat(mvu, {BWBANKW/2{2'b10}}, 'h0, 9, 2);      // MSB  ={1,0}... \
-        writeWeightsRepeat(mvu, {BWBANKW/2{2'b01}}, 'h1, 9, 2);      // LSB  ={0,1}... - = {b10,b01} = {-d2, d1}
-        runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(9), 
-           .iaddr(0), .waddr(0), .omvu(omvu), .obank(15), .oaddr(0), 
-           .m_w(3), .m_h(3), .isign(1), .wsign(1), .scaler(scaler)); 
-
-
-        // Expected result: accumulators get to value h0000000000000063, output to data memory is b001 for each element
-        // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, ...)
-        // (i.e. (d3*d1*d32 + d2*-d1*d31 + d1*-d1*d1)*d3 = d99 = 32'h0000000000000063)
-        // Result output to bank 16 starting at address 0
-        logger.print("TEST gemv signed 7: matrix-vector mult: 3x3 x 3 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
-        writeDataRepeat(mvu, 'h0000000000000000, 'h0000, 3, 3);      // MSB  ={0,0}... \
-        writeDataRepeat(mvu, 'hfffffffffffffffe, 'h0001, 3, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
-        writeDataRepeat(mvu, 'haaaaaaaaaaaaaaab, 'h0002, 3, 3);      // LSB  ={1,0}... /
-        writeWeightsRepeat(mvu, {BWBANKW/2{2'b01}}, 'h0, 9, 2);      // MSB  ={1,0}... \
-        writeWeightsRepeat(mvu, {BWBANKW/2{2'b11}}, 'h1, 9, 2);      // LSB  ={0,1}... - = {b10,b01} = {-d2, d1}
-        runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(8), 
-           .iaddr(0), .waddr(0), .omvu(omvu), .obank(16), .oaddr(0), 
-           .m_w(3), .m_h(3), .isign(1), .wsign(1), .scaler(scaler)); 
-
+        // TEST 5: Signed bias test
+        // Expected result: output get to value d2303 in first half (quantized to b010), 
+        // then d3454 in second half (quantized to b011)
+        // (i.e. [0000000000000000, hffffffffffffffff, 0000000000000000, 0000000000000000, hffffffffffffffff, hffffffffffffffff)
+        // (i.e. first half: d3*d3*d64*d2*d2-1 = d2303, second half: d3*d3*d64*d2*d3-2 = d3454)
+        // Result output to bank 1 starting at address 0
+        logger.print("TEST scalar/bias 1: matrix-vector mult: 2x2 x 2 tiles, 2x2 => 2 bit precision, input=all 1's, scalars=[-2,-3], bias=[1,2]");
+        writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0000), .size(4), .stride(1));
+        writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h0), .size(8), .stride(1));
+        writeScalersRepeat(.mvu(mvu), .word({BSBANKW/BSCALERB{16'd2}}), .startaddr('h0), .size(1), .stride(1));
+        writeScalersRepeat(.mvu(mvu), .word({BSBANKW/BSCALERB{16'd3}}), .startaddr('h1), .size(1), .stride(1));
+        writeBiasesRepeat(.mvu(mvu), .word({BBBANKW/BBIAS{-32'd1}}), .startaddr('h0), .size(1), .stride(1));
+        writeBiasesRepeat(.mvu(mvu), .word({BBBANKW/BBIAS{-32'd2}}), .startaddr('h1), .size(1), .stride(1));
+        runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .oprec(3), .omsb(12), 
+                .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(5), .oaddr(0), 
+                .m_w(2), .m_h(2), .usescalarmem(1), .usebiasmem(1));
 
     endtask
+
+
 
     task tb_setup();
         super.tb_setup();
