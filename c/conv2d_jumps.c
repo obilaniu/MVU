@@ -11,7 +11,7 @@ const int m = 10;                                   // Spacing between dimension
 // Convolution parameters
 //
 
-/*
+
 // Case 1: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 2x2 bits
 const int iprec = 2;                                // Input data precision
 const int wprec = 2;                                // Weight precision
@@ -23,29 +23,29 @@ const int Fw = 3;                                   // Filter kernel width
 const int Fh = 3;                                   // Filter kernel height
 const int Fc = 2;                                   // Number of filter set blocks (i.e. number of output channel blocks)
 const int Sw = 1;                                   // Filter horizontal (width) stride
-const int Pl = 0;                                   // Zero-padding in on the left in the width dimension
-const int Pr = 0;                                   // Zero-padding in on the right in the width dimension
-const int Pt = 0;                                   // Zero-padding in on the top in the height dimension
-const int Pb = 0;                                   // Zero-padding in on the bottom in the height dimension
-*/
+const int Pl = 1;                                   // Zero-padding in on the left in the width dimension
+const int Pr = 1;                                   // Zero-padding in on the right in the width dimension
+const int Pt = 1;                                   // Zero-padding in on the top in the height dimension
+const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
 
 
+/*
 // Case 1a: 3x3 conv, 10x10 feature map, 2 channel blocks in, 4 channel blocks out, 2x2 bits
 const int iprec = 2;                                // Input data precision
 const int wprec = 2;                                // Weight precision
 const int oprec = 2;                                // Output precision
-const int W = 10;                                   // Input width
-const int H = 10;                                   // Input height
+const int W = 8;                                   // Input width
+const int H = 8;                                   // Input height
 const int C = 2;                                    // Input channel blocks
 const int Fw = 3;                                   // Filter kernel width
 const int Fh = 3;                                   // Filter kernel height
-const int Fc = 4;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Fc = 2;                                   // Number of filter set blocks (i.e. number of output channel blocks)
 const int Sw = 1;                                   // Filter horizontal (width) stride
 const int Pl = 0;                                   // Zero-padding in on the left in the width dimension
 const int Pr = 0;                                   // Zero-padding in on the right in the width dimension
 const int Pt = 0;                                   // Zero-padding in on the top in the height dimension
 const int Pb = 0;                                   // Zero-padding in on the bottom in the height dimension
-
+*/
 
 // Case 2: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 1x1 bits 
 /*
@@ -145,7 +145,7 @@ char* b_jump_str[5];
 
 void assignInternalParams()
 {
-    for (int i; i < NJUMPS; i++)
+    for (int i=0; i < NJUMPS; i++)
     {
         i_j[i] = ijump[i];
         i_i[i] = ilength[i];
@@ -325,7 +325,7 @@ int genNextOutput(int curjump)
  Computes parameters for 2-D convolution for one output row 
  on interior of input map (VALID in TF lingo)
 */
-void setConv2dlineValid()
+void setConv2dlineValid(int Fw, int Fh)
 {
     // Scheme 1: Compute all of the output pixels for a single line including all output channel blocks
     ilength[4] = 0;
@@ -337,12 +337,12 @@ void setConv2dlineValid()
     ijump[2] = iprec*(C*(W-Fw) + 1);                                            i_jump_str[2] = (char*)"Move to next row\n";
     ijump[1] = -iprec*(C*(Fh-1)*W + Fw*C - 1);                                  i_jump_str[1] = (char*)"Move back to start of window\n";
     ijump[0] = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);                           i_jump_str[0] = (char*)"Move window to right by horizontal stride\n";
-    wlength[4] = 0;                                                             // not needed
-    wlength[3] = C*Fw*Fh-1;                                                     // Total size of one filter block
+    wlength[4] = C*Fw-1;                                                        // Filter width
+    wlength[3] = Fh-1;                                                          // Filter height
     wlength[2] = iprec*wprec-1;                                                 // Number of bit combos
     wlength[1] = Fc-1;                                                          // Number of filter blocks
-    wjump[4] = 0;                                                               w_jump_str[4] = NULL;                   // not needed
-    wjump[3] = wprec;                                                           w_jump_str[3] = NULL;                   // Move to next channel block/pixel
+    wjump[4] = wprec;                                                           w_jump_str[4] = NULL;                   // Filter width
+    wjump[3] = wprec;                                                           w_jump_str[3] = (char*)"Move to next filter row\n";
     wjump[2] = -wprec*(C*Fw*Fh-1);                                              w_jump_str[2] = (char*)"Move back to start of filter for next precision combo\n";
     wjump[1] = wprec;                                                           w_jump_str[1] = (char*)"Move to next filter set block\n";
     wjump[0] = -wprec*(C*Fw*Fh*Fc-1);                                           w_jump_str[0] = (char*)"Move back to start of first filter set block for next window\n";
@@ -368,6 +368,45 @@ void setConv2dlineValid()
     bjump[2] = 0;                                                               b_jump_str[2] = (char*)"";
     bjump[1] = 1;                                                               b_jump_str[1] = (char*)"Move to next output channel block";          // NOTE: this is jump/stride 0 in the HW
     bjump[0] = -Fc+1;                                                           b_jump_str[0] = (char*)"Move back to first output channel block";    // NOTE: this is jump/stride 1 in the HW    
+}
+
+/*
+ Computes parameters for 2-D convolution for one output row 
+ on top or bottom of input map with padding.
+*/
+void setConv2dlinePaddedTopBottom(int Fw, int Fh, int Pt, int Pb)
+{
+    // The filter height used here will smaller by the padding amount
+    int Fh_pad = Fh - Pt - Pb;
+
+    // Set the jump schedule parameters to be the same as the VALID conv2d, then correct
+    setConv2dlineValid(Fw, Fh_pad);
+
+    // Change the row counter
+    wlength[3] = Fh_pad - 1;
+
+    // Correct the weight memory jump schedule
+    if (Pt)
+    {
+        // Compute extra jump to skip rows in the filter not used when there is padding
+        int row_corr = wprec*C*Fw*Pt;
+
+        // Set the weight base address to skip same number of rows in the weights as the padding
+        woffset = row_corr;
+
+        // Change jump 2 to return to the starting row of the filter channel block accounting for padding
+        wjump[2] = -wprec*(C*Fw*Fh_pad-1);
+
+        // Change jump 1 to jump over unneeded rows when transitioning between filter channel blocks
+        wjump[1] = wprec + row_corr;
+
+        // Change jump 0 to return to the starting row of the first filter channel block
+        wjump[0] = -wprec*(C*Fw*Fh*Fc-1) + row_corr;
+    }
+    else
+    {
+
+    }
 }
 
 
@@ -543,8 +582,9 @@ int main()
 
 
     // Compute parameters for convolution
+    setConv2dlinePaddedTopBottom(Fw, Fh, Pt, 0);        // Top row
     //setConv2dlineEdgePadding(1, 0, 1, 0);           // Upper-left corner
-    setConv2dlineValid();                           // Inner
+    //setConv2dlineValid(Fw, Fh);                       // Inner
     //setConv2dlineEdgePadding(1, 0, 0, 1);           // Lower-left corner
     assignInternalParams();
 
