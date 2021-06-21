@@ -11,7 +11,7 @@ const int m = 10;                                   // Spacing between dimension
 // Convolution parameters
 //
 
-
+/*
 // Case 1: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 2x2 bits
 const int iprec = 2;                                // Input data precision
 const int wprec = 2;                                // Weight precision
@@ -27,7 +27,7 @@ const int Pl = 1;                                   // Zero-padding in on the le
 const int Pr = 1;                                   // Zero-padding in on the right in the width dimension
 const int Pt = 1;                                   // Zero-padding in on the top in the height dimension
 const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
-
+*/
 
 /*
 // Case 1a: 3x3 conv, 10x10 feature map, 2 channel blocks in, 4 channel blocks out, 2x2 bits
@@ -97,6 +97,25 @@ const int Pt = 1;                                   // Zero-padding in on the to
 const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
 */
 
+
+// Case 5: 3x3 conv, 32x32 feature map, 1 channel blocks in, 1 channel blocks out, 2x2 bits = 2 bits
+const int iprec = 2;                                // Input data precision
+const int wprec = 2;                                // Weight precision
+const int oprec = 2;                                // Output precision
+const int W = 32;                                   // Input width
+const int H = 32;                                   // Input height
+const int C = 1;                                    // Input channel blocks
+const int Fw = 3;                                   // Filter kernel width
+const int Fh = 3;                                   // Filter kernel height
+const int Fc = 1;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Sw = 1;                                   // Filter horizontal (width) stride
+const int Pl = 1;                                   // Zero-padding in on the left in the width dimension
+const int Pr = 1;                                   // Zero-padding in on the right in the width dimension
+const int Pt = 1;                                   // Zero-padding in on the top in the height dimension
+const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
+
+
+
 // Tensors
 int i_t[H][W][C][iprec];                            // Input tensor
 int w_t[Fc][Fh][Fw][C][wprec];                      // Filter weight tensor
@@ -161,29 +180,7 @@ void assignInternalParams()
     cntdwn = countdown;
     outaddr = 0;
     w_tptr += woffset;
-    i_tptr += ioffset;
-    /*
-    s_i[0] = slength[0];
-    s_i[1] = slength[1];
-    s_i[2] = slength[2];
-    s_i[3] = slength[3];
-    s_i[3] = slength[3];
-    s_j[0] = sjump[0];
-    s_j[1] = sjump[1];
-    s_j[2] = sjump[2];
-    s_j[3] = sjump[3];
-    s_j[4] = sjump[4];
-    b_i[0] = blength[0];
-    b_i[1] = blength[1];
-    b_i[2] = blength[2];
-    b_i[3] = blength[3];
-    b_j[0] = bjump[0];
-    b_j[1] = bjump[1];
-    b_j[2] = bjump[2];
-    b_j[3] = bjump[3];
-    b_j[4] = bjump[4];
-    */
-    
+    i_tptr += ioffset;   
 }
 
 
@@ -379,6 +376,8 @@ void setConv2dlinePaddedTopBottom(int Fw, int Fh, int Pt, int Pb)
     // The filter height used here will smaller by the padding amount
     int Fh_pad = Fh - Pt - Pb;
 
+    int row_corr = 0;
+
     // Set the jump schedule parameters to be the same as the VALID conv2d, then correct
     setConv2dlineValid(Fw, Fh_pad);
 
@@ -389,24 +388,28 @@ void setConv2dlinePaddedTopBottom(int Fw, int Fh, int Pt, int Pb)
     if (Pt)
     {
         // Compute extra jump to skip rows in the filter not used when there is padding
-        int row_corr = wprec*C*Fw*Pt;
+        row_corr = wprec*C*Fw*Pt;
 
         // Set the weight base address to skip same number of rows in the weights as the padding
         woffset = row_corr;
-
-        // Change jump 2 to return to the starting row of the filter channel block accounting for padding
-        wjump[2] = -wprec*(C*Fw*Fh_pad-1);
-
-        // Change jump 1 to jump over unneeded rows when transitioning between filter channel blocks
-        wjump[1] = wprec + row_corr;
-
-        // Change jump 0 to return to the starting row of the first filter channel block
-        wjump[0] = -wprec*(C*Fw*Fh*Fc-1) + row_corr;
     }
-    else
+    else if (Pb)
     {
+        // Compute extra jump to skip rows in the filter not used when there is padding
+        row_corr = wprec*C*Fw*Pb;
 
+        // No initial row skip is needed at the bottom edge
+        woffset = 0;
     }
+
+    // Change jump 2 to return to the starting row of the filter channel block accounting for padding
+    wjump[2] = -wprec*(C*Fw*Fh_pad-1);
+
+    // Change jump 1 to jump over unneeded rows when transitioning between filter channel blocks
+    wjump[1] = wprec + row_corr;
+
+    // Change jump 0 to return to the starting row of the first filter channel block
+    wjump[0] = -wprec*(C*Fw*Fh*Fc-1) + row_corr;
 }
 
 
@@ -582,10 +585,11 @@ int main()
 
 
     // Compute parameters for convolution
-    setConv2dlinePaddedTopBottom(Fw, Fh, Pt, 0);        // Top row
+    //setConv2dlinePaddedTopBottom(Fw, Fh, Pt, 0);        // Top row
     //setConv2dlineEdgePadding(1, 0, 1, 0);           // Upper-left corner
-    //setConv2dlineValid(Fw, Fh);                       // Inner
+    setConv2dlineValid(Fw, Fh);                       // Inner
     //setConv2dlineEdgePadding(1, 0, 0, 1);           // Lower-left corner
+    //setConv2dlinePaddedTopBottom(Fw, Fh, 0, Pb);        // Bottom row
     assignInternalParams();
 
     // Print out the computed parameters
