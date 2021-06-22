@@ -11,7 +11,7 @@ const int m = 10;                                   // Spacing between dimension
 // Convolution parameters
 //
 
-/*
+
 // Case 1: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 2x2 bits
 const int iprec = 2;                                // Input data precision
 const int wprec = 2;                                // Weight precision
@@ -27,7 +27,7 @@ const int Pl = 1;                                   // Zero-padding in on the le
 const int Pr = 1;                                   // Zero-padding in on the right in the width dimension
 const int Pt = 1;                                   // Zero-padding in on the top in the height dimension
 const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
-*/
+
 
 /*
 // Case 1a: 3x3 conv, 10x10 feature map, 2 channel blocks in, 4 channel blocks out, 2x2 bits
@@ -97,7 +97,7 @@ const int Pt = 1;                                   // Zero-padding in on the to
 const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
 */
 
-
+/*
 // Case 5: 3x3 conv, 32x32 feature map, 1 channel blocks in, 1 channel blocks out, 2x2 bits = 2 bits
 const int iprec = 2;                                // Input data precision
 const int wprec = 2;                                // Weight precision
@@ -113,7 +113,7 @@ const int Pl = 1;                                   // Zero-padding in on the le
 const int Pr = 1;                                   // Zero-padding in on the right in the width dimension
 const int Pt = 1;                                   // Zero-padding in on the top in the height dimension
 const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
-
+*/
 
 
 // Tensors
@@ -322,7 +322,7 @@ int genNextOutput(int curjump)
  Computes parameters for 2-D convolution for one output row 
  on interior of input map (VALID in TF lingo)
 */
-void setConv2dlineValid(int Fw, int Fh)
+void setConv2dlineValid(int Fw, int Fh, int Ow)
 {
     // Scheme 1: Compute all of the output pixels for a single line including all output channel blocks
     ilength[4] = 0;
@@ -343,7 +343,7 @@ void setConv2dlineValid(int Fw, int Fh)
     wjump[2] = -wprec*(C*Fw*Fh-1);                                              w_jump_str[2] = (char*)"Move back to start of filter for next precision combo\n";
     wjump[1] = wprec;                                                           w_jump_str[1] = (char*)"Move to next filter set block\n";
     wjump[0] = -wprec*(C*Fw*Fh*Fc-1);                                           w_jump_str[0] = (char*)"Move back to start of first filter set block for next window\n";
-    countdown = (C * Fw) * (Fh) * (iprec * wprec) * (Fc) * ((W-Fw+1)/Sw);
+    countdown = (C * Fw) * (Fh) * (iprec * wprec) * (Fc) * (Ow);
     zigzag_step_sel = 0x7;                                                      // Step the zig-zag address generator on weight jump 2, 1, or 0
     shacc_load_sel = 0x3;                                                       // Load shift/accumulator on weight jump 0 and 1
     woffset = 0;                                                                // Filter pointer offset
@@ -379,7 +379,7 @@ void setConv2dlinePaddedTopBottom(int Fw, int Fh, int Pt, int Pb)
     int row_corr = 0;
 
     // Set the jump schedule parameters to be the same as the VALID conv2d, then correct
-    setConv2dlineValid(Fw, Fh_pad);
+    setConv2dlineValid(Fw, Fh_pad, (W-Fw+1)/Sw);
 
     // Change the row counter
     wlength[3] = Fh_pad - 1;
@@ -410,6 +410,45 @@ void setConv2dlinePaddedTopBottom(int Fw, int Fh, int Pt, int Pb)
 
     // Change jump 0 to return to the starting row of the first filter channel block
     wjump[0] = -wprec*(C*Fw*Fh*Fc-1) + row_corr;
+}
+
+/*
+ Computes a single output pixel on the left/right edge of the output feature map given a padded
+ input feature map.
+*/
+void setConv2dpixelPaddedLeftRight(int Fw, int Fh, int Pl, int Pr)
+{
+    // Filter width will be smaller by the padding amount
+    int Fw_pad = Fw - Pl - Pr;
+
+    int wcol_corr = 0;
+
+    setConv2dlineValid(Fw_pad, Fh, 1);
+
+    if (Pl)
+    {
+        wcol_corr = wprec*C*Pl;
+        woffset = wcol_corr;
+    }
+    else if (Pr)
+    {
+        wcol_corr = wprec*C*Pr;
+        woffset = 0;
+        ioffset = iprec*C*(W-Fw_pad);
+    }
+
+    // Change weight jump 3 to skip over columns when going to next row
+    wjump[3] = wprec + wcol_corr;
+
+    // Change jump 2 to return to the starting row of the filter channel block correcting for left/right padding
+    wjump[2] = -wprec*(C*Fw*Fh-1) + wcol_corr;
+
+    // Change jump 1 to jump over unneeded columns when transitioning between filter channel blocks
+    wjump[1] = wprec + wcol_corr;
+
+    // Change jump 0 to return to the starting row of the first filter channel block
+    wjump[0] = -wprec*(C*Fw*Fh*Fc-1) + wcol_corr;   
+
 }
 
 
@@ -586,9 +625,9 @@ int main()
 
     // Compute parameters for convolution
     //setConv2dlinePaddedTopBottom(Fw, Fh, Pt, 0);        // Top row
-    //setConv2dlineEdgePadding(1, 0, 1, 0);           // Upper-left corner
-    setConv2dlineValid(Fw, Fh);                       // Inner
-    //setConv2dlineEdgePadding(1, 0, 0, 1);           // Lower-left corner
+    //setConv2dpixelPaddedLeftRight(Fw, Fh, Pl, 0);           // Left edge
+    //setConv2dlineValid(Fw, Fh, (W-Fw+1)/Sw);                       // Inner
+    setConv2dpixelPaddedLeftRight(Fw, Fh, 0, Pr);           // right edge
     //setConv2dlinePaddedTopBottom(Fw, Fh, 0, Pb);        // Bottom row
     assignInternalParams();
 
