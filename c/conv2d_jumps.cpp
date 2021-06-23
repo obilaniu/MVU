@@ -319,34 +319,95 @@ int genNextOutput(int curjump)
 
 
 /*
- Computes parameters for 2-D convolution for one output row 
- on interior of input map (VALID in TF lingo)
+ Computes parameters of a 2-D convolution for outputing a single line (or pixels) of the given length.
+
+ Can handle padded top/bottom edges, left/right edges, and corners. NOTE: assumes that the 
+ input feature map is large enough and the filter small enough that both the top/bottom and left/right
+ edges are not covered at the same time, e.g. filter covers top edge but not bottom edge simulatneously.
+
+ Parameters
+ ----------
+ Fw:     Filter/kernel width
+ Fh:     Filter/kernel height
+ Ow:     Output width in pixels (set to 1 when doing left/right edges/corners)
+ Pt,Pb:  Top/bottom padding
+ Pl,Pr:  Left/right padding     
 */
-void setConv2dlineValid(int Fw, int Fh, int Ow)
+void setConv2dline(int Fw, int Fh, int Ow, int Pt=0, int Pb=0, int Pl=0, int Pr=0)
 {
-    // Scheme 1: Compute all of the output pixels for a single line including all output channel blocks
+    // The filter height used here will be corrected by the padding amount
+    int Fh_corr = Fh - Pt - Pb;
+    int wrow_corr = 0;
+
+    // Filter width will be corrected by the padding amount
+    int Fw_corr = Fw - Pl - Pr;
+    int wcol_corr = 0;
+
+    // Initialize the address offsets for the input and weights
+    ioffset = 0;
+    woffset = 0;
+
+    // Account for top/bottom padding
+    if (Pt)
+    {
+        // Compute increased jump to skip rows in the filter not used when there is padding
+        wrow_corr = wprec*C*Fw*Pt;
+
+        // Set the weight base address to skip same number of rows in the weights as the padding
+        woffset += wrow_corr;
+    }
+    else if (Pb)
+    {
+        // Compute extra jump to skip rows in the filter not used when there is padding
+        wrow_corr = wprec*C*Fw*Pb;
+
+        // No initial weight row skip is needed at the bottom edge
+
+        // Set input offset to skip to bottom edge
+        ioffset += iprec*C*(H-Fh_corr)*W;
+    }
+
+    // Account for left/right padding
+    if (Pl)
+    {
+        // Compute increased jump to skip columns in the filter not used when there is padding
+        wcol_corr = wprec*C*Pl;
+
+        // Set the weight base address to skip the first columns in the weights the cover the padding
+        woffset += wcol_corr;
+    }
+    else if (Pr)
+    {
+        // Compute increased jump to skip columns in the filter not used when there is padding
+        wcol_corr = wprec*C*Pr;
+
+        // Set the input offset to skip to the right edge of the input feature map
+        ioffset += iprec*C*(W-Fw_corr);
+
+        // No weight address offset needed here
+    }
+    
     ilength[4] = 0;
-    ilength[3] = C*Fw-1;                                                        // Width of filter window X number of input channel blocks
-    ilength[2] = Fh-1;                                                          // Height of filter
+    ilength[3] = C*Fw_corr-1;                                                   // Width of filter window X number of input channel blocks
+    ilength[2] = Fh_corr-1;                                                     // Height of filter
     ilength[1] = iprec*wprec*Fc-1;                                              // Number of bit combos X filter sets
     ijump[4] = 0;                                                               i_jump_str[4] = NULL;                   // not needed
     ijump[3] = iprec;                                                           i_jump_str[3] = NULL;                   // Move to next channel block/pixel
-    ijump[2] = iprec*(C*(W-Fw) + 1);                                            i_jump_str[2] = (char*)"Move to next row\n";
-    ijump[1] = -iprec*(C*(Fh-1)*W + Fw*C - 1);                                  i_jump_str[1] = (char*)"Move back to start of window\n";
-    ijump[0] = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);                           i_jump_str[0] = (char*)"Move window to right by horizontal stride\n";
-    wlength[4] = C*Fw-1;                                                        // Filter width
-    wlength[3] = Fh-1;                                                          // Filter height
+    ijump[2] = iprec*(C*(W-Fw_corr) + 1);                                       i_jump_str[2] = (char*)"Move to next row\n";
+    ijump[1] = -iprec*(C*(Fh_corr-1)*W + Fw_corr*C - 1);                        i_jump_str[1] = (char*)"Move back to start of window\n";
+    ijump[0] = -iprec*(C*(Fh_corr-1)*W + (Fw_corr-Sw-1)*C + 1);                 i_jump_str[0] = (char*)"Move window to right by horizontal stride\n";
+    wlength[4] = C*Fw_corr-1;                                                   // Filter width
+    wlength[3] = Fh_corr-1;                                                     // Filter height
     wlength[2] = iprec*wprec-1;                                                 // Number of bit combos
     wlength[1] = Fc-1;                                                          // Number of filter blocks
     wjump[4] = wprec;                                                           w_jump_str[4] = NULL;                   // Filter width
-    wjump[3] = wprec;                                                           w_jump_str[3] = (char*)"Move to next filter row\n";
-    wjump[2] = -wprec*(C*Fw*Fh-1);                                              w_jump_str[2] = (char*)"Move back to start of filter for next precision combo\n";
-    wjump[1] = wprec;                                                           w_jump_str[1] = (char*)"Move to next filter set block\n";
-    wjump[0] = -wprec*(C*Fw*Fh*Fc-1);                                           w_jump_str[0] = (char*)"Move back to start of first filter set block for next window\n";
-    countdown = (C * Fw) * (Fh) * (iprec * wprec) * (Fc) * (Ow);
+    wjump[3] = wprec + wcol_corr;                                               w_jump_str[3] = (char*)"Move to next filter row\n";
+    wjump[2] = -wprec*(C*Fw*Fh_corr-1) + wcol_corr;                             w_jump_str[2] = (char*)"Move back to start of filter for next precision combo\n";
+    wjump[1] = wprec + wrow_corr + wcol_corr;                                   w_jump_str[1] = (char*)"Move to next filter set block\n";
+    wjump[0] = -wprec*(C*Fw*Fh*Fc-1) + wrow_corr + wcol_corr;                   w_jump_str[0] = (char*)"Move back to start of first filter set block for next window\n";
+    countdown = (C * Fw_corr) * (Fh_corr) * (iprec * wprec) * (Fc) * (Ow);
     zigzag_step_sel = 0x7;                                                      // Step the zig-zag address generator on weight jump 2, 1, or 0
     shacc_load_sel = 0x3;                                                       // Load shift/accumulator on weight jump 0 and 1
-    woffset = 0;                                                                // Filter pointer offset
     slength[4] = 0;                                                             // Don't need this inner loop
     slength[3] = 0;                                                             // Don't need this inner loop
     slength[2] = 0;                                                             // Don't need this inner loop. NOTE: this is length0 in the HW
@@ -367,201 +428,6 @@ void setConv2dlineValid(int Fw, int Fh, int Ow)
     bjump[0] = -Fc+1;                                                           b_jump_str[0] = (char*)"Move back to first output channel block";    // NOTE: this is jump/stride 1 in the HW    
 }
 
-/*
- Computes parameters for 2-D convolution for one output row 
- on top or bottom of input map with padding.
-*/
-void setConv2dlinePaddedTopBottom(int Fw, int Fh, int Pt, int Pb)
-{
-    // The filter height used here will smaller by the padding amount
-    int Fh_pad = Fh - Pt - Pb;
-
-    int row_corr = 0;
-
-    // Set the jump schedule parameters to be the same as the VALID conv2d, then correct
-    setConv2dlineValid(Fw, Fh_pad, (W-Fw+1)/Sw);
-
-    // Change the row counter
-    wlength[3] = Fh_pad - 1;
-
-    // Correct the weight memory jump schedule
-    if (Pt)
-    {
-        // Compute extra jump to skip rows in the filter not used when there is padding
-        row_corr = wprec*C*Fw*Pt;
-
-        // Set the weight base address to skip same number of rows in the weights as the padding
-        woffset = row_corr;
-    }
-    else if (Pb)
-    {
-        // Compute extra jump to skip rows in the filter not used when there is padding
-        row_corr = wprec*C*Fw*Pb;
-
-        // No initial row skip is needed at the bottom edge
-        woffset = 0;
-    }
-
-    // Change jump 2 to return to the starting row of the filter channel block accounting for padding
-    wjump[2] = -wprec*(C*Fw*Fh_pad-1);
-
-    // Change jump 1 to jump over unneeded rows when transitioning between filter channel blocks
-    wjump[1] = wprec + row_corr;
-
-    // Change jump 0 to return to the starting row of the first filter channel block
-    wjump[0] = -wprec*(C*Fw*Fh*Fc-1) + row_corr;
-}
-
-/*
- Computes a single output pixel on the left/right edge of the output feature map given a padded
- input feature map.
-*/
-void setConv2dpixelPaddedLeftRight(int Fw, int Fh, int Pl, int Pr)
-{
-    // Filter width will be smaller by the padding amount
-    int Fw_pad = Fw - Pl - Pr;
-
-    int wcol_corr = 0;
-
-    setConv2dlineValid(Fw_pad, Fh, 1);
-
-    if (Pl)
-    {
-        wcol_corr = wprec*C*Pl;
-        woffset = wcol_corr;
-    }
-    else if (Pr)
-    {
-        wcol_corr = wprec*C*Pr;
-        woffset = 0;
-        ioffset = iprec*C*(W-Fw_pad);
-    }
-
-    // Change weight jump 3 to skip over columns when going to next row
-    wjump[3] = wprec + wcol_corr;
-
-    // Change jump 2 to return to the starting row of the filter channel block correcting for left/right padding
-    wjump[2] = -wprec*(C*Fw*Fh-1) + wcol_corr;
-
-    // Change jump 1 to jump over unneeded columns when transitioning between filter channel blocks
-    wjump[1] = wprec + wcol_corr;
-
-    // Change jump 0 to return to the starting row of the first filter channel block
-    wjump[0] = -wprec*(C*Fw*Fh*Fc-1) + wcol_corr;   
-
-}
-
-
-/*
- Computes parameters to do the convolution in the corner/edge of an input feature map
- when there is "virtual" padding (i.e. no actual zeros in memory). Needed where the output 
- feature map is the same size as the input feature map in width and height (i.e. SAME in TF lingo)
- Pl and Pr are mutully exclusive, as are Pt and Pb. Set the one not being used to 0.
-*/
-/*
-void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
-{/*
-    // Upper left corner
-    if (Pt > 0 && Pl > 0)
-    {
-        printf("=Upper left corner=\n");
-        woffset = wprec*C*(Pt*Fw + Pl);                                             // Start on weight tile within in the first filter block
-        ioffset = 0;
-        ilength0 = C*(Fw-Pl)-1;                                                     // Width of filter window X number of input channel blocks
-        ilength1 = Fh-Pt-1;                                                         // Height of filter
-        ilength2 = iprec*wprec*Fc-1;                                                // Number of bit combos X number of filter sets
-        ilength3 = 0;                                                               // Not needed. Countdown will terminate.
-        ijump0 = iprec*(C*(W-Fw+Pl) + 1);                                           i_jump0_str = (char*)"Move to next row";
-        ijump1 = -iprec*(C*(Fh-Pt-1)*W + (Fw-Pl)*C - 1);                            i_jump1_str = (char*)"Move back to start of window";
-        ijump2 = ijump1;                                                            i_jump2_str = i_jump1_str;
-        ijump3 = ijump1;                                                            i_jump3_str = i_jump1_str;
-        wlength0 = C*(Fw-Pl)-1;                                                     // One subset of the columns of the filter
-        wlength1 = Fh-Pt-1;                                                         // Subset of the rows of the filter
-        wlength2 = iprec*wprec-1;                                                   // Number of bit combos
-        wlength3 = Fc-1;                                                            // Number of filter sets, but don't really need since countdown will terminate
-        wjump0 = wprec*(C*Pl+1);                                                    w_jump0_str = (char*)"Jump to next row of filter set";
-        wjump1 = -wprec*(C*Fw*Fh - 1) + woffset;                                    w_jump1_str = (char*)"Move back to start of filter for next bit combo";
-        wjump2 = wprec + woffset;                                                   w_jump2_str = (char*)"Move to next filter set block";
-        wjump3 = 0;                                                                 w_jump3_str = (char*)"Not needed!";
-        countdown = (C * (Fw-Pl)) * (Fh-Pt) * (iprec * wprec) * (Fc);
-        zigzag_step_sel = 2;
-        shacc_load_sel = 1 << 3;       
-    }
-    // Upper right corner
-    else if (Pt > 0 && Pr > 0)
-    {
-        printf("=Upper right corner=\n");
-        woffset = wprec*C*Pt*Fw;                                                    // Start on correct row of first filter block
-        ioffset = iprec*(C*(W-Fw+Pr));                                              // Start on right edge of input feature map
-        ilength0 = C*(Fw-Pr)-1;                                                     // Width of filter window X number of input channel blocks
-        ilength1 = Fh-Pt-1;                                                         // Height of filter
-        ilength2 = iprec*wprec*Fc-1;                                                // Number of bit combos X number of filter sets
-        ilength3 = 0;                                                               // Not needed. Countdown will terminate.
-        ijump0 = iprec*(C*(W-Fw+Pr) + 1);                                           i_jump0_str = (char*)"Move to next row";
-        ijump1 = -iprec*(C*(Fh-Pt-1)*W + (Fw-Pr)*C - 1);                            i_jump1_str = (char*)"Move back to start of window";
-        ijump2 = ijump1;                                                            i_jump2_str = i_jump1_str;
-        ijump3 = ijump1;                                                            i_jump3_str = i_jump1_str;
-        wlength0 = C*(Fw-Pr)-1;                                                     // One subset of the columns of the filter
-        wlength1 = Fh-Pt-1;                                                         // Subset of the rows of the filter
-        wlength2 = iprec*wprec-1;                                                   // Number of bit combos
-        wlength3 = Fc-1;                                                            // Number of filter sets, but don't really need since countdown will terminate
-        wjump0 = wprec*(C*Pr+1);                                                    w_jump0_str = (char*)"Jump to next row of filter set";
-        wjump1 = -wprec*(C*Fw*Fh - 1) + wprec*C*Pr + woffset;                       w_jump1_str = (char*)"Move back to start of filter for next bit combo";
-        wjump2 = wprec*(C*Pr + 1) + woffset;                                        w_jump2_str = (char*)"Move to next filter set block";
-        wjump3 = 0;                                                                 w_jump3_str = (char*)"Not needed!";
-        countdown = (C * (Fw-Pr)) * (Fh-Pt) * (iprec * wprec) * (Fc);
-        zigzag_step_sel = 2;
-        shacc_load_sel = 1 << 3;   
-    }
-    // Lower left corner
-    // 
-    else if (Pb > 0 && Pl > 0)
-    {
-        printf("=Lower left corner=\n");
-        woffset = wprec*C*Pl;                                                       // Start on weight tile within in the first filter block
-        ioffset = iprec*C*W*(H-1-Pb);                                               // Input row position near bottom edge
-        ilength0 = C*(Fw-Pl)-1;                                                     // Width of filter window X number of input channel blocks
-        ilength1 = Fh-Pb-1;                                                         // Height of filter
-        ilength2 = iprec*wprec*Fc-1;                                                // Number of bit combos X number of filter sets
-        ilength3 = 0;                                                               // Not needed. Countdown will terminate.
-        ijump0 = iprec*(C*(W-Fw+Pl) + 1);                                           i_jump0_str = (char*)"Move to next row";
-        ijump1 = -iprec*(C*(Fh-Pb-1)*W + (Fw-Pl)*C - 1);                            i_jump1_str = (char*)"Move back to start of window";
-        ijump2 = ijump1;                                                            i_jump2_str = i_jump1_str;
-        ijump3 = ijump1;                                                            i_jump3_str = i_jump1_str;
-        wlength0 = C*(Fw-Pl)-1;                                                     // One subset of the columns of the filter
-        wlength1 = Fh-Pb-1;                                                         // Subset of the rows of the filter
-        wlength2 = iprec*wprec-1;                                                   // Number of bit combos
-        wlength3 = Fc-1;                                                            // Number of filter sets, but don't really need since countdown will terminate
-        wjump0 = wprec*(C*Pl+1);                                                    w_jump0_str = (char*)"Jump to next row of filter set";
-        wjump1 = -wprec*(C*Fw*(Fh-Pb) - 1) + woffset;                               w_jump1_str = (char*)"Move back to start of filter for next bit combo";
-        wjump2 = wprec*(C*Fw + 1) + woffset;                                        w_jump2_str = (char*)"Move to next filter set block";
-        wjump3 = 0;                                                                 w_jump3_str = (char*)"Not needed!";
-        countdown = (C * (Fw-Pl)) * (Fh-Pb) * (iprec * wprec) * (Fc);
-        zigzag_step_sel = 2;
-        shacc_load_sel = 1 << 3;    
-    }
-    // Lower right corner
-    else if (Pb > 0 && Pr > 0)
-    {
-
-    }
-    // Left edge
-    else if (Pl > 0)
-    {
-
-    }
-    // Right edge
-    else if (Pr)
-    {
-
-    }
-    else
-    {
-        printf("Error! Not a valid padding config!\n");
-    }
-       
-}
-*/
 
 
 int main()
@@ -622,13 +488,18 @@ int main()
         b_t[fc] = fc;
     }
 
+    int Ow_line_valid = (W-Fw+1)/Sw;
 
     // Compute parameters for convolution
-    //setConv2dlinePaddedTopBottom(Fw, Fh, Pt, 0);        // Top row
-    //setConv2dpixelPaddedLeftRight(Fw, Fh, Pl, 0);           // Left edge
-    //setConv2dlineValid(Fw, Fh, (W-Fw+1)/Sw);                       // Inner
-    setConv2dpixelPaddedLeftRight(Fw, Fh, 0, Pr);           // right edge
-    //setConv2dlinePaddedTopBottom(Fw, Fh, 0, Pb);        // Bottom row
+    //setConv2dline(Fw, Fh, 1, Pt, 0, Pl, 0);        // top left corner
+    //setConv2dline(Fw, Fh, Ow_line_valid, Pt, 0, 0, 0);        // Top edge
+    //setConv2dline(Fw, Fh, 1, Pt, 0, 0, Pr);        // top right corner
+    //setConv2dline(Fw, Fh, 1, 0, 0, Pl, 0);        // Left edge
+    //setConv2dline(Fw, Fh, (W-Fw+1)/Sw);                       // Inner
+    //setConv2dline(Fw, Fh, 1, 0, 0, 0, Pr);        // right edge
+    //setConv2dline(Fw, Fh, 1, 0, Pb, Pl, 0);        // bottom left corner
+    //setConv2dline(Fw, Fh, Ow_line_valid, 0, Pb, 0, 0);        // Bottom row
+    setConv2dline(Fw, Fh, 1, 0, Pb, 0, Pr);        // bottom left corner
     assignInternalParams();
 
     // Print out the computed parameters
