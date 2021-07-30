@@ -36,4 +36,9 @@ localparam NJUMPS        = 5;  // Number of address jump parameters available
 localparam BDBANKABS = $clog2(NDBANK);  // Bitwidth of Data    BANK Address Bank Select 
 localparam BDBANKAWS = 10;              // Bitwidth of Data    BANK Address Word Select 
 
+typedef logic [BWBANKW-1 : 0 ] w_data_t;
+typedef w_data_t w_data_q_t[$];
+
+typedef logic [BDBANKW-1 : 0 ] a_data_t;
+typedef a_data_t a_data_q_t[$];
 endpackage
