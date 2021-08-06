@@ -21,6 +21,8 @@ module mvutop_tester();
     parameter  NMVU    =  8;   /* Number of MVUs. Ideally a Power-of-2. */
     parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
     parameter  NDBANK  = 32;   /* Number of 2N-bit, 512-element Data BANK. */
+    parameter  BBIAS   = 32;   // Bitwidth of bias values
+
     localparam BMVUA   = $clog2(NMVU);  /* Bitwidth of MVU          Address */
     localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
     localparam BWBANKW = 4096;          // Bitwidth of Weights BANK Word
@@ -39,6 +41,13 @@ module mvutop_tester();
     localparam BSCALERB = 16;           // Bitwidth of multiplicative scaler (operand 'b')
     localparam BSCALERP = 48;           // Bitwidth of the scaler output
     localparam NJUMPS   = 5;            // Number of address jumps supported
+
+    // Scalar and Bias memory bank parameters
+    localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
+    localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word
+    localparam BBBANKA     = 6;             // Bitwidth of Scaler BANK address
+    localparam BBBANKW     = BBIAS*N;       // Bitwidth of Scaler BANK word
+
 
     localparam BACC    = 27;            /* Bitwidth of Accumulators */
 
@@ -69,7 +78,18 @@ module mvutop_tester();
     reg [     BDBANKA-1 : 0] wrc_addr    ;//input  wrc_addr;
     reg [     BDBANKW-1 : 0] wrc_word    ;//input  wrc_word;
 
-    reg [         NMVU-1 : 0] quant_clr;        // Quantizer: clear
+    // Scaler memory signals
+    reg[         NMVU-1 : 0] wrs_en;      // Scaler memory: write enable
+    reg[      BSBANKA-1 : 0] wrs_addr;    // Scaler memory: write address
+    reg[      BSBANKW-1 : 0] wrs_word;    // Scaler memory: write word
+
+    //Bias memory signals
+    reg[         NMVU-1 : 0] wrb_en;                 // Bias memory: write enable
+    reg[      BBBANKA-1 : 0] wrb_addr;               // Bias memory: write address
+    reg[      BBBANKW-1 : 0] wrb_word;               // Bias memory: write word
+
+
+	reg [         NMVU-1 : 0] quant_clr;        // Quantizer: clear
     reg [NMVU*BQMSBIDX-1 : 0] quant_msbidx;     // Quantizer: bit position index of the MSB
 
     reg[  NMVU*BCNTDWN-1 : 0] countdown;        // Config: number of clocks to countdown for given task
@@ -94,13 +114,26 @@ module mvutop_tester();
     reg[        NJUMPS-1 : 0] shacc_load_sel[NMVU-1 : 0];   // Config: select jump trigger for shift/accumultor load
     reg[        NJUMPS-1 : 0] zigzag_step_sel[NMVU-1 : 0];  // Config: select jump trigger for stepping the zig-zag address generator  
 
+    // Scaler and Bias memory configiration
+    reg[  NMVU*BSBANKA-1 : 0] sbaseaddr;            // Config: scaler memory base address
+    reg[  NMVU*BBBANKA-1 : 0] bbaseaddr;            // Config: bias memory base address
+    reg[  NMVU*BSTRIDE-1 : 0] sstride_0;            // Config: scaler AGU stride 0
+    reg[  NMVU*BSTRIDE-1 : 0] sstride_1;            // Config: scaler AGU stride 1
+    reg[  NMVU*BSTRIDE-1 : 0] bstride_0;            // Config: bias AGU stride 0
+    reg[  NMVU*BSTRIDE-1 : 0] bstride_1;            // Config: bias AGU stride 1
+    reg[  NMVU*BLENGTH-1 : 0] slength_0;            // Config: scaler AGU length 0
+    reg[  NMVU*BLENGTH-1 : 0] slength_1;            // Config: scaler AGU length 1
+    reg[  NMVU*BLENGTH-1 : 0] blength_0;            // Config: bias AGU length 0
+    reg[  NMVU*BLENGTH-1 : 0] blength_1;            // Config: bias AGU length 1
+
     //
     // DUT
     //
     mvutop #(
             .NMVU  (NMVU  ),
             .N     (N     ),
-            .NDBANK(NDBANK)
+            .NDBANK(NDBANK),
+            .BBIAS (BBIAS )
         ) dut
         (
             .clk              (clk          ),
@@ -145,7 +178,23 @@ module mvutop_tester();
             .wrc_en           (wrc_en),
             .wrc_grnt         (wrc_grnt),
             .wrc_addr         (wrc_addr),
-            .wrc_word         (wrc_word)
+            .wrc_word         (wrc_word),
+            .wrs_en           (wrs_en),
+            .wrs_addr         (wrs_addr),
+            .wrs_word         (wrs_word),
+            .wrb_en           (wrb_en),
+            .wrb_addr         (wrb_addr),
+            .wrb_word         (wrb_word),
+            .sbaseaddr        (sbaseaddr),
+            .bbaseaddr        (bbaseaddr),
+            .sstride_0        (sstride_0),
+            .sstride_1        (sstride_1),
+            .bstride_0        (bstride_0),
+            .bstride_1        (bstride_1),
+            .slength_0        (slength_0),
+            .slength_1        (slength_1),
+            .blength_0        (blength_0),
+            .blength_1        (blength_1)
         );
 
 
@@ -194,6 +243,43 @@ task writeWeightsRepeat(int mvu, logic unsigned[BWBANKW-1 : 0] word, logic unsig
     end
 endtask
 
+task writeScalers(int mvu, unsigned[BSBANKW-1 : 0] word, unsigned[BSBANKA-1 : 0] addr);
+    checkmvu(mvu);
+    wrs_addr[mvu*BSBANKA +: BSBANKA] = addr;
+    wrs_word[mvu*BSBANKW +: BSBANKW] = word;
+    wrs_en[mvu] = 1'b1;
+    #(`CLKPERIOD);
+    wrs_en[mvu] = 1'b0;
+endtask
+
+task writeScalersRepeat(int mvu, logic unsigned[BSBANKW-1 : 0] word, logic unsigned[BSBANKA-1 : 0] startaddr, int size, int stride=1);
+    checkmvu(mvu);
+    for (int i = 0; i < size; i++) begin
+        writeScalers(.mvu(mvu), .word(word), .addr(startaddr));
+        #(`CLKPERIOD);
+        startaddr = startaddr + stride;
+    end
+endtask
+
+task writeBiases(int mvu, unsigned[BBBANKW-1 : 0] word, unsigned[BBBANKA-1 : 0] addr);
+    checkmvu(mvu);
+    wrb_addr[mvu*BBBANKA +: BBBANKA] = addr;
+    wrb_word[mvu*BBBANKW +: BBBANKW] = word;
+    wrb_en[mvu] = 1'b1;
+    #(`CLKPERIOD);
+    wrb_en[mvu] = 1'b0;
+endtask
+
+task writeBiasesRepeat(int mvu, logic unsigned[BBBANKW-1 : 0] word, logic unsigned[BBBANKA-1 : 0] startaddr, int size, int stride=1);
+    checkmvu(mvu);
+    for (int i = 0; i < size; i++) begin
+        writeBiases(.mvu(mvu), .word(word), .addr(startaddr));
+        #(`CLKPERIOD);
+        startaddr = startaddr + stride;
+    end
+endtask
+
+
 task automatic readData(int mvu, logic unsigned [BDBANKA-1 : 0] addr, ref logic unsigned [BDBANKW-1 : 0] word, ref logic unsigned [NMVU-1 : 0] grnt);
     checkmvu(mvu);
     rdc_addr[mvu*BDBANKA +: BDBANKA] = addr;
@@ -204,6 +290,16 @@ task automatic readData(int mvu, logic unsigned [BDBANKA-1 : 0] addr, ref logic 
     #(`CLKPERIOD*2);
     word = rdc_word[mvu*BDBANKW +: BDBANKW];
 
+endtask
+
+
+// Initialize scaler and bias memories
+task scalerMemInit(int mvu);
+    writeScalersRepeat(.mvu(mvu), .word({(BSBANKW){16'h0001}}), .startaddr(0), .size(2**BSBANKA));
+endtask
+
+task biasMemInit(int mvu);
+    writeBiasesRepeat(.mvu(mvu), .word({(BBBANKW){32'h00000000}}), .startaddr(0), .size(2**BBBANKA));
 endtask
 
 
@@ -280,6 +376,16 @@ task automatic runGEMV(
     zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
     countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
 
+    // Scaler and bias memory parameters
+    sstride_0[mvu*BSTRIDE +: BSTRIDE] = 1;
+    sstride_1[mvu*BSTRIDE +: BSTRIDE] = 0;
+    bstride_0[mvu*BSTRIDE +: BSTRIDE] = 1;
+    bstride_1[mvu*BSTRIDE +: BSTRIDE] = 0;
+    slength_0[mvu*BLENGTH +: BLENGTH] = 0;
+    slength_1[mvu*BLENGTH +: BLENGTH] = m_h-1;
+    blength_0[mvu*BLENGTH +: BLENGTH] = 0;
+    blength_1[mvu*BLENGTH +: BLENGTH] = m_h-1;
+
     // Run the GEMV
     start[mvu] = 1'b1;
     #(`CLKPERIOD);
@@ -333,6 +439,33 @@ task controllerMemTest();
 
 
 endtask
+
+//
+// Scaler memory write test
+//
+task scalerMemTest();
+   
+    print_banner("Scaler memory write test");
+
+    // Write test
+    writeScalersRepeat(0, {(BSBANKW/32){'hdeadbeef}}, 0, 4, 1);
+
+    #(`CLKPERIOD*10);
+
+endtask
+
+//
+// Bias memory write test
+//
+task biasMemTest();
+    
+    print_banner("Bias memory write test");
+
+    // Write test
+    writeBiasesRepeat(0, {(BBBANKW/32){'hdeadbeef}}, 0, 4, 1);
+
+endtask
+
 
 //
 // Matrix-vector multiplication (GEMV) test
@@ -527,7 +660,13 @@ initial begin
     wrc_en = 0;
     wrc_addr = 0;
     wrc_word = 0;
-    quant_clr = 0;
+    wrs_en = 0;
+    wrs_addr = 0;
+    wrs_word = 0;
+    wrb_en = 0;
+    wrb_addr = 0;
+    wrb_word = 0;
+	quant_clr = 0;
     quant_msbidx = 0;
     countdown = 0;
     wprecision = 0;
@@ -541,6 +680,8 @@ initial begin
     wrw_addr = 0;
     wrw_word = 0;
     wrw_en = 0;
+    sbaseaddr = 0;
+    bbaseaddr = 0;
 
     // Initialize arrays
     for (int m = 0; m < NMVU; m++) begin
@@ -549,6 +690,8 @@ initial begin
             wjump[m][i] = 0;
             ijump[m][i] = 0;
             ojump[m][i] = 0;
+            sjump[m][i] = 0;
+            bjump[m][i] = 0;
         end
 
         // Initizalize lengths
@@ -556,6 +699,8 @@ initial begin
             wlength[m][i] = 0;
             ilength[m][i] = 0;
             olength[m][i] = 0;
+            slength[m][i] = 0;
+            blength[m][i] = 0;
         end
 
         shacc_load_sel[m] = 0;
@@ -572,12 +717,33 @@ initial begin
     max_en = 1;
 
     // Test memory access
-    controllerMemTest();
+    //controllerMemTest();
+
+    // Test scaler and bias memory writes
+    //scalerMemTest();
+    //biasMemTest();
+
+    // Initialize scaler and bias memories
+    scalerMemInit(0);
+    biasMemInit(0);
+    #(`CLKPERIOD*10);
+ 
  
     // Run gemv tests, mvu0 -> mvu0
     print_banner("GEMV tests: mvu0 -> mvu0");
     gemvTests(.mvu(0), .omvu('b00000001), .scaler(1));
 
+    // Run gemv tests, mvu0 -> mvu0, but with escalating scaler and bias memory values set
+    print_banner("GEMV tests: mvu0 -> mvu0");
+    writeScalers(.mvu(0), .word({BSBANKW{16'h0001}}), .addr(0));
+    writeScalers(.mvu(0), .word({BSBANKW{16'h0002}}), .addr(1));
+    writeScalers(.mvu(0), .word({BSBANKW{16'h0003}}), .addr(2));
+    writeBiases(.mvu(0), .word({BSBANKW{32'h00000000}}), .addr(0));
+    writeBiases(.mvu(0), .word({BSBANKW{32'h00000001}}), .addr(1));
+    writeBiases(.mvu(0), .word({BSBANKW{32'h00000002}}), .addr(2));
+    gemvTests(.mvu(0), .omvu('b00000001), .scaler(1));
+
+/*
     // Run signed gemv tests, mvu0 -> mvu0
     print_banner("Signed GEMV tests: mvu0 -> mvu0");
     gemvSignedTests(.mvu(0), .omvu('b00000001), .scaler(1));

@@ -37,6 +37,23 @@ class mvu_testbench_base extends BaseObj;
 
     endtask
 
+    //
+    // Scaler memory write test
+    //
+    task scalerMemTest();
+        logger.print_banner("Scaler memory write test");
+        writeScalersRepeat(0, {(BSBANKW/32){'hdeadbeef}}, 0, 4, 1);
+        for(int i=0; i<10; i++) @(posedge intf.clk);
+    endtask
+
+    //
+    // Bias memory write test
+    //
+    task biasMemTest();
+        logger.print_banner("Bias memory write test");
+        writeBiasesRepeat(0, {(BBBANKW/32){'hdeadbeef}}, 0, 4, 1);
+    endtask
+
 
     task checkmvu(int mvu);
         if (mvu > N) begin
@@ -80,6 +97,42 @@ class mvu_testbench_base extends BaseObj;
         end
     endtask
 
+    task writeScalers(int mvu, unsigned[BSBANKW-1 : 0] word, unsigned[BSBANKA-1 : 0] addr);
+        checkmvu(mvu);
+        intf.wrs_addr[mvu*BSBANKA +: BSBANKA] = addr;
+        intf.wrs_word[mvu*BSBANKW +: BSBANKW] = word;
+        intf.wrs_en[mvu] = 1'b1;
+        @(posedge intf.clk)
+        intf.wrs_en[mvu] = 1'b0;
+    endtask
+
+    task writeScalersRepeat(int mvu, logic unsigned[BSBANKW-1 : 0] word, logic unsigned[BSBANKA-1 : 0] startaddr, int size, int stride=1);
+        checkmvu(mvu);
+        for (int i = 0; i < size; i++) begin
+            writeScalers(.mvu(mvu), .word(word), .addr(startaddr));
+            @(posedge intf.clk)
+            startaddr = startaddr + stride;
+        end
+    endtask
+
+    task writeBiases(int mvu, unsigned[BBBANKW-1 : 0] word, unsigned[BBBANKA-1 : 0] addr);
+        checkmvu(mvu);
+        intf.wrb_addr[mvu*BBBANKA +: BBBANKA] = addr;
+        intf.wrb_word[mvu*BBBANKW +: BBBANKW] = word;
+        intf.wrb_en[mvu] = 1'b1;
+        @(posedge intf.clk)
+        intf.wrb_en[mvu] = 1'b0;
+    endtask
+
+    task writeBiasesRepeat(int mvu, logic unsigned[BBBANKW-1 : 0] word, logic unsigned[BBBANKA-1 : 0] startaddr, int size, int stride=1);
+        checkmvu(mvu);
+        for (int i = 0; i < size; i++) begin
+            writeBiases(.mvu(mvu), .word(word), .addr(startaddr));
+            @(posedge intf.clk)
+            startaddr = startaddr + stride;
+        end
+    endtask
+
     task automatic readData(int mvu, logic unsigned [BDBANKA-1 : 0] addr, ref logic unsigned [BDBANKW-1 : 0] word, ref logic unsigned [NMVU-1 : 0] grnt);
         checkmvu(mvu);
         intf.rdc_addr[mvu*BDBANKA +: BDBANKA] = addr;
@@ -90,6 +143,15 @@ class mvu_testbench_base extends BaseObj;
         @(posedge intf.clk)
         @(posedge intf.clk)
         word = intf.rdc_word[mvu*BDBANKW +: BDBANKW];
+    endtask
+
+    // Initialize scaler and bias memories
+    task scalerMemInit(int mvu);
+        writeScalersRepeat(.mvu(mvu), .word({(BSBANKW){16'h0001}}), .startaddr(0), .size(2**BSBANKA));
+    endtask
+
+    task biasMemInit(int mvu);
+        writeBiasesRepeat(.mvu(mvu), .word({(BBBANKW){32'h00000000}}), .startaddr(0), .size(2**BBBANKA));
     endtask
 
 
@@ -107,9 +169,13 @@ class mvu_testbench_base extends BaseObj;
         int oaddr,
         int m_w,            // Matrix width / vector length
         int m_h,            // Matrix height
+        int saddr = 0,
+        int baddr = 0,
         logic isign = 0,    // True if input data are signed
         logic wsign = 0,    // True if weights are signed
-        int scaler = 1
+        int scaler = 1,
+        logic usescalarmem = 0,
+        logic usebiasmem = 0
     );
 
         logic [BDBANKABS-1 : 0]     obank_sel = obank;
@@ -130,6 +196,8 @@ class mvu_testbench_base extends BaseObj;
         intf.quant_msbidx[mvu*BQMSBIDX +: BQMSBIDX] = omsb;
         intf.wbaseaddr[mvu*BWBANKA +: BWBANKA] = waddr;
         intf.ibaseaddr[mvu*BDBANKA +: BDBANKA] = iaddr;
+        intf.sbaseaddr[mvu*BSBANKA +: BSBANKA] = saddr;
+        intf.bbaseaddr[mvu*BBBANKA +: BBBANKA] = baddr;
         intf.obaseaddr[mvu*BDBANKA +: BDBANKA] = {obank_sel, oword_sel};
         intf.omvusel[mvu*NMVU +: NMVU]         = omvu;                   // Set the output MVUs
         intf.wjump[mvu][0] = wprec;                        // move 1 tile ahead to next tile row
@@ -165,6 +233,36 @@ class mvu_testbench_base extends BaseObj;
         intf.shacc_load_sel[mvu] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
         intf.zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
         intf.countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
+
+        // Scaler and bias memory parameters
+        if (usescalarmem) begin
+            intf.usescaler_mem[mvu] = 1;
+            intf.sjump[mvu][0] = 1;
+            intf.sjump[mvu][1] = 0;
+            intf.sjump[mvu][2] = 0;
+            intf.sjump[mvu][3] = 0;
+            intf.sjump[mvu][4] = 0;
+            intf.slength[mvu][1] = 0;
+            intf.slength[mvu][2] = 0;
+            intf.slength[mvu][3] = 0;
+            intf.slength[mvu][4] = 0;
+        end else begin
+            intf.usescaler_mem[mvu] = 0;
+        end
+        if (usebiasmem) begin
+            intf.usebias_mem[mvu] = 1;
+            intf.bjump[mvu][0] = 1;
+            intf.bjump[mvu][1] = 0;
+            intf.bjump[mvu][2] = 0;
+            intf.bjump[mvu][3] = 0;
+            intf.bjump[mvu][4] = 0;
+            intf.blength[mvu][1] = 0;
+            intf.blength[mvu][2] = 0;
+            intf.blength[mvu][3] = 0;
+            intf.blength[mvu][4] = 0;           
+        end else begin
+            intf.usebias_mem[mvu] = 0;
+        end
 
         // Run the GEMV
         intf.start[mvu] = 1'b1;
@@ -205,6 +303,8 @@ class mvu_testbench_base extends BaseObj;
         intf.oprecision = 0;
         intf.wbaseaddr = 0;
         intf.ibaseaddr = 0;
+        intf.sbaseaddr = 0;
+        intf.bbaseaddr = 0;
         intf.obaseaddr = 0;
         intf.omvusel = 0;
 
@@ -214,6 +314,8 @@ class mvu_testbench_base extends BaseObj;
             for (int i = 0; i < NJUMPS; i++) begin
                 intf.wjump[m][i] = 0;
                 intf.ijump[m][i] = 0;
+                intf.sjump[m][i] = 0;
+                intf.bjump[m][i] = 0;
                 intf.ojump[m][i] = 0;
             end
 
@@ -221,11 +323,16 @@ class mvu_testbench_base extends BaseObj;
             for (int i = 1; i < NJUMPS; i++) begin
                 intf.wlength[m][i] = 0;
                 intf.ilength[m][i] = 0;
+                intf.slength[m][i] = 0;
+                intf.blength[m][i] = 0;
                 intf.olength[m][i] = 0;
             end
 
             intf.shacc_load_sel[m] = 0;
             intf.zigzag_step_sel[m] = 0;
+
+            intf.usescaler_mem[m] = 0;
+            intf.usebias_mem[m] = 0;
         end
         
         intf.scaler_b = 1;
@@ -240,6 +347,11 @@ class mvu_testbench_base extends BaseObj;
         // #(`CLOCK_SPEED*10);
         for(int i=0; i<10; i++) @(posedge intf.clk);
  
+        // Initialize scaler and bias memories
+        scalerMemInit(0);
+        biasMemInit(0);
+        for(int i=0; i<10; i++) @(posedge intf.clk);
+
         // Turn some stuff on
         intf.max_en = 1;
         
