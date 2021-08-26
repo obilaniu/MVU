@@ -21,9 +21,11 @@ module mvutop_tester();
     parameter  NMVU    =  8;   /* Number of MVUs. Ideally a Power-of-2. */
     parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
     parameter  NDBANK  = 32;   /* Number of 2N-bit, 512-element Data BANK. */
+    parameter  BBIAS   = 32;   // Bitwidth of bias values
+
     localparam BMVUA   = $clog2(NMVU);  /* Bitwidth of MVU          Address */
     localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
-	localparam BWBANKW = 4096;			// Bitwidth of Weights BANK Word
+    localparam BWBANKW = 4096;          // Bitwidth of Weights BANK Word
     localparam BDBANKABS = $clog2(NDBANK);  /* Bitwidth of Data    BANK Address Bank Select */
     localparam BDBANKAWS = 10;              /* Bitwidth of Data    BANK Address Word Select */
     localparam BDBANKA   = BDBANKABS+ BDBANKAWS;    /* Bitwidth of Data    BANK Address */
@@ -34,14 +36,22 @@ module mvutop_tester();
     localparam BPREC 	= 6;			// Bitwidth of the precision ports
     localparam BBWADDR	= 9;			// Bitwidth of the weight base address ports
     localparam BBDADDR	= 15;			// Bitwidth of the data base address ports
-    localparam BSTRIDE	= 15;			// Bitwidth of the stride ports
+    localparam BJUMP	= 15;			// Bitwidth of the jump ports
     localparam BLENGTH	= 15;			// Bitwidth of the length ports
     localparam BSCALERB = 16;           // Bitwidth of multiplicative scaler (operand 'b')
     localparam BSCALERP = 48;           // Bitwidth of the scaler output
+    localparam NJUMPS   = 5;            // Number of address jumps supported
+
+    // Scalar and Bias memory bank parameters
+    localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
+    localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word
+    localparam BBBANKA     = 6;             // Bitwidth of Scaler BANK address
+    localparam BBBANKW     = BBIAS*N;       // Bitwidth of Scaler BANK word
+
 
     localparam BACC    = 27;            /* Bitwidth of Accumulators */
 
-	// Quantizer parameters
+    // Quantizer parameters
     localparam BQMSBIDX = $clog2(BSCALERP); // Bitwidth of the quantizer MSB location specifier
     localparam BQBOUT   = $clog2(BSCALERP); // Bitwitdh of the quantizer 
 
@@ -68,6 +78,17 @@ module mvutop_tester();
     reg [     BDBANKA-1 : 0] wrc_addr    ;//input  wrc_addr;
     reg [     BDBANKW-1 : 0] wrc_word    ;//input  wrc_word;
 
+    // Scaler memory signals
+    reg[         NMVU-1 : 0] wrs_en;      // Scaler memory: write enable
+    reg[      BSBANKA-1 : 0] wrs_addr;    // Scaler memory: write address
+    reg[      BSBANKW-1 : 0] wrs_word;    // Scaler memory: write word
+
+    //Bias memory signals
+    reg[         NMVU-1 : 0] wrb_en;                 // Bias memory: write enable
+    reg[      BBBANKA-1 : 0] wrb_addr;               // Bias memory: write address
+    reg[      BBBANKW-1 : 0] wrb_word;               // Bias memory: write word
+
+
 	reg [         NMVU-1 : 0] quant_clr;        // Quantizer: clear
     reg [NMVU*BQMSBIDX-1 : 0] quant_msbidx;     // Quantizer: bit position index of the MSB
 
@@ -78,36 +99,32 @@ module mvutop_tester();
     reg[  NMVU*BBWADDR-1 : 0] wbaseaddr;        // Config: weight memory base address
     reg[  NMVU*BBDADDR-1 : 0] ibaseaddr;        // Config: data memory base address for input
     reg[  NMVU*BBDADDR-1 : 0] obaseaddr;        // Config: data memory base address for output
-    reg[     NMVU*NMVU-1 : 0] omvusel;	 		// Config: MVU selector bits for output
+    reg[     NMVU*NMVU-1 : 0] omvusel;          // Config: MVU selector bits for output
 
     reg[  NMVU*BWBANKA-1 : 0] wrw_addr;         // Weight memory: write address
-    reg[  NMVU*BWBANKW-1 : 0] wrw_word;	        // Weight memory: write word
+    reg[  NMVU*BWBANKW-1 : 0] wrw_word;         // Weight memory: write word
     reg[          NMVU-1 : 0] wrw_en;           // Weight memory: write enable
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_0;        // Config: weight stride in dimension 0 (x)
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_1;        // Config: weight stride in dimension 1 (y)
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_2;        // Config: weight stride in dimension 2 (z)
-    reg[  NMVU*BSTRIDE-1 : 0] wstride_3;        // Config: weight stride in dimension 3 (w)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_0;        // Config: input stride in dimension 0 (x)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_1;        // Config: input stride in dimension 1 (y)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_2;        // Config: input stride in dimension 2 (z)
-    reg[  NMVU*BSTRIDE-1 : 0] istride_3;        // Config: input stride in dimension 3 (w)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_0;        // Config: output stride in dimension 0 (x)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_1;        // Config: output stride in dimension 1 (y)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_2;        // Config: output stride in dimension 2 (z)
-    reg[  NMVU*BSTRIDE-1 : 0] ostride_3;        // Config: output stride in dimension 2 (w)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_0;        // Config: weight length in dimension 0 (x)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_1;        // Config: weight length in dimension 1 (y)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_2;        // Config: weight length in dimension 2 (z)
-    reg[  NMVU*BLENGTH-1 : 0] wlength_3;        // Config: weight length in dimension 2 (w)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_0;        // Config: input length in dimension 0 (x)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_1;        // Config: input length in dimension 1 (y)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_2;        // Config: input length in dimension 2 (z)
-    reg[  NMVU*BLENGTH-1 : 0] ilength_3;        // Config: input length in dimension 2 (w)
-    reg[  NMVU*BLENGTH-1 : 0] olength_0;        // Config: output length in dimension 0 (x)
-    reg[  NMVU*BLENGTH-1 : 0] olength_1;        // Config: output length in dimension 1 (y)
-    reg[  NMVU*BLENGTH-1 : 0] olength_2;        // Config: output length in dimension 2 (z)
-    reg[  NMVU*BLENGTH-1 : 0] olength_3;        // Config: output length in dimension 2 (w)
+    reg[         BJUMP-1 : 0] wjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: weight jumps
+    reg[         BJUMP-1 : 0] ijump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: input jumps
+    reg[         BJUMP-1 : 0] ojump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: output jumps
+    reg[       BLENGTH-1 : 0] wlength[NMVU-1 : 0][NJUMPS-1 : 1];        // Config: weight lengths
+    reg[       BLENGTH-1 : 0] ilength[NMVU-1 : 0][NJUMPS-1 : 1];        // Config: input length 1
+    reg[       BLENGTH-1 : 0] olength[NMVU-1 : 0][NJUMPS-1 : 1];        // Config: output length 1
     reg[ NMVU*BSCALERB-1 : 0] scaler_b;         // Config: multiplicative scaler (operand 'b')
+    reg[        NJUMPS-1 : 0] shacc_load_sel[NMVU-1 : 0];   // Config: select jump trigger for shift/accumultor load
+    reg[        NJUMPS-1 : 0] zigzag_step_sel[NMVU-1 : 0];  // Config: select jump trigger for stepping the zig-zag address generator  
+
+    // Scaler and Bias memory configiration
+    reg[  NMVU*BSBANKA-1 : 0] sbaseaddr;            // Config: scaler memory base address
+    reg[  NMVU*BBBANKA-1 : 0] bbaseaddr;            // Config: bias memory base address
+    reg[  NMVU*BSTRIDE-1 : 0] sstride_0;            // Config: scaler AGU stride 0
+    reg[  NMVU*BSTRIDE-1 : 0] sstride_1;            // Config: scaler AGU stride 1
+    reg[  NMVU*BSTRIDE-1 : 0] bstride_0;            // Config: bias AGU stride 0
+    reg[  NMVU*BSTRIDE-1 : 0] bstride_1;            // Config: bias AGU stride 1
+    reg[  NMVU*BLENGTH-1 : 0] slength_0;            // Config: scaler AGU length 0
+    reg[  NMVU*BLENGTH-1 : 0] slength_1;            // Config: scaler AGU length 1
+    reg[  NMVU*BLENGTH-1 : 0] blength_0;            // Config: bias AGU length 0
+    reg[  NMVU*BLENGTH-1 : 0] blength_1;            // Config: bias AGU length 1
 
     //
     // DUT
@@ -115,7 +132,8 @@ module mvutop_tester();
     mvutop #(
             .NMVU  (NMVU  ),
             .N     (N     ),
-            .NDBANK(NDBANK)
+            .NDBANK(NDBANK),
+            .BBIAS (BBIAS )
         ) dut
         (
             .clk              (clk          ),
@@ -131,8 +149,8 @@ module mvutop_tester();
             .max_en           (max_en       ),
             .max_clr          (max_clr      ),
             .max_pool         (max_pool     ),
-            .quant_clr        (quant_clr	),
-    		.quant_msbidx     (quant_msbidx ),
+            .quant_clr        (quant_clr    ),
+            .quant_msbidx     (quant_msbidx ),
             .countdown        (countdown),
             .wprecision       (wprecision),
             .iprecision       (iprecision),
@@ -141,31 +159,15 @@ module mvutop_tester();
             .ibaseaddr        (ibaseaddr),
             .obaseaddr        (obaseaddr),
             .omvusel          (omvusel),
-            .wstride_0        (wstride_0),
-            .wstride_1        (wstride_1),
-            .wstride_2        (wstride_2),
-            .wstride_3        (wstride_3),
-            .istride_0        (istride_0),
-            .istride_1        (istride_1),
-            .istride_2        (istride_2),
-            .istride_3        (istride_3),
-            .ostride_0        (ostride_0),
-            .ostride_1        (ostride_1),
-            .ostride_2        (ostride_2),
-            .ostride_3        (ostride_3),
-            .wlength_0        (wlength_0),
-            .wlength_1        (wlength_1),
-            .wlength_2        (wlength_2),
-            .wlength_3        (wlength_3),
-            .ilength_0        (ilength_0),
-            .ilength_1        (ilength_1),
-            .ilength_2        (ilength_2),
-            .ilength_3        (ilength_3),
-            .olength_0        (olength_0),
-            .olength_1        (olength_1),
-            .olength_2        (olength_2),
+            .wjump            (wjump),
+            .ijump            (ijump),
+            .ojump            (ojump),
+            .wlength          (wlength),
+            .ilength          (ilength),
+            .olength          (olength),
             .scaler_b         (scaler_b),
-            .olength_3        (olength_3),
+            .shacc_load_sel   (shacc_load_sel),
+            .zigzag_step_sel  (zigzag_step_sel),
 			.wrw_addr         (wrw_addr),
 			.wrw_word         (wrw_word),
 			.wrw_en           (wrw_en),
@@ -176,7 +178,23 @@ module mvutop_tester();
             .wrc_en           (wrc_en),
             .wrc_grnt         (wrc_grnt),
             .wrc_addr         (wrc_addr),
-            .wrc_word         (wrc_word)
+            .wrc_word         (wrc_word),
+            .wrs_en           (wrs_en),
+            .wrs_addr         (wrs_addr),
+            .wrs_word         (wrs_word),
+            .wrb_en           (wrb_en),
+            .wrb_addr         (wrb_addr),
+            .wrb_word         (wrb_word),
+            .sbaseaddr        (sbaseaddr),
+            .bbaseaddr        (bbaseaddr),
+            .sstride_0        (sstride_0),
+            .sstride_1        (sstride_1),
+            .bstride_0        (bstride_0),
+            .bstride_1        (bstride_1),
+            .slength_0        (slength_0),
+            .slength_1        (slength_1),
+            .blength_0        (blength_0),
+            .blength_1        (blength_1)
         );
 
 
@@ -225,6 +243,43 @@ task writeWeightsRepeat(int mvu, logic unsigned[BWBANKW-1 : 0] word, logic unsig
     end
 endtask
 
+task writeScalers(int mvu, unsigned[BSBANKW-1 : 0] word, unsigned[BSBANKA-1 : 0] addr);
+    checkmvu(mvu);
+    wrs_addr[mvu*BSBANKA +: BSBANKA] = addr;
+    wrs_word[mvu*BSBANKW +: BSBANKW] = word;
+    wrs_en[mvu] = 1'b1;
+    #(`CLKPERIOD);
+    wrs_en[mvu] = 1'b0;
+endtask
+
+task writeScalersRepeat(int mvu, logic unsigned[BSBANKW-1 : 0] word, logic unsigned[BSBANKA-1 : 0] startaddr, int size, int stride=1);
+    checkmvu(mvu);
+    for (int i = 0; i < size; i++) begin
+        writeScalers(.mvu(mvu), .word(word), .addr(startaddr));
+        #(`CLKPERIOD);
+        startaddr = startaddr + stride;
+    end
+endtask
+
+task writeBiases(int mvu, unsigned[BBBANKW-1 : 0] word, unsigned[BBBANKA-1 : 0] addr);
+    checkmvu(mvu);
+    wrb_addr[mvu*BBBANKA +: BBBANKA] = addr;
+    wrb_word[mvu*BBBANKW +: BBBANKW] = word;
+    wrb_en[mvu] = 1'b1;
+    #(`CLKPERIOD);
+    wrb_en[mvu] = 1'b0;
+endtask
+
+task writeBiasesRepeat(int mvu, logic unsigned[BBBANKW-1 : 0] word, logic unsigned[BBBANKA-1 : 0] startaddr, int size, int stride=1);
+    checkmvu(mvu);
+    for (int i = 0; i < size; i++) begin
+        writeBiases(.mvu(mvu), .word(word), .addr(startaddr));
+        #(`CLKPERIOD);
+        startaddr = startaddr + stride;
+    end
+endtask
+
+
 task automatic readData(int mvu, logic unsigned [BDBANKA-1 : 0] addr, ref logic unsigned [BDBANKW-1 : 0] word, ref logic unsigned [NMVU-1 : 0] grnt);
     checkmvu(mvu);
     rdc_addr[mvu*BDBANKA +: BDBANKA] = addr;
@@ -235,6 +290,16 @@ task automatic readData(int mvu, logic unsigned [BDBANKA-1 : 0] addr, ref logic 
     #(`CLKPERIOD*2);
     word = rdc_word[mvu*BDBANKW +: BDBANKW];
 
+endtask
+
+
+// Initialize scaler and bias memories
+task scalerMemInit(int mvu);
+    writeScalersRepeat(.mvu(mvu), .word({(BSBANKW){16'h0001}}), .startaddr(0), .size(2**BSBANKA));
+endtask
+
+task biasMemInit(int mvu);
+    writeBiasesRepeat(.mvu(mvu), .word({(BBBANKW){32'h00000000}}), .startaddr(0), .size(2**BBBANKA));
 endtask
 
 
@@ -277,34 +342,49 @@ task automatic runGEMV(
     ibaseaddr[mvu*BDBANKA +: BDBANKA] = iaddr;
     obaseaddr[mvu*BDBANKA +: BDBANKA] = {obank_sel, oword_sel};
     omvusel[mvu*NMVU +: NMVU] = omvu;                           // Set the output MVUs
-    wstride_0[mvu*BSTRIDE +: BSTRIDE] = -wprec*(m_w-1);         // Move back to tile 0 of current tile row
-    wstride_1[mvu*BSTRIDE +: BSTRIDE] = wprec;                  // move 1 tile ahead to next tile row
-    wstride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    wstride_3[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    istride_0[mvu*BSTRIDE +: BSTRIDE] = -iprec*(m_w-1);         // Move back to beginning vector 
-    istride_1[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    istride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    istride_3[mvu*BSTRIDE +: BSTRIDE] = -iprec*(m_w-1);         // Set the same as istride_0
-    ostride_0[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    ostride_1[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    ostride_2[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    ostride_3[mvu*BSTRIDE +: BSTRIDE] = 0;                      // Don't need this for GEMV
-    wlength_0[mvu*BLENGTH +: BLENGTH] = m_w-1;                  // Number tiles in width minus 1
-    wlength_1[mvu*BLENGTH +: BLENGTH] = wprec*iprec-1;          // number bit combinations minus 1
-    wlength_2[mvu*BLENGTH +: BLENGTH] = m_h-1;                  // Number tiles in height minus 1
-    wlength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-    ilength_0[mvu*BLENGTH +: BLENGTH] = m_h-1;                  // Number tiles in height minus 1
-    ilength_1[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-    ilength_2[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-    ilength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-    olength_0[mvu*BLENGTH +: BLENGTH] = 1;                      // Write out sequentially
-    olength_1[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-    olength_2[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
-    olength_3[mvu*BLENGTH +: BLENGTH] = 0;                      // Don't need this for GEMV
+    wjump[mvu][0] = wprec;                        // move 1 tile ahead to next tile row
+    wjump[mvu][1] = -wprec*(m_w-1);               // Move back to tile 0 of current tile row
+    wjump[mvu][2] = wprec;                        // Move ahead one tile
+    wjump[mvu][3] = 0;                            // Don't need this for GEMV
+    wjump[mvu][4] = 0;                            // Don't need this for GEMV
+    ijump[mvu][0] = -iprec*(m_w-1);               // Move back to beginning vector 
+    ijump[mvu][1] = iprec;                        // Move ahead one tile
+    ijump[mvu][2] = 0;                            // Don't need this for GEMV
+    ijump[mvu][3] = 0;                            // Don't need this for GEMV
+    ijump[mvu][4] = 0;                            // Don't need this for GEMV
+    ojump[mvu][0] = 0;                            // Don't need this for GEMV
+    ojump[mvu][1] = 0;                            // Don't need this for GEMV
+    ojump[mvu][2] = 0;                            // Don't need this for GEMV
+    ojump[mvu][3] = 0;                            // Don't need this for GEMV
+    ojump[mvu][4] = 0;                            // Don't need this for GEMV
+    wlength[mvu][1] = wprec*iprec-1;              // number bit combinations minus 1
+    wlength[mvu][2] = m_w-1;                      // Number tiles in width minus 1
+    wlength[mvu][3] = 0;                          // Don't need this for GEMV
+    wlength[mvu][4] = 0;                          // Don't need this for GEMV
+    ilength[mvu][1] = m_h-1;                      // Number tiles in height minus 1
+    ilength[mvu][2] = 0;                          // Don't need this for GEMV
+    ilength[mvu][3] = 0;                          // Don't need this for GEMV
+    ilength[mvu][4] = 0;                          // Don't need this for GEMV
+    olength[mvu][1] = 1;                          // Write out sequentially
+    olength[mvu][2] = 0;                          // Don't need this for GEMV
+    olength[mvu][3] = 0;                          // Don't need this for GEMV
+    olength[mvu][4] = 0;                          // Don't need this for GEMV
     d_signed[mvu] = isign;
     w_signed[mvu] = wsign;
     scaler_b[mvu*BSCALERB +: BSCALERB] = scaler;
+    shacc_load_sel[mvu] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
+    zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
     countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
+
+    // Scaler and bias memory parameters
+    sstride_0[mvu*BSTRIDE +: BSTRIDE] = 1;
+    sstride_1[mvu*BSTRIDE +: BSTRIDE] = 0;
+    bstride_0[mvu*BSTRIDE +: BSTRIDE] = 1;
+    bstride_1[mvu*BSTRIDE +: BSTRIDE] = 0;
+    slength_0[mvu*BLENGTH +: BLENGTH] = 0;
+    slength_1[mvu*BLENGTH +: BLENGTH] = m_h-1;
+    blength_0[mvu*BLENGTH +: BLENGTH] = 0;
+    blength_1[mvu*BLENGTH +: BLENGTH] = m_h-1;
 
     // Run the GEMV
     start[mvu] = 1'b1;
@@ -359,6 +439,33 @@ task controllerMemTest();
 
 
 endtask
+
+//
+// Scaler memory write test
+//
+task scalerMemTest();
+   
+    print_banner("Scaler memory write test");
+
+    // Write test
+    writeScalersRepeat(0, {(BSBANKW/32){'hdeadbeef}}, 0, 4, 1);
+
+    #(`CLKPERIOD*10);
+
+endtask
+
+//
+// Bias memory write test
+//
+task biasMemTest();
+    
+    print_banner("Bias memory write test");
+
+    // Write test
+    writeBiasesRepeat(0, {(BBBANKW/32){'hdeadbeef}}, 0, 4, 1);
+
+endtask
+
 
 //
 // Matrix-vector multiplication (GEMV) test
@@ -553,6 +660,12 @@ initial begin
     wrc_en = 0;
     wrc_addr = 0;
     wrc_word = 0;
+    wrs_en = 0;
+    wrs_addr = 0;
+    wrs_word = 0;
+    wrb_en = 0;
+    wrb_addr = 0;
+    wrb_word = 0;
 	quant_clr = 0;
     quant_msbidx = 0;
     countdown = 0;
@@ -563,34 +676,37 @@ initial begin
     ibaseaddr = 0;
     obaseaddr = 0;
     omvusel = 0;  
-    wstride_0 = 0;
-    wstride_1 = 0;
-    wstride_2 = 0;
-    wstride_3 = 0;
-    istride_0 = 0;
-    istride_1 = 0;
-    istride_2 = 0;
-    istride_3 = 0;
-    ostride_0 = 0;
-    ostride_1 = 0;
-    ostride_2 = 0;
-    ostride_3 = 0;
-    wlength_0 = 0;
-    wlength_1 = 0;
-    wlength_2 = 0;
-    wlength_3 = 0;
-    ilength_0 = 0;
-    ilength_1 = 0;
-    ilength_2 = 0;
-    ilength_3 = 0;
-    olength_0 = 0;
-    olength_1 = 0;
-    olength_2 = 0;
     scaler_b = 1;
-    olength_3 = 0;
     wrw_addr = 0;
     wrw_word = 0;
     wrw_en = 0;
+    sbaseaddr = 0;
+    bbaseaddr = 0;
+
+    // Initialize arrays
+    for (int m = 0; m < NMVU; m++) begin
+        // Initialize jumps
+        for (int i = 0; i < NJUMPS; i++) begin
+            wjump[m][i] = 0;
+            ijump[m][i] = 0;
+            ojump[m][i] = 0;
+            sjump[m][i] = 0;
+            bjump[m][i] = 0;
+        end
+
+        // Initizalize lengths
+        for (int i = 1; i < NJUMPS; i++) begin
+            wlength[m][i] = 0;
+            ilength[m][i] = 0;
+            olength[m][i] = 0;
+            slength[m][i] = 0;
+            blength[m][i] = 0;
+        end
+
+        shacc_load_sel[m] = 0;
+        zigzag_step_sel[m] = 0;
+    end
+
     #(`CLKPERIOD*10);
 
     // Come out of reset
@@ -601,12 +717,33 @@ initial begin
     max_en = 1;
 
     // Test memory access
-    controllerMemTest();
+    //controllerMemTest();
+
+    // Test scaler and bias memory writes
+    //scalerMemTest();
+    //biasMemTest();
+
+    // Initialize scaler and bias memories
+    scalerMemInit(0);
+    biasMemInit(0);
+    #(`CLKPERIOD*10);
+ 
  
     // Run gemv tests, mvu0 -> mvu0
     print_banner("GEMV tests: mvu0 -> mvu0");
     gemvTests(.mvu(0), .omvu('b00000001), .scaler(1));
 
+    // Run gemv tests, mvu0 -> mvu0, but with escalating scaler and bias memory values set
+    print_banner("GEMV tests: mvu0 -> mvu0");
+    writeScalers(.mvu(0), .word({BSBANKW{16'h0001}}), .addr(0));
+    writeScalers(.mvu(0), .word({BSBANKW{16'h0002}}), .addr(1));
+    writeScalers(.mvu(0), .word({BSBANKW{16'h0003}}), .addr(2));
+    writeBiases(.mvu(0), .word({BSBANKW{32'h00000000}}), .addr(0));
+    writeBiases(.mvu(0), .word({BSBANKW{32'h00000001}}), .addr(1));
+    writeBiases(.mvu(0), .word({BSBANKW{32'h00000002}}), .addr(2));
+    gemvTests(.mvu(0), .omvu('b00000001), .scaler(1));
+
+/*
     // Run signed gemv tests, mvu0 -> mvu0
     print_banner("Signed GEMV tests: mvu0 -> mvu0");
     gemvSignedTests(.mvu(0), .omvu('b00000001), .scaler(1));
@@ -635,7 +772,7 @@ initial begin
     //
     // Interconnect tests
     // 
-
+/*
     // Repeat the unsigned gemv tests, mvu0 -> mvu1
     print_banner("GEMV tests: mvu0 -> mvu1");
     gemvTests(.mvu(0), .omvu('b00000010), .scaler(1));
@@ -664,7 +801,7 @@ initial begin
     // Repeat the unsigned gemv tests, mvu4-> mvu5, mvu6
     print_banner("GEMV tests: mvu4 -> mvu5,6");
     gemvTests(.mvu(4), .omvu('b01100000), .scaler(1));
-
+*/
     
 
     print_banner($sformatf("Simulation done."));

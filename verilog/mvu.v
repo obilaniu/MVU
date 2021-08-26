@@ -42,7 +42,7 @@
  *     | TOTAL                                    625
  */
 
-`timescale 1 ps / 1 ps
+`timescale 1 ns / 1 ps
 /**** Module mvu ****/
 module mvu( clk,
             mul_mode,
@@ -53,6 +53,8 @@ module mvu( clk,
             shacc_sh,
             scaler_clr,
             scaler_b,
+            usescaler_mem,
+            usebias_mem,
             max_en,
             max_clr,
             max_pool,
@@ -87,15 +89,32 @@ module mvu( clk,
             wrc_addr,
             wrc_word,
             mvu_word_out,
+            rddhp_addr,
             wrihp_addr,
-            mvu_word_outhp);
+            wrihp_word,
+            mvu_word_inhp,
+            mvu_word_outhp,
+            rds_en,
+            rds_addr,
+            wrs_en,
+            wrs_addr,   
+            wrs_word,
+            rdb_en,
+            rdb_addr,
+            wrb_en,
+            wrb_addr,
+            wrb_word
+);
 
 
 /* Parameters */
 parameter  N          = 64;   /* N x N matrix-vector product size. Power-of-2. */
 parameter  NDBANK     = 32;   /* Number of N-bit, 1024-element Data BANK. */
+
 parameter  BDHPBANKW  = 32;    // Bitwidth of high-precision data bank word
 parameter  BDHPBANKA  = 9;     // Bitwidth of high-precision data bank address
+
+parameter  BBIAS   = 32;   // Bit witdh of the bias values
 
 localparam CLOG2N      = $clog2(N);     /* clog2(N) */
 
@@ -115,6 +134,12 @@ localparam BSCALERC    = 27;
 localparam BSCALERD    = 27;
 localparam BSCALERP    = 48;
 
+localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
+localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word
+localparam BBBANKA     = 6;             // Bitwidth of Scaler BANK address
+localparam BBBANKW     = BBIAS*N;       // Bitwidth of Scaler BANK word
+
+
 // Quantizer parameters
 parameter  QMSBLOCBD  = $clog2(BSCALERP);   // Bitwidth of the quantizer MSB location specifier
 
@@ -128,6 +153,8 @@ input  wire                 shacc_acc;
 input  wire                 shacc_sh;
 input  wire                 scaler_clr;             // Scaler: clear/reset
 input  wire[BSCALERB-1 : 0] scaler_b;               // Scaler: multiplier operand
+input  wire                 usescaler_mem;
+input  wire                 usebias_mem;
 input  wire                 max_en;
 input  wire                 max_clr;
 input  wire                 max_pool;
@@ -143,6 +170,20 @@ input  wire[  BWBANKA-1 : 0]	rdw_addr;
 input  wire[  BWBANKA-1 : 0]	wrw_addr;			// Weight memory: write address
 input  wire[  BWBANKW-1 : 0]	wrw_word;			// Weight memory: write word
 input  wire						wrw_en;				// Weight memory: write enable
+
+// Scaler memory signals
+input   wire                rds_en;                 // Scaler memory: read enable
+input   wire[BSBANKA-1 : 0] rds_addr;               // Scaler memory: read address
+input   wire                wrs_en;                 // Scaler memory: write enable
+input   wire[BSBANKA-1 : 0] wrs_addr;               // Scaler memory: write address
+input   wire[BSBANKW-1 : 0] wrs_word;               // Scaler memory: write word
+
+// Bias memory signals
+input   wire                rdb_en;                 // Bias memory: read enable
+input   wire[BBBANKA-1 : 0] rdb_addr;               // Bias memory: read address
+input   wire                wrb_en;                 // Bias memory: write enable
+input   wire[BBBANKA-1 : 0] wrb_addr;               // Bias memory: write address
+input   wire[BBBANKW-1 : 0] wrb_word;               // Bias memory: write word
 
 input  wire                rdd_en;
 output wire                rdd_grnt;
@@ -171,7 +212,9 @@ input  wire[BDBANKW-1 : 0] wrc_word;
 
 output wire[BDBANKW-1 : 0] mvu_word_out;
 
-input  wire[    BDHPBANKA : 0] wrihp_addr;          // High-precision data input write
+input  wire[  BDHPBANKA-1 : 0] rddhp_addr;          // High-precision data local read address
+input  wire[N*BDHPBANKW-1 : 0] wrihp_word;          // High-precision data inconnect write word
+input  wire[  BDHPBANKA-1 : 0] wrihp_addr;          // High-precision data interconnect write address
 input  wire[N*BDHPBANKW-1 : 0] mvu_word_inhp;       // High-precision data input word (composed of N words)
 output wire[N*BDHPBANKW-1 : 0] mvu_word_outhp;      // High-precision data output word (composed of N words)
 
@@ -205,6 +248,13 @@ wire[NDBANK*BDBANKW-1 : 0] rdc_words;
 wire[BDBANKW*NDBANK-1 : 0] rdd_words_t;
 wire[BDBANKW*NDBANK-1 : 0] rdi_words_t;
 wire[BDBANKW*NDBANK-1 : 0] rdc_words_t;
+
+wire[   N*BDHPBANKW-1 : 0] rddhp_word;              // High-precision data memory word bus
+
+wire[BSBANKW-1 : 0]        rds_word;                // Scaler memory: read word
+wire[BBBANKW-1 : 0]        rdb_word;                // Bias memory: read word
+wire[BSCALERB-1 : 0]       scaler_mult_op[N-1 : 0]; // Scaler input multiplier operand
+wire[BSCALERC-1 : 0]       scaler_post_op[N-1 : 0]; // Scaler input postadd operand
 
 
 
@@ -243,6 +293,41 @@ mvp     #(N, 'b0010101) matrix_core  (clk, mul_mode, core_weights, core_data, co
     $display("ERROR: INTEL or XILINX macro not defined!");
  `endif
 
+
+// Scaler memory bank
+//      Used to store batch norm weights and/or quantization scalers
+ ram_simple2port #(
+    .BDADDR(BSBANKA),
+    .BDWORD(BSBANKW)
+ ) scaler_bank (
+    .clk(clk),
+    .rd_en(rds_en),
+    .rd_addr(rds_addr),
+    .rd_word(rds_word),
+    .wr_en(wrs_en),
+    .wr_addr(wrs_addr),
+    .wr_word(wrs_word)
+ );
+
+
+ // Bias memory bank
+ //     Stores bias values from conv/fc/bn layers
+// Scaler memory bank
+//      Used to store batch norm weights and/or quantization scalers
+ ram_simple2port #(
+    .BDADDR(BBBANKA),
+    .BDWORD(BBBANKW)
+ ) bias_bank (
+    .clk(clk),
+    .rd_en(rdb_en),
+    .rd_addr(rdb_addr),
+    .rd_word(rdb_word),
+    .wr_en(wrb_en),
+    .wr_addr(wrb_addr),
+    .wr_word(wrb_word)
+ );
+
+
 // Negate the core output before accumulation, if the negation control is set to 1
 generate for (i=0; i < N; i=i+1) begin: acc_in_array
     assign core_out_signed[i] = core_out[i*BSUM +: BSUM];
@@ -258,6 +343,10 @@ end endgenerate
 
 /* Scalers */
 generate for (i=0; i < N; i=i+1) begin: scalerarray
+    
+    assign scaler_mult_op[i] = usescaler_mem ? rds_word[i*BSCALERB +: BSCALERB] : scaler_b;
+    assign scaler_post_op[i] = usebias_mem ? rdb_word[i*BBIAS +: BSCALERC] : 0;
+
     fixedpointscaler #(
         .BA(BSCALERA),
         .BB(BSCALERB),
@@ -268,8 +357,8 @@ generate for (i=0; i < N; i=i+1) begin: scalerarray
         .clk(clk),
         .clr(scaler_clr),
         .a(shacc_out[i]),
-        .b(scaler_b),
-        .c({BSCALERC{1'b0}}),
+        .b(scaler_mult_op[i]),
+        .c(scaler_post_op[i]),
         .d({BSCALERD{1'b0}}),
         .p(scaler_out[i])
     );
@@ -332,7 +421,7 @@ assign mvu_word_out = quant_out;
 
 
 // High-precision data bank
- ram_highprec #(
+ ram_simple2port #(
     .BDADDR(BDHPBANKA),
     .BDWORD(N*BDHPBANKW)
  ) dbhp (

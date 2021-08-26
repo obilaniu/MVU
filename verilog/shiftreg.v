@@ -2,6 +2,7 @@
 // Variable size shift register
 //
 
+`timescale 1ns/1ps
 module shiftreg #(
     parameter N = 1
 ) (

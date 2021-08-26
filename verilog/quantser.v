@@ -5,7 +5,7 @@
  *
  */
 
-`timescale 1 ns / 1 ps
+`timescale 1ns/1ps
 
 module quantser #(
     parameter BWIN      = 32,                       // Input data bit depth

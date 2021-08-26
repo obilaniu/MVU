@@ -5,7 +5,7 @@
 // It expects a signal called "step" that will trigger the 
 //
 //
-
+`timescale 1ns/1ps
 module outagu(clk, clr, step, load, baseaddr, addrout);
 
 // Parameters

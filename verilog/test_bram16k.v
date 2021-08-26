@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 module test_bram16k();
 
 reg clock = 0;
