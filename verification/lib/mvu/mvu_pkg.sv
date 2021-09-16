@@ -13,7 +13,7 @@ localparam BDBANKA = 15;            // Bitwidth of Data    BANK Address
 localparam BDBANKW = N;             // Bitwidth of Data    BANK Word 
 
 localparam BACC     = 27;               // Bitwidth of Accumulators 
-localparam BSCALERP = 48;               // Bitwidth of the scaler output
+localparam BSCALERP = 27;               // Bitwidth of the scaler output
 
 localparam BDHPBANKW    = 32;           // Bitwidth of high-precision data bank word
 localparam BDHPBUSW     = BDHPBANKW*N;  // Bitwidth of high-precision data word bus
@@ -34,6 +34,7 @@ localparam BLENGTH       = 15; // Bitwidth of the length ports
 localparam BSCALERB      = 16; // Bitwidth of the scaler parameter
 localparam VVPSTAGES     = 3;  // Number of stages in the VVP pipeline
 localparam SCALERLATENCY = 3;  // Number of stages in the scaler pipeline
+localparam HPADDERLATENCY= 1;  // Latency of fixed point adder module
 localparam MAXPOOLSTAGES = 1;  // Number of max pool pipeline stages
 localparam MEMRDLATENCY  = 2;  // Memory read latency
 localparam NJUMPS        = 5;  // Number of address jump parameters available

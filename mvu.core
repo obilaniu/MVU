@@ -28,6 +28,8 @@ filesets:
             - verilog/controller.v
             - verilog/shiftreg.v
             - verilog/fixedpointscaler.v
+            - verilog/fixedpointadder.sv:
+                file_type: systemVerilogSource
             - verilog/ram_simple2port.v
             - verilog/inagu.sv:
                 file_type: systemVerilogSource

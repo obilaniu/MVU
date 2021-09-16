@@ -229,7 +229,7 @@ class mvu_testbench_base extends BaseObj;
         intf.olength[mvu][4] = 0;                          // Don't need this for GEMV
         intf.d_signed[mvu] = isign;
         intf.w_signed[mvu] = wsign;
-        intf.scaler_b[mvu*BSCALERB +: BSCALERB] = scaler;
+        intf.scaler1_b[mvu*BSCALERB +: BSCALERB] = scaler;
         intf.shacc_load_sel[mvu] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
         intf.zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
         intf.countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
@@ -335,7 +335,7 @@ class mvu_testbench_base extends BaseObj;
             intf.usebias_mem[m] = 0;
         end
         
-        intf.scaler_b = 1;
+        intf.scaler1_b = 1;
         intf.wrw_addr = 0;
         intf.wrw_word = 0;
         intf.wrw_en = 0;

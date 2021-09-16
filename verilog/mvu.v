@@ -51,13 +51,18 @@ module mvu( clk,
             shacc_load,
             shacc_acc,
             shacc_sh,
-            scaler_clr,
-            scaler_b,
+            scaler1_clr,
+            scaler1_b,
             usescaler_mem,
             usebias_mem,
+            usehpadder,
+            usepooler4hpout,
+            hpadder_clr,
             max_en,
             max_clr,
             max_pool,
+            scaler2_clr,
+            scaler2_b,
             quant_clr,
             quant_msbidx,
 			quant_step,
@@ -90,9 +95,9 @@ module mvu( clk,
             wrc_word,
             mvu_word_out,
             rddhp_addr,
+            wrihp_en,
             wrihp_addr,
             wrihp_word,
-            mvu_word_inhp,
             mvu_word_outhp,
             rds_en,
             rds_addr,
@@ -132,7 +137,7 @@ localparam BSCALERA    = BACC;
 localparam BSCALERB    = 16;
 localparam BSCALERC    = 27;
 localparam BSCALERD    = 27;
-localparam BSCALERP    = 48;
+localparam BSCALERP    = 27;
 
 localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
 localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word
@@ -151,13 +156,18 @@ input  wire                 shacc_clr;
 input  wire                 shacc_load;
 input  wire                 shacc_acc;
 input  wire                 shacc_sh;
-input  wire                 scaler_clr;             // Scaler: clear/reset
-input  wire[BSCALERB-1 : 0] scaler_b;               // Scaler: multiplier operand
+input  wire                 scaler1_clr;             // Scaler1: clear/reset
+input  wire[BSCALERB-1 : 0] scaler1_b;               // Scaler1: multiplier operand
 input  wire                 usescaler_mem;
 input  wire                 usebias_mem;
+input  wire                 usehpadder;
+input  wire                 hpadder_clr;             // Adder: clear/reset
 input  wire                 max_en;
 input  wire                 max_clr;
 input  wire                 max_pool;
+input  wire                 usepooler4hpout;         // When 1, use the pooler to output to high-precision interconnect; otherwise take output from scaler1
+input  wire                 scaler2_clr;             // Scaler2: clear/reset
+input  wire[BSCALERB-1 : 0] scaler2_b;               // Scaler2: multiplier operand
 
 // Quantizer input signals
 input  wire                  quant_clr;
@@ -213,9 +223,9 @@ input  wire[BDBANKW-1 : 0] wrc_word;
 output wire[BDBANKW-1 : 0] mvu_word_out;
 
 input  wire[  BDHPBANKA-1 : 0] rddhp_addr;          // High-precision data local read address
-input  wire[N*BDHPBANKW-1 : 0] wrihp_word;          // High-precision data inconnect write word
+input  wire                    wrihp_en;            // High-precision data interconnect write enable
+input  wire[N*BDHPBANKW-1 : 0] wrihp_word;          // High-precision data interconnect write word
 input  wire[  BDHPBANKA-1 : 0] wrihp_addr;          // High-precision data interconnect write address
-input  wire[N*BDHPBANKW-1 : 0] mvu_word_inhp;       // High-precision data input word (composed of N words)
 output wire[N*BDHPBANKW-1 : 0] mvu_word_outhp;      // High-precision data output word (composed of N words)
 
 /* Generation Variables */
@@ -236,8 +246,11 @@ wire[BSUM*N-1  : 0]     core_out;
 wire signed[BSUM-1 : 0] core_out_signed [N-1 : 0];
 wire signed[BSUM-1 : 0] shacc_in        [N-1 : 0];
 wire[BACC-1  : 0]       shacc_out       [N-1 : 0];
-wire[BSCALERP-1 : 0]    scaler_out      [N-1 : 0];
+wire[BSCALERP-1 : 0]    scaler1_out     [N-1 : 0];
+wire[BDHPBANKW-1 : 0]   hpadder_b_in    [N-1 : 0];
+wire[BSCALERP-1 : 0]    hpadder_out     [N-1 : 0];
 wire[BSCALERP-1 : 0]    pool_out        [N-1 : 0];
+wire[BSCALERP-1 : 0]    scaler2_out     [N-1 : 0];
 wire[BDBANKW-1 : 0]     quant_out;
 reg [BDBANKW-1 : 0]     rdd_word;
 wire[BDBANKW-1 : 0]     wrd_word;
@@ -253,8 +266,8 @@ wire[   N*BDHPBANKW-1 : 0] rddhp_word;              // High-precision data memor
 
 wire[BSBANKW-1 : 0]        rds_word;                // Scaler memory: read word
 wire[BBBANKW-1 : 0]        rdb_word;                // Bias memory: read word
-wire[BSCALERB-1 : 0]       scaler_mult_op[N-1 : 0]; // Scaler input multiplier operand
-wire[BSCALERC-1 : 0]       scaler_post_op[N-1 : 0]; // Scaler input postadd operand
+wire[BSCALERB-1 : 0]       scaler1_mult_op[N-1 : 0]; // Scaler input multiplier operand
+wire[BSCALERC-1 : 0]       scaler1_post_op[N-1 : 0]; // Scaler input postadd operand
 
 
 
@@ -341,11 +354,11 @@ generate for(i=0;i<N;i=i+1) begin:shaccarray
                                       shacc_out[i]);
 end endgenerate
 
-/* Scalers */
-generate for (i=0; i < N; i=i+1) begin: scalerarray
+/* First Scalers */
+generate for (i=0; i < N; i=i+1) begin: scaler1array
     
-    assign scaler_mult_op[i] = usescaler_mem ? rds_word[i*BSCALERB +: BSCALERB] : scaler_b;
-    assign scaler_post_op[i] = usebias_mem ? rdb_word[i*BBIAS +: BSCALERC] : 0;
+    assign scaler1_mult_op[i] = usescaler_mem ? rds_word[i*BSCALERB +: BSCALERB] : scaler1_b;
+    assign scaler1_post_op[i] = usebias_mem ? rdb_word[i*BBIAS +: BSCALERC] : 0;
 
     fixedpointscaler #(
         .BA(BSCALERA),
@@ -353,23 +366,62 @@ generate for (i=0; i < N; i=i+1) begin: scalerarray
         .BC(BSCALERC),
         .BD(BSCALERD),
         .BP(BSCALERP)
-    ) scaler (
+    ) scaler1 (
         .clk(clk),
-        .clr(scaler_clr),
+        .clr(scaler1_clr),
         .a(shacc_out[i]),
-        .b(scaler_mult_op[i]),
-        .c(scaler_post_op[i]),
+        .b(scaler1_mult_op[i]),
+        .c(scaler1_post_op[i]),
         .d({BSCALERD{1'b0}}),
-        .p(scaler_out[i])
+        .p(scaler1_out[i])
+    );
+end endgenerate
+
+/* Fixed point high-precision adders */
+generate for (i=0; i < N; i=i+1) begin: hpadderarray
+
+    // If usehpadder is 1, then take the input operand from the high-precision memory, otherwise input zero
+    assign hpadder_b_in[i] = usehpadder ? rddhp_word[i*BDHPBANKW +: BDHPBANKW] : 0;
+
+    fixedpointadder #(
+        .BA(BSCALERP),
+        .BB(BDHPBANKW),
+        .BOUT(BSCALERP)
+    ) hpadder (
+        .clk(clk),
+        .clr(hpadder_clr),
+        .a(scaler1_out[i]),
+        .b(hpadder_b_in[i]),
+        .out(hpadder_out[i])
     );
 end endgenerate
 
 
 /* Max poolers */
 generate for(i=0;i<N;i=i+1) begin:poolarray
-    maxpool #(BSCALERP)       pooler     (clk, max_clr, max_pool,
-                                      scaler_out [i],
+    maxpool #(BSCALERP)       pooler (clk, max_clr, max_pool,
+                                      scaler1_out [i],
                                       pool_out[i]);
+end endgenerate
+
+
+/* Second Scalers */
+generate for (i=0; i < N; i=i+1) begin: scaler2array  
+    fixedpointscaler #(
+        .BA(BSCALERA),
+        .BB(BSCALERB),
+        .BC(BSCALERC),
+        .BD(BSCALERD),
+        .BP(BSCALERP)
+    ) scaler2 (
+        .clk(clk),
+        .clr(scaler2_clr),
+        .a(pool_out[i]),
+        .b(scaler2_b),
+        .c({BSCALERC{1'b0}}),
+        .d({BSCALERD{1'b0}}),
+        .p(scaler2_out[i])
+    );
 end endgenerate
 
 
@@ -383,7 +435,7 @@ generate for(i=0;i<N;i=i+1) begin:quantarray
         .msbidx     (quant_msbidx),
         .load       (quant_load),
         .step       (quant_step),
-        .din        (pool_out[i]),
+        .din        (scaler2_out[i]),
         .dout       (quant_out[i])
     );
 end endgenerate
@@ -418,6 +470,11 @@ end endgenerate
 assign core_data = rdd_word;
 assign wrd_word  = quant_out;
 assign mvu_word_out = quant_out;
+
+// Select either the pooler output or the scaler1 output to drive the high-performance interconnect output
+generate for (i=0; i < N; i = i+1) begin: word_outhp
+    assign mvu_word_outhp[i*BDHPBANKW +: BDHPBANKW] = usepooler4hpout ? pool_out[i] : scaler1_out[i];
+end endgenerate
 
 
 // High-precision data bank

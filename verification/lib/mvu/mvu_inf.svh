@@ -29,17 +29,22 @@ interface mvu_interface(input logic clk);
     logic[     NMVU*NMVU-1 : 0] ohpmvusel;            // Config: MVU selector bits for high-precision output
     logic[         BJUMP-1 : 0] wjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: weight jumps
     logic[         BJUMP-1 : 0] ijump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: input jumps
+    logic[         BJUMP-1 : 0] hpjump[NMVU-1 : 0][NJUMPS-1 : 0];           // Config: input jumps
     logic[         BJUMP-1 : 0] sjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: scaler jumps
     logic[         BJUMP-1 : 0] bjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: bias jumps
     logic[         BJUMP-1 : 0] ojump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: output jumps
     logic[       BLENGTH-1 : 0] wlength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: weight lengths
     logic[       BLENGTH-1 : 0] ilength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: input length
+    logic[       BLENGTH-1 : 0] hplength[NMVU-1 : 0][NJUMPS-1 : 1];         // Config: scaler length
     logic[       BLENGTH-1 : 0] slength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: scaler length
     logic[       BLENGTH-1 : 0] blength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: bias length
     logic[       BLENGTH-1 : 0] olength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: output length
-    logic[ NMVU*BSCALERB-1 : 0] scaler_b;                                   // Config: multiplicative scaler (operand 'b')
+    logic[ NMVU*BSCALERB-1 : 0] scaler1_b;                                  // Config: multiplicative scaler (operand 'b')
+    logic[ NMVU*BSCALERB-1 : 0] scaler2_b;                                  // Config: multiplicative scaler (operand 'b')
     logic                       usescaler_mem[NMVU-1 : 0];                  // Config: use scalar mem if 1; otherwise use the scaler_b input for scaling
     logic                       usebias_mem[NMVU-1 : 0];                    // Config: use the bias memory if 1; if not, not bias is added in the scaler
+    logic                       usepooler4hpout[NMVU-1 : 0];                // Config: for the high-precision interconnect, use the output of pooler if 1, or use output of scaler1 if 0
+    logic                       usehpadder[NMVU-1 : 0];                     // Config: use the hpadder if 1
     logic[        NJUMPS-1 : 0] shacc_load_sel[NMVU-1 : 0];                 // Config: select jump trigger for shift/accumultor load
     logic[        NJUMPS-1 : 0] zigzag_step_sel[NMVU-1 : 0];                // Config: select jump trigger for stepping the zig-zag address generator  
     logic[  NMVU*BWBANKA-1 : 0] wrw_addr;             // Weight memory: write address
@@ -94,17 +99,22 @@ modport  tb_interface (
                         input  ohpmvusel,
                         input  wjump,
                         input  ijump,
+                        input  hpjump,
                         input  sjump,
                         input  bjump,
                         input  ojump,
                         input  wlength,
                         input  ilength,
+                        input  hplength,
                         input  slength,
                         input  blength,
                         input  olength,
-                        input  scaler_b,
+                        input  scaler1_b,
+                        input  scaler2_b,
                         input  usescaler_mem,
                         input  usebias_mem,
+                        input  usepooler4hpout,
+                        input  usehpadder,
                         input  shacc_load_sel,
                         input  zigzag_step_sel,
                         input  wrw_addr,
@@ -160,17 +170,22 @@ modport  system_interface (
                            input  ohpmvusel,
                            input  wjump,
                            input  ijump,
+                           input  hpjump,
                            input  sjump,
                            input  bjump,
                            input  ojump,
                            input  wlength,
                            input  ilength,
+                           input  hplength,
                            input  slength,
                            input  blength,
                            input  olength,
-                           input  scaler_b,
+                           input  scaler1_b,
+                           input  scaler2_b,
                            input  usescaler_mem,
                            input  usebias_mem,
+                           input  usepooler4hpout,
+                           input  usehpadder,
                            input  shacc_load_sel,
                            input  zigzag_step_sel,
                            input  wrw_addr,
