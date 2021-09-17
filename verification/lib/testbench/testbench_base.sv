@@ -307,6 +307,9 @@ class mvu_testbench_base extends BaseObj;
         intf.bbaseaddr = 0;
         intf.obaseaddr = 0;
         intf.omvusel = 0;
+        intf.ihpbaseaddr = 0;
+        intf.ohpbaseaddr = 0;
+        intf.ohpmvusel = 0;
 
         // Initialize arrays
         for (int m = 0; m < NMVU; m++) begin
@@ -314,6 +317,7 @@ class mvu_testbench_base extends BaseObj;
             for (int i = 0; i < NJUMPS; i++) begin
                 intf.wjump[m][i] = 0;
                 intf.ijump[m][i] = 0;
+                intf.hpjump[m][i] = 0;
                 intf.sjump[m][i] = 0;
                 intf.bjump[m][i] = 0;
                 intf.ojump[m][i] = 0;
@@ -323,6 +327,7 @@ class mvu_testbench_base extends BaseObj;
             for (int i = 1; i < NJUMPS; i++) begin
                 intf.wlength[m][i] = 0;
                 intf.ilength[m][i] = 0;
+                intf.hplength[m][i] = 0;
                 intf.slength[m][i] = 0;
                 intf.blength[m][i] = 0;
                 intf.olength[m][i] = 0;
@@ -333,9 +338,12 @@ class mvu_testbench_base extends BaseObj;
 
             intf.usescaler_mem[m] = 0;
             intf.usebias_mem[m] = 0;
+            intf.usepooler4hpout[m] = 0;
+            intf.usehpadder[m] = 0;
         end
         
         intf.scaler1_b = 1;
+        intf.scaler2_b = 1;
         intf.wrw_addr = 0;
         intf.wrw_word = 0;
         intf.wrw_en = 0;
