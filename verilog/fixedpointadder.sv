@@ -24,15 +24,11 @@
  );
 
 
-// Registers
-logic signed [BOUT-1 : 0] out_q;
-
-
 always @(posedge clk) begin
     if (clr) begin
-        out_q <= 0;
+        out <= 0;
     end else begin
-        out_q <= a + b;
+        out <= a + b;
     end
 end
 

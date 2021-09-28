@@ -4,7 +4,8 @@ interface mvu_interface(input logic clk);
     logic[          NMVU-1 : 0] start;                // Start the MVU job
     logic[          NMVU-1 : 0] done;                 // Indicates if a job is done
     logic[          NMVU-1 : 0] irq;                  // Interrupt request
-    logic                       ic_clr;                               // Interconnect: clear
+    logic                       ic_clr;               // Interconnect: clear
+    logic                       ichp_clr;             // Interconnect (high-precision): clear
     logic[        2*NMVU-1 : 0] mul_mode;             // Config: multiply mode
     logic[          NMVU-1 : 0] d_signed;             // Config: input data signed
     logic[          NMVU-1 : 0] w_signed;             // Config: weights signed
@@ -75,6 +76,7 @@ modport  tb_interface (
                         output done,
                         output irq,
                         input  ic_clr,
+                        input  ichp_clr,
                         input  mul_mode,
                         input  d_signed,
                         input  w_signed,
@@ -146,6 +148,7 @@ modport  system_interface (
                            output done,
                            output irq,
                            input  ic_clr,
+                           input  ichp_clr,
                            input  mul_mode,
                            input  d_signed,
                            input  w_signed,

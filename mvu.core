@@ -21,6 +21,8 @@ filesets:
             - verilog/shacc.v
             - verilog/vvp.v
             - verilog/interconn.v
+            - verilog/interconn_new.sv:
+                file_type: systemVerilogSource
             - verilog/quantser.v
             - verilog/quantser_ctrl.v
             - verilog/outagu.v
@@ -62,6 +64,8 @@ filesets:
             - verilog/controller.v
             - verilog/shiftreg.v
             - verilog/fixedpointscaler.v
+            - verilog/fixedpointadder.sv:
+                file_type: systemVerilogSource
             - verilog/ram_simple2port.v
             - verilog/inagu.sv:
                 file_type: systemVerilogSource
@@ -112,7 +116,7 @@ targets:
         description: Simulate the design
         tools: 
             xsim:
-                xelab_options: [--debug, typical, -L, secureip, -L, unisims_ver, -L, unimacro_ver, -L, work.glbl, -L, blk_mem_gen_v8_4_3, --timescale, 1ns/1ps]
+                xelab_options: [--debug, typical, -L, secureip, -L, unisims_ver, -L, unimacro_ver, -L, work.glbl, -L, blk_mem_gen_v8_4_3, --timescale, 1ns/1ps, --stat]
         parameters: [XILINX]
         toplevel: testbench_top
     sim-gemv:
@@ -122,9 +126,9 @@ targets:
         <<: *sim
         parameters: [XILINX, TB_SCALARBIAS]
     synth:
+        <<: *default
         description: Synthesize the design for an FPGA board
-        filesets:
-            - synth
+        filesets_append:
             - synth_xilinx
         default_tool: vivado
         tools:

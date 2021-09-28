@@ -19,7 +19,7 @@ module interconn_tester();
 
 /* Parameters */
 parameter   N = 8;              // Number of MVUs
-parameter   W = 64;             // Biwidth of the data words
+parameter   W = 16*64;             // Biwidth of the data words
 parameter   BADDR = 15;         // Biwidth of the address words
 
 reg                     clk;
@@ -58,7 +58,8 @@ interconn #(
 
 
 // Variables
-test_stats test_stat;
+test_stats_t test_stat;
+Logger logger;
 
 
 //==================================================================================================
@@ -77,7 +78,7 @@ end
 // Simulation timeout
 initial begin
     #(`SIM_TIMEOUT*1ms);
-    print_banner($sformatf("Simulation took more time than expected ( more than %0dms)", `SIM_TIMEOUT), "ERROR");
+    logger.print_banner($sformatf("Simulation took more time than expected ( more than %0dms)", `SIM_TIMEOUT), "ERROR");
     $finish();
 end
 
@@ -119,7 +120,7 @@ task sendDataAndCheck(int from, int to, logic[BADDR-1 : 0] addr, logic[W-1 : 0] 
         test_stat.fail_cnt+=1;       
     end
 
-    print($sformatf("from=%d, to=%d, addr=%x, word=%x %s", from, to, addr, word, res_str));
+    logger.print($sformatf("from=%d, to=%d, addr=%x, word=%x %s", from, to, addr, word, res_str));
     //print($sformatf("from_out=%b, en_out=%b, addr_out=%x, word_out=%x", from_out, en_out, addr_out, word_out));
     //print($sformatf("recv_from=%b, recv_en=%b, recv_addr=%x, recv_word=%x", recv_from, recv_en, recv_addr, recv_word));
 
@@ -159,7 +160,7 @@ initial begin
     // End
     print_result(test_stat, VERB_LOW);
 
-    print_banner($sformatf("Simulation done."));
+    logger.print_banner($sformatf("Simulation done."));
     $finish();
 
 

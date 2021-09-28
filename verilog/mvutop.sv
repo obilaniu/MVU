@@ -67,13 +67,13 @@ logic[        NMVU-1 : 0] wrd_grnt;
 logic[NMVU*BDBANKA-1 : 0] wrd_addr;
 
 // MVU Data memory control (high precision)
-logic[          NMVU-1 : 0] rddhp_en;
-logic[          NMVU-1 : 0] rddhp_grnt;
+logic                       rddhp_en [NMVU-1 : 0];
+logic                       rddhp_grnt [NMVU-1 : 0];
 logic[     BDHPBANKA-1 : 0] rddhp_addr [NMVU-1 : 0];
 logic[     BDHPBANKA-1 : 0] rddhp_addr_offset [NMVU-1 : 0];
-logic[          NMVU-1 : 0] wrdhp_en;
-logic[          NMVU-1 : 0] wrdhp_grnt;
-logic[NMVU*BDHPBANKA-1 : 0] wrdhp_addr;
+logic                       wrdhp_en [NMVU-1 : 0];
+logic                       wrdhp_grnt [NMVU-1 : 0];
+logic[     BDHPBANKA-1 : 0] wrdhp_addr [NMVU-1 : 0];
 
 // MVU Scaler and Bias memory control
 logic[        NMVU-1 : 0] rds_en;                        // Scaler memory: read enable
@@ -107,24 +107,24 @@ logic[NMVU*BDBANKW-1 : 0] mvu_word_out;
 
 // Interconnect (high-precision)
 logic                     ichp_clr_int;
-logic[   NMVU*NMVU-1 : 0] ichp_send_to;
-logic[        NMVU-1 : 0] ichp_send_en;
-logic[        NMVU-1 : 0] ichp_send_en_trig;
-logic[NMVU*BDHPBANKA-1 : 0] ichp_send_addr;
-logic[NMVU*BDHPBUSW-1 : 0] ichp_send_word;
-logic[        NMVU-1 : 0] ichp_recv_en;
-logic[   NMVU*NMVU-1 : 0] ichp_recv_from;
-logic[NMVU*BDHPBANKA-1 : 0] ichp_recv_addr;
-logic[NMVU*BDHPBUSW-1 : 0] ichp_recv_word;
+logic[        NMVU-1 : 0] ichp_send_to [NMVU-1 : 0];
+logic                     ichp_send_en [NMVU-1 : 0];
+logic                     ichp_send_en_trig [NMVU-1 : 0];
+logic[   BDHPBANKA-1 : 0] ichp_send_addr [NMVU-1 : 0];
+logic[    BDHPBUSW-1 : 0] ichp_send_word [NMVU-1 : 0];
+logic                     ichp_recv_en [NMVU-1 : 0];
+logic[        NMVU-1 : 0] ichp_recv_from [NMVU-1 : 0];
+logic[   BDHPBANKA-1 : 0] ichp_recv_addr [NMVU-1 : 0];
+logic[    BDHPBUSW-1 : 0] ichp_recv_word [NMVU-1 : 0];
 logic[NMVU*BDHPBUSW-1 : 0] rdihp_word;
 logic[        NMVU-1 : 0] wrihp_en;
-logic[NMVU*BDHPBUSW-1 : 0] wrihp_word;
+logic[    BDHPBUSW-1 : 0] wrihp_word [NMVU-1 : 0];
 logic[        NMVU-1 : 0] rdihp_en;
 logic[        NMVU-1 : 0] rdihp_grnt;
 logic[NMVU*BDHPBANKA-1 : 0] rdihp_addr;
 logic[        NMVU-1 : 0] wrihp_grnt;
-logic[NMVU*BDHPBANKA-1 : 0] wrihp_addr;
-logic[NMVU*BDHPBUSW-1 : 0] mvu_word_outhp;
+logic[   BDHPBANKA-1 : 0] wrihp_addr [NMVU-1 : 0];
+logic[    BDHPBUSW-1 : 0] mvu_word_outhp [NMVU-1 : 0];
 
 // Scaler1
 logic[        NMVU-1 : 0] scaler1_clr;            // Scaler: clear/reset
@@ -238,12 +238,12 @@ assign rdi_addr         = 0;
 * Interconnect (high-precision)
 */
 
-interconn #(
+interconn_new #(
     .N(NMVU),
     .W(BDHPBUSW),
     .BADDR(BDHPBANKA)
 ) ichp (
-    .clk(clk),
+    .clk(intf.clk),
     .clr(ichp_clr_int),
     .send_to(ichp_send_to),
     .send_en(ichp_send_en),
@@ -257,16 +257,15 @@ interconn #(
 
 // Interconnect wires
 generate for(i=0; i < NMVU; i = i+1) begin
-    assign ichp_send_to[i*NMVU +: NMVU] = ohpmvusel_q[i];
+    assign ichp_send_to[i] = ohpmvusel_q[i];
     assign ichp_send_en_trig[i] = usepooler4hpout_q[i] ? maxpool_done[i] : scaler1_done[i];
-    assign ichp_send_en[i] = (| ohpmvusel_q[i]) & !ohpmvusel_q[i][i] & ichp_send_en_trig[i];      // Trigger when source unit is done
+    assign ichp_send_en[i] = (| ohpmvusel_q[i]) & ichp_send_en_trig[i];      // Trigger when source unit is done
+    assign wrihp_en[i] = ichp_recv_en[i];
+    assign ichp_send_word[i] = mvu_word_outhp[i];
+    assign ichp_send_addr[i] = wrdhp_addr[i];
+    assign wrihp_word[i] = ichp_recv_word[i];
+    assign wrihp_addr[i] = ichp_recv_addr[i];
 end endgenerate
-
-assign ichp_send_word = mvu_word_outhp;
-assign ichp_send_addr = wrdhp_addr;
-assign wrihp_word     = ichp_recv_word;
-assign wrihp_en       = ichp_recv_en;
-assign wrihp_addr     = ichp_recv_addr;
 
 
 /*
@@ -291,6 +290,7 @@ assign shacc_load       = shacc_done | shacc_load_start;    // Load accumulator 
 
 // Clear signals (just connect to global reset for now)
 assign ic_clr_int       = !intf.rst_n | intf.ic_clr;
+assign ichp_clr_int     = !intf.rst_n | intf.ichp_clr;
 assign controller_clr   = {NMVU{!intf.rst_n}};
 assign inagu_clr        = {NMVU{!intf.rst_n}} | start_q;
 assign outagu_clr       = {NMVU{!intf.rst_n}};
@@ -305,7 +305,7 @@ assign scaler2_clr      = {NMVU{!intf.rst_n}};
 assign hpadder_clr      = {NMVU{!intf.rst_n}};
 
 // Quantizer and output control signals
-assign quant_start      = maxpool_done;
+assign quant_start      = scaler2_done;
 assign outstep          = quant_step;
 assign quant_ctrl_clr   = {NMVU{!intf.rst_n}} | intf.quant_clr;
 
@@ -390,6 +390,7 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 scaler2_b_q[i]          <= intf.scaler2_b    [i*BSCALERB +: BSCALERB];
                 usescaler_mem_q[i]      <= intf.usescaler_mem[i];
                 usebias_mem_q[i]        <= intf.usebias_mem[i];
+                usehpadder_q[i]         <= intf.usehpadder[i];
                 usepooler4hpout_q[i]    <= intf.usepooler4hpout[i];
                 shacc_load_sel_q[i]     <= intf.shacc_load_sel[i];
                 zigzag_step_sel_q[i]    <= intf.zigzag_step_sel[i];
@@ -517,6 +518,7 @@ generate for(i = 0; i < NMVU; i = i+1) begin: hprdaguarray
         .on_j       ()
     );
     assign rddhp_addr[i] = ihpbaseaddr_q[i] + rddhp_addr_offset[i];
+    assign inhpagu_step[i] = scaler1_done[i];
 end endgenerate
 
 
@@ -541,19 +543,21 @@ generate for(i = 0; i < NMVU; i = i+1) begin:outhpaguarray
             .BDBANKA    (BDHPBANKA)
         ) outaguunit
         (
-            .clk        (intf.clk                           ),
-            .clr        (outhpagu_clr[i]                    ),
-            .step       (outhpagu_step[i]                   ),
-            .load       (outhpagu_load[i]                   ),
-            .baseaddr   (ohpbaseaddr_q[i]                   ),
-            .addrout    (wrdhp_addr[i*BDHPBANKA  +: BDHPBANKA]  )
+            .clk        (intf.clk),
+            .clr        (outhpagu_clr[i]),
+            .step       (outhpagu_step[i]),
+            .load       (outhpagu_load[i]),
+            .baseaddr   (ohpbaseaddr_q[i]),
+            .addrout    (wrdhp_addr[i])
         );
+    assign outhpagu_load[i] = usepooler4hpout_q[i] ? outhpagu_load_onpooler[i] : outhpagu_load_onscaler1[i];
+    assign outhpagu_step[i] = usepooler4hpout_q[i] ? maxpool_done[i] : scaler1_done[i];
 end endgenerate
 
 
 // Quantizer Controllers
 generate for(i = 0; i < NMVU; i = i+1) begin: quantser_ctrlarray
-    assign quant_bwout[i*BPREC +: BQBOUT] = intf.oprecision[i*BPREC +: BQBOUT];
+    assign quant_bwout[i*BPREC +: BQBOUT] = oprecision_q[i];
     quantser_ctrl #(
         .BWOUT      (BSCALERP)
     ) quantser_ctrl_unit (
@@ -661,6 +665,16 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     );
 
     shiftreg #(
+        .N      (SCALERLATENCY)
+    ) scaler2_done_delayarrayunit (
+        .clk    (intf.clk),
+        .clr    (~intf.rst_n),
+        .step   (1'b1),
+        .in     (maxpool_done[i]),
+        .out    (scaler2_done[i])
+    );
+
+    shiftreg #(
         .N      (VVPSTAGES+MEMRDLATENCY+2*SCALERLATENCY+HPADDERLATENCY+MAXPOOLSTAGES + 1)
     ) outagu_load_delayarrayunit (
         .clk    (intf.clk),
@@ -673,8 +687,8 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     shiftreg #(
         .N      (VVPSTAGES+MEMRDLATENCY+SCALERLATENCY)
     ) outhpagu_load_onscaler1_delayarrayunit (
-        .clk    (clk),
-        .clr    (~rst_n),
+        .clk    (intf.clk),
+        .clr    (~intf.rst_n),
         .step   (1'b1),
         .in     (start_q[i]),
         .out    (outhpagu_load_onscaler1[i])
@@ -683,20 +697,18 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
     shiftreg #(
         .N      (VVPSTAGES+MEMRDLATENCY+SCALERLATENCY+HPADDERLATENCY+MAXPOOLSTAGES)
     ) outhpagu_load_onpooler_delayarrayunit (
-        .clk    (clk),
-        .clr    (~rst_n),
+        .clk    (intf.clk),
+        .clr    (~intf.rst_n),
         .step   (1'b1),
         .in     (start_q[i]),
         .out    (outhpagu_load_onpooler[i])
     );
 
-    assign outhpagu_load[i] = usepooler4hpout_q[i] ? outhpagu_load_onpooler[i] : outhpagu_load_onscaler1[i];
-
     shiftreg #(
         .N      (SCALERLATENCY)
     ) scaler1_done_delayarrayunit (
-        .clk    (clk),
-        .clr    (~rst_n),
+        .clk    (intf.clk),
+        .clr    (~intf.rst_n),
         .step   (1'b1),
         .in     (shacc_done[i]),
         .out    (scaler1_done[i])
@@ -766,9 +778,9 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .mvu_word_out   (mvu_word_out[i*BDBANKW +: BDBANKW]     ),
             .rddhp_addr     (rddhp_addr[i]                          ),
             .wrihp_en       (wrihp_en[i]                            ),
-            .wrihp_addr     (wrihp_addr[i*BDHPBANKA +: BDHPBANKA]   ),
-            .wrihp_word     (wrihp_word[i*BDHPBUSW +: BDHPBUSW]     ),
-            .mvu_word_outhp (mvu_word_outhp[i*BDHPBUSW +: BDHPBUSW] ),
+            .wrihp_addr     (wrihp_addr[i]                          ),
+            .wrihp_word     (wrihp_word[i]                          ),
+            .mvu_word_outhp (mvu_word_outhp[i]                      ),
             .rds_en         (rds_en[i]                              ),
             .rds_addr       (rds_addr[i*BSBANKA +: BSBANKA]         ),
             .wrs_en         (intf.wrs_en[i]                         ),

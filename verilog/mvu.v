@@ -117,7 +117,7 @@ parameter  N          = 64;   /* N x N matrix-vector product size. Power-of-2. *
 parameter  NDBANK     = 32;   /* Number of N-bit, 1024-element Data BANK. */
 
 parameter  BDHPBANKW  = 32;    // Bitwidth of high-precision data bank word
-parameter  BDHPBANKA  = 9;     // Bitwidth of high-precision data bank address
+parameter  BDHPBANKA  = 12;     // Bitwidth of high-precision data bank address
 
 parameter  BBIAS   = 32;   // Bit witdh of the bias values
 
@@ -132,6 +132,7 @@ localparam BDBANKA     = BDBANKABS+     /* Bitwidth of Data    BANK Address */
 localparam BDBANKW     = N;             /* Bitwidth of Data    BANK Word */
 localparam BSUM        = CLOG2N+2;      /* Bitwidth of Sums */
 localparam BACC        = 27;            /* Bitwidth of Accumulators */
+localparam BDHPBUSW    = BDHPBANKW*N;   // Bitwidth of high-precision data word bus
 
 localparam BSCALERA    = BACC;
 localparam BSCALERB    = 16;
@@ -222,11 +223,11 @@ input  wire[BDBANKW-1 : 0] wrc_word;
 
 output wire[BDBANKW-1 : 0] mvu_word_out;
 
-input  wire[  BDHPBANKA-1 : 0] rddhp_addr;          // High-precision data local read address
-input  wire                    wrihp_en;            // High-precision data interconnect write enable
-input  wire[N*BDHPBANKW-1 : 0] wrihp_word;          // High-precision data interconnect write word
-input  wire[  BDHPBANKA-1 : 0] wrihp_addr;          // High-precision data interconnect write address
-output wire[N*BDHPBANKW-1 : 0] mvu_word_outhp;      // High-precision data output word (composed of N words)
+input  wire[BDHPBANKA-1 : 0]    rddhp_addr;          // High-precision data local read address
+input  wire                     wrihp_en;            // High-precision data interconnect write enable
+input  wire[BDHPBUSW-1 : 0]     wrihp_word;          // High-precision data interconnect write word
+input  wire[BDHPBANKA-1 : 0]    wrihp_addr;          // High-precision data interconnect write address
+output wire[BDHPBUSW-1 : 0]     mvu_word_outhp;      // High-precision data output word (composed of N words)
 
 /* Generation Variables */
 genvar i, j;
@@ -262,7 +263,7 @@ wire[BDBANKW*NDBANK-1 : 0] rdd_words_t;
 wire[BDBANKW*NDBANK-1 : 0] rdi_words_t;
 wire[BDBANKW*NDBANK-1 : 0] rdc_words_t;
 
-wire[   N*BDHPBANKW-1 : 0] rddhp_word;              // High-precision data memory word bus
+wire[      BDHPBUSW-1 : 0] rddhp_word;              // High-precision data memory word bus
 
 wire[BSBANKW-1 : 0]        rds_word;                // Scaler memory: read word
 wire[BBBANKW-1 : 0]        rdb_word;                // Bias memory: read word
@@ -400,7 +401,7 @@ end endgenerate
 /* Max poolers */
 generate for(i=0;i<N;i=i+1) begin:poolarray
     maxpool #(BSCALERP)       pooler (clk, max_clr, max_pool,
-                                      scaler1_out [i],
+                                      hpadder_out[i],
                                       pool_out[i]);
 end endgenerate
 
@@ -480,7 +481,7 @@ end endgenerate
 // High-precision data bank
  ram_simple2port #(
     .BDADDR(BDHPBANKA),
-    .BDWORD(N*BDHPBANKW)
+    .BDWORD(BDHPBUSW)
  ) dbhp (
     .clk(clk),
     .rd_en(1'b1),
