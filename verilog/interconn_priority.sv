@@ -27,18 +27,9 @@ module interconn_priority #(
 );
 
 // Internal signals and registers
-logic  [N-1 : 0] send_to_bo [N-1 : 0];                   // Breakout of send_to
-logic  [BADDR-1 : 0] send_addr_xb [N-1 : 0][N-1 :0];     // Array [source][destination]
-logic  [N-1 : 0] send_addr_t [N-1 : 0][BADDR-1 : 0];     // Transpose of send_addr
-logic  [W-1 : 0] send_word_xb [N-1 : 0][N-1 : 0];
-logic  [N-1 : 0] send_word_t [N-1 : 0][W-1 : 0];
-logic  [N-1 : 0] recv_from_c [N-1 : 0];                  // Receive from MVU ID
-logic  [N-1 : 0] recv_en_c;                              // 
-logic  [BADDR-1 : 0] recv_addr_c [N-1 : 0];              // Memory address to write to
-logic  [W-1 : 0] recv_word_c [N-1 : 0];                  // Data received
 logic  [N-1 : 0] requests [N-1 : 0];                     // Request arrays
-logic  [N-1 : 0] requests_priority [N-1 : 0];            // Request arrays in priority order
-genvar i, j, k;
+
+genvar i, j, k, m;
 integer select [N-1 : 0];
 
 
@@ -53,42 +44,36 @@ generate if(N > 1) begin: multiple
     // The 'i' busses are the source, the 'j' busses are the destination
     for (j=0; j < N; j=j+1) begin: loop_busses_xb_j
 
-        // Generate the request arrays for the output ports
-        for (i=0; i < N; i=i+1) begin: req_i
-            assign requests[j][i] = send_to[i][j] & send_en[i];
-        end
-
         // For the given destination, select the highest priority source
         // that is currently trying to send. Currenly, the sender with
         // highest priority is the same as the destination. Priority then
         // passes to the next sender in reverse numerical order.
         always_comb begin : select_priority_env
-            int m = j;
-            for (int k=0; k < N; k=k+1) begin: select_priority_enc_loop
-                if (requests[j][m]) begin
-                    select[j] = m;
-                    break;
-                end
-                if (m == 0) begin
-                    m = N - 1;
-                end else begin
-                    m = m - 1;
+        // Generate the request arrays for the output ports
+            for (int i=0; i < N; i=i+1) begin: req_i
+                requests[j][i] = send_to[i][j] & send_en[i];
+            end
+            for (int k=0; k < N; k = k+1) begin: select_priority_enc_loop
+                if (requests[j][(k+j+1) % N]) begin
+                    select[j] = (k+j+1) % N;
                 end
             end
         end
 
         // Mux in the selected source to the destination
-        always @(posedge clk or posedge clr) begin
-            if(clr) begin
-                recv_en[j] <= 0;
-                recv_addr[j] <= 0;
-                recv_from[j] <= 0;
-                recv_word[j] <= 0;
-            end else if(clk) begin
-                recv_from[j] <= 1 << select[j];
-                recv_en[j] <= requests[j][select[j]];
-                recv_addr[j] <= send_addr[select[j]];
-                recv_word[j] <= send_word[select[j]];
+        always @(posedge clk) begin
+            if (clr) begin
+                recv_en[j] = 0;
+                recv_addr[j] = 0;
+                recv_from[j] = 0;
+                recv_word[j] = 0;
+            end else begin
+                recv_en[j] = requests[j][select[j]];
+                if (requests[j][select[j]]) begin
+                    recv_from[j] = 1 << select[j];
+                    recv_addr[j] = send_addr[select[j]];
+                    recv_word[j] = send_word[select[j]];
+                end
             end
         end        
     end

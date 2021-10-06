@@ -25,9 +25,9 @@ interface mvu_interface(input logic clk);
     logic[  NMVU*BBBANKA-1 : 0] bbaseaddr;            // Config: bias memory base address
     logic[  NMVU*BBDADDR-1 : 0] obaseaddr;            // Config: data memory base address for output
     logic[     NMVU*NMVU-1 : 0] omvusel;              // Config: MVU selector bits for output
-    logic[  NMVU*BBDADDR-1 : 0] ihpbaseaddr;          // Config: high-precision data memory base address for input
-    logic[  NMVU*BBDADDR-1 : 0] ohpbaseaddr;          // Config: high-precision data memory base address for output
-    logic[     NMVU*NMVU-1 : 0] ohpmvusel;            // Config: MVU selector bits for high-precision output
+    logic[       BBDADDR-1 : 0] ihpbaseaddr[NMVU-1 : 0];                     // Config: high-precision data memory base address for input
+    logic[       BBDADDR-1 : 0] ohpbaseaddr[NMVU-1 : 0];                    // Config: high-precision data memory base address for output
+    logic[          NMVU-1 : 0] ohpmvusel[NMVU-1 : 0];                      // Config: MVU selector bits for high-precision output
     logic[         BJUMP-1 : 0] wjump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: weight jumps
     logic[         BJUMP-1 : 0] ijump[NMVU-1 : 0][NJUMPS-1 : 0];            // Config: input jumps
     logic[         BJUMP-1 : 0] hpjump[NMVU-1 : 0][NJUMPS-1 : 0];           // Config: input jumps
@@ -40,8 +40,8 @@ interface mvu_interface(input logic clk);
     logic[       BLENGTH-1 : 0] slength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: scaler length
     logic[       BLENGTH-1 : 0] blength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: bias length
     logic[       BLENGTH-1 : 0] olength[NMVU-1 : 0][NJUMPS-1 : 1];          // Config: output length
-    logic[ NMVU*BSCALERB-1 : 0] scaler1_b;                                  // Config: multiplicative scaler (operand 'b')
-    logic[ NMVU*BSCALERB-1 : 0] scaler2_b;                                  // Config: multiplicative scaler (operand 'b')
+    logic[      BSCALERB-1 : 0] scaler1_b[NMVU-1 : 0];                      // Config: multiplicative scaler (operand 'b')
+    logic[      BSCALERB-1 : 0] scaler2_b[NMVU-1 : 0];                      // Config: multiplicative scaler (operand 'b')
     logic                       usescaler_mem[NMVU-1 : 0];                  // Config: use scalar mem if 1; otherwise use the scaler_b input for scaling
     logic                       usebias_mem[NMVU-1 : 0];                    // Config: use the bias memory if 1; if not, not bias is added in the scaler
     logic                       usepooler4hpout[NMVU-1 : 0];                // Config: for the high-precision interconnect, use the output of pooler if 1, or use output of scaler1 if 0

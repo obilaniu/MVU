@@ -238,7 +238,7 @@ assign rdi_addr         = 0;
 * Interconnect (high-precision)
 */
 
-interconn_new #(
+interconn_priority #(
     .N(NMVU),
     .W(BDHPBUSW),
     .BADDR(BDHPBANKA)
@@ -383,11 +383,11 @@ generate for(i = 0; i < NMVU; i = i + 1) begin: parambuf_array
                 bbaseaddr_q[i]          <= intf.bbaseaddr    [i*BBBANKA +: BBBANKA];
                 obaseaddr_q[i]          <= intf.obaseaddr    [i*BBDADDR +: BBDADDR];
                 omvusel_q[i]            <= intf.omvusel      [i*NMVU +: NMVU];
-                ihpbaseaddr_q[i]        <= intf.ihpbaseaddr  [i*BBDADDR +: BBDADDR];
-                ohpbaseaddr_q[i]        <= intf.ohpbaseaddr  [i*BBDADDR +: BBDADDR];
-                ohpmvusel_q[i]          <= intf.ohpmvusel    [i*NMVU +: NMVU];
-                scaler1_b_q[i]          <= intf.scaler1_b    [i*BSCALERB +: BSCALERB];
-                scaler2_b_q[i]          <= intf.scaler2_b    [i*BSCALERB +: BSCALERB];
+                ihpbaseaddr_q[i]        <= intf.ihpbaseaddr[i];
+                ohpbaseaddr_q[i]        <= intf.ohpbaseaddr[i];
+                ohpmvusel_q[i]          <= intf.ohpmvusel[i];
+                scaler1_b_q[i]          <= intf.scaler1_b[i];
+                scaler2_b_q[i]          <= intf.scaler2_b[i];
                 usescaler_mem_q[i]      <= intf.usescaler_mem[i];
                 usebias_mem_q[i]        <= intf.usebias_mem[i];
                 usehpadder_q[i]         <= intf.usehpadder[i];

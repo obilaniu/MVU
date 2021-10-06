@@ -21,7 +21,7 @@ filesets:
             - verilog/shacc.v
             - verilog/vvp.v
             - verilog/interconn.v
-            - verilog/interconn_new.sv:
+            - verilog/interconn_priority.sv:
                 file_type: systemVerilogSource
             - verilog/quantser.v
             - verilog/quantser_ctrl.v
@@ -95,7 +95,6 @@ filesets:
                 is_include_file: true
             - verification/tests/scalar_bias/scalar_bias_tester.sv:
                 is_include_file: true
-            - verification/lib/testbench/testbench_top.sv
             - ip/build/xilinx/bram64k_64x1024_xilinx/simulation/blk_mem_gen_v8_4.v:
                 file_type: verilogSource
             - ip/build/xilinx/bram64k_64x1024_xilinx/sim/bram64k_64x1024_xilinx.v:
@@ -104,6 +103,14 @@ filesets:
                 file_type: verilogSource
             - ip/build/xilinx/bram2m_xilinx/sim/bram2m_xilinx.v:
                 file_type: verilogSource
+            - verification/tests/highprecision/highprecision_tester.sv:
+                is_include_file: true
+            - verification/lib/testbench/testbench_top.sv
+    tb_highprec:
+        file_type: systemVerilogSource
+        files:
+            - verification/tests/highprecision/highprecision_tester.sv:
+                is_include_file: true
 targets:
     default: &default
         filesets:
@@ -125,6 +132,9 @@ targets:
     sim-scalarbias:
         <<: *sim
         parameters: [XILINX, TB_SCALARBIAS]
+    sim-highprec:
+        <<: *sim
+        parameters: [XILINX, TB_HIGHPREC]
     synth:
         <<: *default
         description: Synthesize the design for an FPGA board
@@ -133,7 +143,7 @@ targets:
         default_tool: vivado
         tools:
           vivado:
-            part: xcku115-flva1517-2-e
+            part: xcvu9p-flgb2104-2-e
             pnr: none
         parameters: [XILINX]
         toplevel: [mvutop]
@@ -147,6 +157,10 @@ parameters:
         default   : 1
         paramtype : vlogdefine
     TB_SCALARBIAS:
+        datatype  : int
+        default   : 1
+        paramtype : vlogdefine
+    TB_HIGHPREC:
         datatype  : int
         default   : 1
         paramtype : vlogdefine

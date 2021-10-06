@@ -22,17 +22,22 @@ parameter   N = 8;              // Number of MVUs
 parameter   W = 64;          // Biwidth of the data words
 parameter   BADDR = 15;         // Biwidth of the address words
 
-reg                     clk;
-reg                     clr;
-reg [N-1   : 0]         send_to [N-1 : 0];        // MVUs to send to (selectors bits)
-reg                     send_en [N-1 : 0];
-reg [BADDR-1   : 0]     send_addr [N-1 : 0];      // Memory address to write to
-reg [W-1 : 0]           send_word [N-1 : 0];      // Data to send
 
-reg [N-1 : 0]           recv_from [N-1 : 0];      // Receive from MVU ID
-reg                     recv_en [N-1 : 0];        // 
-reg [BADDR-1   : 0]     recv_addr [N-1 : 0];      // Memory address to write to
-reg [W-1 : 0]           recv_word [N-1 : 0];      // Data received
+// DUT port signals
+logic                     clk;
+logic                     clr;
+logic [N-1   : 0]         send_to [N-1 : 0];        // MVUs to send to (selectors bits)
+logic                     send_en [N-1 : 0];
+logic [BADDR-1   : 0]     send_addr [N-1 : 0];      // Memory address to write to
+logic [W-1 : 0]           send_word [N-1 : 0];      // Data to send
+
+logic [N-1 : 0]           recv_from [N-1 : 0];      // Receive from MVU ID
+logic                     recv_en [N-1 : 0];        // 
+logic [BADDR-1   : 0]     recv_addr [N-1 : 0];      // Memory address to write to
+logic [W-1 : 0]           recv_word [N-1 : 0];      // Data received
+
+// Testbench signals
+logic [W-1 : 0]           testword;
 
 
 
@@ -92,6 +97,7 @@ task sendData(int from, int to, logic[BADDR-1 : 0] addr, logic[W-1 : 0] word);
     send_word[from] = word;
     send_en[from] = 1;
     #(`CLKPERIOD);
+    send_en[from] = 0;
 
 endtask
 
@@ -104,15 +110,15 @@ task sendDataAndCheck(int from, int to, logic[BADDR-1 : 0] addr, logic[W-1 : 0] 
 
     sendData(from, to, addr, word);
 
-    #(`CLKPERIOD);
+    //#(`CLKPERIOD);
 
     word_out = recv_word[to];
     addr_out = recv_addr[to];
     en_out = recv_en[to];
     from_out = recv_from[to];
 
-    send_en[from] = 0;
-    
+    //send_en[from] = 0;
+
     if ((word == word_out[W-1 : 0]) && (addr == addr_out) && en_out && (from_out == (1 << from))) begin
         res_str = "PASS";
         test_stat.pass_cnt+=1;
@@ -153,8 +159,13 @@ initial begin
 
     // Test all permutations for 1-to-1
     for (int i = 0; i < N; i++) begin
+        if (i % 2) begin
+            testword = 'hdeadbeefdeadbeef;
+        end else begin
+            testword = 'hbeefdeadbeefdead;
+        end
         for (int j = 0; j < N; j++) begin
-            sendDataAndCheck(i, j, 7, 'hdeadbeefdeadbeef);
+            sendDataAndCheck(i, j, i+j+1, testword);
         end
     end
 

@@ -229,7 +229,7 @@ class mvu_testbench_base extends BaseObj;
         intf.olength[mvu][4] = 0;                          // Don't need this for GEMV
         intf.d_signed[mvu] = isign;
         intf.w_signed[mvu] = wsign;
-        intf.scaler1_b[mvu*BSCALERB +: BSCALERB] = scaler;
+        intf.scaler1_b[mvu] = scaler;
         intf.shacc_load_sel[mvu] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
         intf.zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
         intf.countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
@@ -307,9 +307,6 @@ class mvu_testbench_base extends BaseObj;
         intf.bbaseaddr = 0;
         intf.obaseaddr = 0;
         intf.omvusel = 0;
-        intf.ihpbaseaddr = 0;
-        intf.ohpbaseaddr = 0;
-        intf.ohpmvusel = 0;
 
         // Initialize arrays
         for (int m = 0; m < NMVU; m++) begin
@@ -333,6 +330,10 @@ class mvu_testbench_base extends BaseObj;
                 intf.olength[m][i] = 0;
             end
 
+            intf.ihpbaseaddr[m] = 0;
+            intf.ohpbaseaddr[m] = 0;
+            intf.ohpmvusel[m] = 0;
+
             intf.shacc_load_sel[m] = 0;
             intf.zigzag_step_sel[m] = 0;
 
@@ -340,10 +341,11 @@ class mvu_testbench_base extends BaseObj;
             intf.usebias_mem[m] = 0;
             intf.usepooler4hpout[m] = 0;
             intf.usehpadder[m] = 0;
+
+            intf.scaler1_b[m] = 1;
+            intf.scaler2_b[m] = 1;
         end
         
-        intf.scaler1_b = 1;
-        intf.scaler2_b = 1;
         intf.wrw_addr = 0;
         intf.wrw_word = 0;
         intf.wrw_en = 0;

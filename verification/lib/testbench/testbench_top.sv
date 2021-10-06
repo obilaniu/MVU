@@ -4,6 +4,8 @@
     `include "gemv_tester.sv"
 `elsif TB_SCALARBIAS
     `include "scalar_bias_tester.sv"
+`elsif TB_HIGHPREC
+    `include "highprecision_tester.sv"
 `else
     `include "base_tester.sv"
 `endif
@@ -25,6 +27,8 @@ module testbench_top import utils::*;import testbench_pkg::*; ();
     gemv_tester tb;
 `elsif TB_SCALARBIAS
     scalar_bias_tester tb;
+`elsif TB_HIGHPREC
+    highprecision_tester tb;
 `else
     base_tester tb;
 `endif
