@@ -65,7 +65,7 @@ interconn_priority #(
 // Variables
 test_stats_t test_stat;
 Logger logger;
-
+string sim_log_file = "test.log";
 
 //==================================================================================================
 // Simulation specific Threads
@@ -110,14 +110,10 @@ task sendDataAndCheck(int from, int to, logic[BADDR-1 : 0] addr, logic[W-1 : 0] 
 
     sendData(from, to, addr, word);
 
-    //#(`CLKPERIOD);
-
     word_out = recv_word[to];
     addr_out = recv_addr[to];
     en_out = recv_en[to];
     from_out = recv_from[to];
-
-    //send_en[from] = 0;
 
     if ((word == word_out[W-1 : 0]) && (addr == addr_out) && en_out && (from_out == (1 << from))) begin
         res_str = "PASS";
@@ -128,7 +124,7 @@ task sendDataAndCheck(int from, int to, logic[BADDR-1 : 0] addr, logic[W-1 : 0] 
         test_stat.fail_cnt+=1;       
     end
 
-    //logger.print($sformatf("from=%d, to=%d, addr=%x, word=%x %s", from, to, addr, word, res_str));
+    logger.print($sformatf("from=%d, to=%d, addr=%x, word=%x %s", from, to, addr, word, res_str));
     //print($sformatf("from_out=%b, en_out=%b, addr_out=%x, word_out=%x", from_out, en_out, addr_out, word_out));
     //print($sformatf("recv_from=%b, recv_en=%b, recv_addr=%x, recv_word=%x", recv_from, recv_en, recv_addr, recv_word));
 
@@ -140,6 +136,8 @@ endtask;
 // Main test thread
 
 initial begin
+
+    logger = new(sim_log_file);
 
     // Initialize signals
     clr = 1;
@@ -172,9 +170,9 @@ initial begin
 
 
     // End
-    print_result(test_stat, VERB_LOW);
+    print_result(test_stat, VERB_LOW, logger);
 
-    //logger.print_banner($sformatf("Simulation done."));
+    logger.print_banner($sformatf("Simulation done."));
     $finish();
 
 
