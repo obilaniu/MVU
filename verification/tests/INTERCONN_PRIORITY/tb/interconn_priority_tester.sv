@@ -90,12 +90,14 @@ end
 
 // =================================================================================================
 // Tasks and functions
-task sendData(int from[], int to[], logic[BADDR-1 : 0] addr, logic[W-1 : 0] word);
+task sendData(int from[], int to[][], logic[BADDR-1 : 0] addr, logic[W-1 : 0] word);
 
     foreach (from[j]) begin
         send_to[from[j]] = 0;
-        foreach (to[i]) begin
-            send_to[from[j]] |= 1 << to[i];
+        foreach (to[j]) begin
+            foreach (to[j][i]) begin
+                send_to[from[j]] |= 1 << to[j][i];
+            end
         end
         send_addr[from[j]] = addr;
         send_word[from[j]] = word;
@@ -108,7 +110,7 @@ task sendData(int from[], int to[], logic[BADDR-1 : 0] addr, logic[W-1 : 0] word
 
 endtask
 
-task sendDataAndCheck(int from[], int to[], logic[BADDR-1 : 0] addr, logic[W-1 : 0] word);
+task sendDataAndCheck(int from[], int to[][], logic[BADDR-1 : 0] addr, logic[W-1 : 0] word);
     string res_str;
     logic [W-1 : 0] word_out;
     logic [BADDR-1 : 0] addr_out;
@@ -119,17 +121,19 @@ task sendDataAndCheck(int from[], int to[], logic[BADDR-1 : 0] addr, logic[W-1 :
 
     // Check the output
     foreach (from[j]) begin
-        foreach (to[i]) begin
-            word_out = recv_word[to[i]];
-            addr_out = recv_addr[to[i]];
-            en_out = recv_en[to[i]];
-            from_out = recv_from[to[i]];
-            if ((word == word_out[W-1 : 0]) && (addr == addr_out) && en_out && (from_out == (1 << from[j]))) begin
-                res_str = "PASS";
-            end
-            else begin
-                res_str = "FAIL";
-                break;    
+        foreach (to[j][i]) begin
+            foreach (to[i]) begin
+                word_out = recv_word[to[j][i]];
+                addr_out = recv_addr[to[j][i]];
+                en_out = recv_en[to[j][i]];
+                from_out = recv_from[to[j][i]];
+                if ((word == word_out[W-1 : 0]) && (addr == addr_out) && en_out && (from_out == (1 << from[j]))) begin
+                    res_str = "PASS";
+                end
+                else begin
+                    res_str = "FAIL";
+                    break;    
+                end
             end
         end
     end
@@ -178,7 +182,7 @@ initial begin
             testword = 'hbeefdeadbeefdead;
         end
         for (int j = 0; j < N; j++) begin
-            sendDataAndCheck('{i}, '{j}, i+j+1, testword);
+            sendDataAndCheck('{i}, '{'{j}}, i+j+1, testword);
         end
     end
 
@@ -191,7 +195,7 @@ initial begin
             testword = 'hbeefdeadbeefdead;
         end
         for (int j = 0; j < N; j++) begin
-            sendDataAndCheck('{i}, '{j,(j+1)%N}, i+j+1, testword);
+            sendDataAndCheck('{i}, '{'{j,(j+1)%N}}, i+j+1, testword);
         end
     end
 
@@ -204,7 +208,7 @@ initial begin
             testword = 'hbeefdeadbeefdead;
         end
         for (int j = 0; j < N; j++) begin
-            sendDataAndCheck('{i}, '{j,(j+1)%N,(j+2)%N}, i+j+1, testword);
+            sendDataAndCheck('{i}, '{'{j,(j+1)%N,(j+2)%N}}, i+j+1, testword);
         end
     end
 

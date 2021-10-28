@@ -20,6 +20,7 @@ files_to_clean = ["jou", "vcd", "pb", ".Xil/", "xsim.dir/", "log", "wdb", "str"]
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--simulator', help='Simulator to use', required=False)
+    parser.add_argument('-i', '--includes', help='file of include directories', required=False)
     parser.add_argument('-f', '--files', help='Simulation files', required=False)
     parser.add_argument('-m', '--vlogmacros', help='File containing Verilog global macros', required=False)
     parser.add_argument('-l', '--libs', help='File containing list of simulation libraries', required=False)
@@ -81,6 +82,16 @@ def get_libs(f_file):
                 libs += " -L " + lib + " "
     return libs
 
+def get_includes(f_file):
+    # import ipdb as pdb; pdb.set_trace()
+    includes = ""
+    with open(f_file, 'r') as f:
+        includelist = f.readlines()
+        for include in includelist:
+            if include != "":
+                include = include.replace("\n", "")
+                includes += " -i " + include + " "
+    return includes
 
 #=======================================================================
 # Main
@@ -95,6 +106,7 @@ if __name__ == '__main__':
     files = args['files']
     vlogmacros_file = args['vlogmacros']
     libs_file = args['libs']
+    includes_file = args['includes']
     gui = args['gui']
     svseed = args['svseed']
     coverage = args['coverage']
@@ -138,6 +150,15 @@ if __name__ == '__main__':
         else:
             util.print_log("Library list file not found!", "ERROR", verbosity="VERB_LOW")
             sys.exit()
+    
+     # Load list of include directories from file, if specified
+    includes = ""
+    if includes_file is not None:
+        if os.path.exists(includes_file):
+            includes = get_includes(includes_file)
+        else:
+            util.print_log("Includes list file not found!", "ERROR", verbosity="VERB_LOW")
+            sys.exit()   
 
     if simulator.lower() == "xilinx":
         # For Xilinx tools we need to specify top level for creating snapshots which is needed
@@ -157,6 +178,7 @@ if __name__ == '__main__':
         # import ipdb as pdb; pdb.set_trace()
         if sv_rtl != "":
             cmd_to_run = "xvlog --sv {0} ".format(sv_rtl)
+            cmd_to_run += includes
             cmd_to_run += vlogmacros
             if silence:
                 cmd_to_run += "> /dev/null"
@@ -180,7 +202,7 @@ if __name__ == '__main__':
         util.print_banner("Creating snapshot", verbosity=verbosity)
         # cmd_to_run = "xelab {0} ".format(top_level)
         # import ipdb as pdb; pdb.set_trace()
-        cmd_to_run = "xelab -debug typical -L secureip -L unisims_ver -L unimacro_ver {0} ".format(top_level)
+        cmd_to_run = "xelab -debug typical -L secureip -L unisims_ver -L unimacro_ver --stat {0} ".format(top_level)
         if libs_file:
             cmd_to_run += libs
         if waveform:
