@@ -12,16 +12,16 @@ const int m = 10;                                   // Spacing between dimension
 //
 
 /*
-// Case 1: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 2x2 bits
+// Case 1: 3x3 conv, 10x10 feature map, 128 channels in, 128 channels out, 2x2 bits
 const int iprec = 2;                                // Input data precision
 const int wprec = 2;                                // Weight precision
 const int oprec = 2;                                // Output precision
 const int W = 10;                                   // Input width
 const int H = 10;                                   // Input height
-const int C = 2;                                    // Input channel blocks
+const int Ci = 128;                                 // Input channels
 const int Fw = 3;                                   // Filter kernel width
 const int Fh = 3;                                   // Filter kernel height
-const int Fc = 2;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Co = 128;                                 // Number of output channels
 const int Sw = 1;                                   // Filter horizontal (width) stride
 const int Pl = 0;                                   // Zero-padding in on the left in the width dimension
 const int Pr = 0;                                   // Zero-padding in on the right in the width dimension
@@ -29,67 +29,67 @@ const int Pt = 0;                                   // Zero-padding in on the to
 const int Pb = 0;                                   // Zero-padding in on the bottom in the height dimension
 */
 
-
-// Case 1a: 3x3 conv, 10x10 feature map, 2 channel blocks in, 4 channel blocks out, 2x2 bits
+/*
+// Case 1a: 3x3 conv, 10x10 feature map, 128 channels in, 256 channels out, 2x2 bits
 const int iprec = 2;                                // Input data precision
 const int wprec = 2;                                // Weight precision
 const int oprec = 2;                                // Output precision
 const int W = 10;                                   // Input width
 const int H = 10;                                   // Input height
-const int C = 2;                                    // Input channel blocks
+const int Ci = 128;                                 // Input channel 
 const int Fw = 3;                                   // Filter kernel width
 const int Fh = 3;                                   // Filter kernel height
-const int Fc = 4;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Co = 256;                                 // Number of output channels
 const int Sw = 1;                                   // Filter horizontal (width) stride
 const int Pl = 0;                                   // Zero-padding in on the left in the width dimension
 const int Pr = 0;                                   // Zero-padding in on the right in the width dimension
 const int Pt = 0;                                   // Zero-padding in on the top in the height dimension
 const int Pb = 0;                                   // Zero-padding in on the bottom in the height dimension
+*/
 
-
-// Case 2: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 1x1 bits 
+// Case 2: 3x3 conv, 10x10 feature map, 128 channels in, 128 channels out, 1x1 bits 
 /*
 const int iprec = 1;                                // Input data precision
 const int wprec = 1;                                // Weight precision
 const int oprec = 1;                                // Output precision
 const int W = 10;                                   // Input width
 const int H = 10;                                   // Input height
-const int C = 2;                                    // Input channel blocks
+const int Ci = 128;                                 // Input channels
 const int Fw = 3;                                   // Filter kernel width
 const int Fh = 3;                                   // Filter kernel height
-const int Fc = 2;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Co = 128;                                 // Number of output channels
 const int Sw = 1;                                   // Filter horizontal (width) stride
 const int Pw = 0;                                   // Zero-padding in width dimension
 const int Ph = 0;                                   // Zero-padding in height dimension
 */
 
-// Case 3: 3x3 conv, 2x2 upper left corner of feature map, 2 channel blocks in, 2 channel blocks out, 2x2 bits
+// Case 3: 3x3 conv, 2x2 upper left corner of feature map, 128 channels in, 128 channels out, 2x2 bits
 /*
 const int iprec = 2;                                // Input data precision
 const int wprec = 2;                                // Weight precision
 const int oprec = 2;                                // Output precision
 const int W = 2;                                    // Input width
 const int H = 2;                                    // Input height
-const int C = 2;                                    // Input channel blocks
+const int Ci = 128;                                 // Input channel blocks
 const int Fw = 3;                                   // Filter kernel width
 const int Fh = 3;                                   // Filter kernel height
-const int Fc = 2;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Co = 128;                                 // Number of filter set blocks (i.e. number of output channel blocks)
 const int Sw = 1;                                   // Filter horizontal (width) stride
 const int Pw = 1;                                   // Zero-padding in width dimension
 const int Ph = 1;                                   // Zero-padding in height dimension
 */
 
 /*
-// Case 4: 3x3 conv, 32x32 feature map, 2 channel blocks in, 2 channel blocks out, 8x8 bits
+// Case 4: 3x3 conv, 32x32 feature map, 64 channels in, 64 channels out, 8x8 bits
 const int iprec = 8;                                // Input data precision
 const int wprec = 8;                                // Weight precision
 const int oprec = 8;                                // Output precision
 const int W = 32;                                   // Input width
 const int H = 32;                                   // Input height
-const int C = 1;                                    // Input channel blocks
+const int Ci = 64;                                  // Input channel blocks
 const int Fw = 3;                                   // Filter kernel width
 const int Fh = 3;                                   // Filter kernel height
-const int Fc = 1;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Co = 64;                                  // Number of filter set blocks (i.e. number of output channel blocks)
 const int Sw = 1;                                   // Filter horizontal (width) stride
 const int Pl = 1;                                   // Zero-padding in on the left in the width dimension
 const int Pr = 1;                                   // Zero-padding in on the right in the width dimension
@@ -97,7 +97,25 @@ const int Pt = 1;                                   // Zero-padding in on the to
 const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
 */
 
+// Case 5: 3x3 conv, 32x32 feature map, 1 channel blocks in, 1 channel blocks out, 2x2 bits
+const int iprec = 2;                                // Input data precision
+const int wprec = 2;                                // Weight precision
+const int oprec = 2;                                // Output precision
+const int W = 32;                                   // Input width
+const int H = 32;                                   // Input height
+const int Ci = 64;                                  // Input channels
+const int Fw = 3;                                   // Filter kernel width
+const int Fh = 3;                                   // Filter kernel height
+const int Co = 64;                                  // Number of filter set blocks (i.e. number of output channel blocks)
+const int Sw = 1;                                   // Filter horizontal (width) stride
+const int Pl = 0;                                   // Zero-padding in on the left in the width dimension
+const int Pr = 0;                                   // Zero-padding in on the right in the width dimension
+const int Pt = 0;                                   // Zero-padding in on the top in the height dimension
+const int Pb = 0;                                   // Zero-padding in on the bottom in the height dimension
+
 // Tensors
+const int C = Ci/64;
+const int Fc = Co/64;
 int i_t[H][W][C][iprec];                            // Input tensor
 int w_t[Fc][Fh][Fw][C][wprec];                      // Filter weight tensor
 int *i_tptr = (int*)i_t;                            // Input address pointer
@@ -485,6 +503,11 @@ void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
 
 int main()
 {
+    if (Ci % 64 != 0)
+        printf("WARNING: number of input channels Ci=%d is not a even multiple of 64!", Ci);
+    if (Co % 64 != 0)
+        printf("WARNING: number of input channels Co=%d is not a even multiple of 64!", Co);
+
     w_tptr += woffset;
 
     // Initialize input tensor
