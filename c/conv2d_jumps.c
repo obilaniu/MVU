@@ -1,10 +1,23 @@
 #include <stdio.h>
+#include <unistd.h>
 
 //
 // General parameters
 //
 #define NJUMPS 5
 const int m = 10;                                   // Spacing between dimension blocks in generated tensors
+
+
+// Prints out help on use of the command line
+void printHelp()
+{
+	printf("Usage:\n");
+	printf("  conv2d_jumps [-p] [-h]\n");
+	printf("Options:\n");
+	printf("  -p           Print out only the job parameters; do no simulate.\n");
+	printf("  -h           Print help (this message)\n");
+	return;
+}
 
 
 //
@@ -97,11 +110,11 @@ const int Pt = 1;                                   // Zero-padding in on the to
 const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
 */
 
-// Case 5: 3x3 conv, 32x32 feature map, 1 channel blocks in, 1 channel blocks out, 2x2 bits
+// Case 5: 3x3 conv, 32x32 feature map, 1 channel blocks in, 1 channel blocks out, 2x2 bits, with left/right padding of 1
 const int iprec = 2;                                // Input data precision
-const int wprec = 2;                                // Weight precision
+const int wprec = 4;                                // Weight precision
 const int oprec = 2;                                // Output precision
-const int W = 32;                                   // Input width
+const int W = 32+2;                                 // Input width (with padding of 1)
 const int H = 32;                                   // Input height
 const int Ci = 64;                                  // Input channels
 const int Fw = 3;                                   // Filter kernel width
@@ -501,8 +514,25 @@ void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
 */
 
 
-int main()
-{
+int main(int argc, char *argv[])
+{   
+    int param_only = 0;
+    int option;
+
+    // Get command line options
+    while((option = getopt(argc, argv, "ph")) != -1)
+    {
+        switch(option)
+        {
+            case 'p':
+                param_only = 1;
+                break;
+            case 'h':
+                printHelp();
+                break;
+        }
+    }
+
     if (Ci % 64 != 0)
         printf("WARNING: number of input channels Ci=%d is not a even multiple of 64!", Ci);
     if (Co % 64 != 0)
@@ -583,6 +613,11 @@ int main()
     printf("bjump[4]  =%10d, bjump[3]  =%10d, bjump[2]  =%10d, bjump[1]  =%10d, bjump[0]  =%10d\n", bjump[4], bjump[3], bjump[2], bjump[1], bjump[0]);
     printf("ioffset=%d, woffset=%d, countdown=%d\n", ioffset, woffset, countdown);
     printf("\n");
+
+
+    // If the -p flag is set, end here
+    if (param_only)
+        return 0;
 
     // Do the operation
     int w_whichjump = 0;
