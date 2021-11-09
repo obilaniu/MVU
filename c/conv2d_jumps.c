@@ -112,7 +112,7 @@ const int Pb = 1;                                   // Zero-padding in on the bo
 
 // Case 5: 3x3 conv, 32x32 feature map, 1 channel blocks in, 1 channel blocks out, 2x2 bits, with left/right padding of 1
 const int iprec = 2;                                // Input data precision
-const int wprec = 4;                                // Weight precision
+const int wprec = 2;                                // Weight precision
 const int oprec = 2;                                // Output precision
 const int W = 32+2;                                 // Input width (with padding of 1)
 const int H = 32;                                   // Input height
@@ -600,6 +600,12 @@ int main(int argc, char *argv[])
     setConv2dlineValid();                           // Inner
     //setConv2dlineEdgePadding(1, 0, 0, 1);           // Lower-left corner
     assignInternalParams();
+
+    // Print out input parameters
+    printf("iprec = %d, wprec = %d, oprec = %d\n", iprec, wprec, oprec);
+    printf("W = %d, H = %d, Ci = %d, Fw = %d, Fh = %d, Co = %d\n", W, H, Ci, Fw, Fh, Co);
+    printf("Sw = %d, Pl = %d, Pr = %d, Pt = %d, Pb = %d\n\n", Sw, Pl, Pr, Pt, Pb);
+
 
     // Print out the computed parameters
     printf("==Computed Parameters==\n");
