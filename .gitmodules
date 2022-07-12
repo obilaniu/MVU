@@ -1,0 +1,6 @@
+[submodule "deps/apb"]
+	path = deps/apb
+	url = https://github.com/pulp-platform/apb.git
+[submodule "deps/common_cells"]
+	path = deps/common_cells
+	url = https://github.com/pulp-platform/common_cells.git

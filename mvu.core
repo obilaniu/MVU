@@ -6,10 +6,22 @@ filesets:
     rtl:
         file_type: verilogSource
         files:
+            - deps/common_cells/src/cf_math_pkg.sv:
+                file_type: systemVerilogSource
+            - deps/apb/include/apb/assign.svh:
+                is_include_file: True
+            - deps/apb/include/apb/typedef.svh:
+                is_include_file: True
+            - deps/apb/src/apb_test.sv:
+                file_type: systemVerilogSource
+            - deps/apb/src/apb_pkg.sv:
+                file_type: systemVerilogSource
+            - deps/apb/src/apb_intf.sv:
+                file_type: systemVerilogSource
             - verification/lib/mvu/mvu_pkg.sv:
                 file_type: systemVerilogSource
-            - verification/lib/mvu/mvu_inf.svh:
-                is_include_file: true
+            - verification/lib/mvu/mvu_intf.sv:
+                file_type: systemVerilogSource
             - verilog/bram64k.v
             - verilog/bank64k.v
             - verilog/bram2m.v
@@ -39,13 +51,15 @@ filesets:
                 file_type: systemVerilogSource
             - verilog/mvutop.sv:
                 file_type: systemVerilogSource
+            - verilog/mvutop_wrapper.sv:
+                file_type: systemVerilogSource
     synth:
         file_type: verilogSource
         files:
             - verification/lib/mvu/mvu_pkg.sv:
                 file_type: systemVerilogSource
-            - verification/lib/mvu/mvu_inf.svh:
-                is_include_file: true
+            - verification/lib/mvu/mvu_intf.sv:
+                file_type: systemVerilogSource
             - verilog/bram64k.v
             - verilog/bank64k.v
             - verilog/bram2m.v
@@ -89,11 +103,7 @@ filesets:
             - verification/lib/utils/utils.sv
             - verification/lib/testbench/testbench_config.sv
             - verification/lib/testbench/testbench_base.sv
-            - verification/tests/tb_base/base_tester.sv:
-                is_include_file: true
             - verification/tests/gemv/gemv_tester.sv:
-                is_include_file: true
-            - verification/tests/scalar_bias/scalar_bias_tester.sv:
                 is_include_file: true
             - ip/build/xilinx/bram64k_64x1024_xilinx/simulation/blk_mem_gen_v8_4.v:
                 file_type: verilogSource
@@ -103,14 +113,7 @@ filesets:
                 file_type: verilogSource
             - ip/build/xilinx/bram2m_xilinx/sim/bram2m_xilinx.v:
                 file_type: verilogSource
-            - verification/tests/highprecision/highprecision_tester.sv:
-                is_include_file: true
             - verification/lib/testbench/testbench_top.sv
-    tb_highprec:
-        file_type: systemVerilogSource
-        files:
-            - verification/tests/highprecision/highprecision_tester.sv:
-                is_include_file: true
 targets:
     default: &default
         filesets:
