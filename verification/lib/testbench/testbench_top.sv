@@ -2,6 +2,8 @@
 
 `ifdef TB_GEMV
     `include "gemv_tester.sv"
+`elsif TB_GEMV_RELU
+    `include "gemv_tester_w_relu.sv"
 `elsif TB_SCALARBIAS
     `include "scalar_bias_tester.sv"
 `else
@@ -23,6 +25,8 @@ module testbench_top import utils::*;import testbench_pkg::*; ();
     // Select which testbench to run
 `ifdef TB_GEMV 
     gemv_tester tb;
+`elsif TB_GEMV_RELU
+    gemv_tester_w_relu tb;
 `elsif TB_SCALARBIAS
     scalar_bias_tester tb;
 `else
