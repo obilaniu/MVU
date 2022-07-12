@@ -2,12 +2,12 @@
 
 `ifdef TB_GEMV
     `include "gemv_tester.sv"
-// `elsif TB_SCALARBIAS
-//     `include "scalar_bias_tester.sv"
-// `elsif TB_HIGHPREC
-//     `include "highprecision_tester.sv"
-// `else
-//     `include "base_tester.sv"
+`elsif TB_GEMV_RELU
+    `include "gemv_tester_w_relu.sv"
+`elsif TB_SCALARBIAS
+    `include "scalar_bias_tester.sv"
+`else
+    `include "base_tester.sv"
 `endif
 
 `include "assign.svh"
@@ -36,12 +36,12 @@ module testbench_top import utils::*;import testbench_pkg::*; ();
     // Select which testbench to run
 `ifdef TB_GEMV 
     gemv_tester tb;
-// `elsif TB_SCALARBIAS
-//     scalar_bias_tester tb;
-// `elsif TB_HIGHPREC
-//     highprecision_tester tb;
-// `else
-//     base_tester tb;
+`elsif TB_GEMV_RELU
+    gemv_tester_w_relu tb;
+`elsif TB_SCALARBIAS
+    scalar_bias_tester tb;
+`else
+    base_tester tb;
 `endif
 
     initial begin
