@@ -21,53 +21,42 @@ always_comb begin
         unique case (mvu_pkg::mvu_csr_t'(register_adr[11:0]))
             CSR_MVUWBASEPTR : mvu_cfg_if.wbaseaddr[mvu_id] = apb.pwdata[BBWADDR-1 : 0];
             CSR_MVUIBASEPTR : mvu_cfg_if.ibaseaddr[mvu_id] = apb.pwdata[BBDADDR-1 : 0];
-            CSR_MVUSBASEPTR : mvu_cfg_if.sbaseaddr[mvu_id] = apb.pwdata[BJUMP-1 : 0];
+            CSR_MVUSBASEPTR : mvu_cfg_if.sbaseaddr[mvu_id] = apb.pwdata[BSBANKA-1 : 0];
             CSR_MVUBBASEPTR : mvu_cfg_if.bbaseaddr[mvu_id] = apb.pwdata[BBBANKA-1 : 0];
             CSR_MVUOBASEPTR : mvu_cfg_if.obaseaddr[mvu_id] = apb.pwdata[BBDADDR-1 : 0];
-
             CSR_MVUWJUMP_0  : mvu_cfg_if.wjump[mvu_id][0]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUWJUMP_1  : mvu_cfg_if.wjump[mvu_id][1]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUWJUMP_2  : mvu_cfg_if.wjump[mvu_id][2]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUWJUMP_3  : mvu_cfg_if.wjump[mvu_id][3]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUWJUMP_4  : mvu_cfg_if.wjump[mvu_id][4]  = apb.pwdata[BJUMP-1 : 0];
-
             CSR_MVUIJUMP_0  : mvu_cfg_if.ijump[mvu_id][0]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUIJUMP_1  : mvu_cfg_if.ijump[mvu_id][1]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUIJUMP_2  : mvu_cfg_if.ijump[mvu_id][2]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUIJUMP_3  : mvu_cfg_if.ijump[mvu_id][3]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUIJUMP_4  : mvu_cfg_if.ijump[mvu_id][4]  = apb.pwdata[BJUMP-1 : 0];
-
             CSR_MVUSJUMP_0  : mvu_cfg_if.sjump[mvu_id][0]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUSJUMP_1  : mvu_cfg_if.sjump[mvu_id][1]  = apb.pwdata[BJUMP-1 : 0];
-
             CSR_MVUBJUMP_0  : mvu_cfg_if.bjump[mvu_id][0]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUBJUMP_1  : mvu_cfg_if.bjump[mvu_id][1]  = apb.pwdata[BJUMP-1 : 0];
-            
             CSR_MVUOJUMP_0  : mvu_cfg_if.ojump[mvu_id][0]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUOJUMP_1  : mvu_cfg_if.ojump[mvu_id][1]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUOJUMP_2  : mvu_cfg_if.ojump[mvu_id][2]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUOJUMP_3  : mvu_cfg_if.ojump[mvu_id][3]  = apb.pwdata[BJUMP-1 : 0];
             CSR_MVUOJUMP_4  : mvu_cfg_if.ojump[mvu_id][4]  = apb.pwdata[BJUMP-1 : 0];
-
             CSR_MVUWLENGTH_1: mvu_cfg_if.wlength[mvu_id][1]= apb.pwdata[BLENGTH-1 : 0];
             CSR_MVUWLENGTH_2: mvu_cfg_if.wlength[mvu_id][2]= apb.pwdata[BLENGTH-1 : 0];
             CSR_MVUWLENGTH_3: mvu_cfg_if.wlength[mvu_id][3]= apb.pwdata[BLENGTH-1 : 0];
             CSR_MVUWLENGTH_4: mvu_cfg_if.wlength[mvu_id][4]= apb.pwdata[BLENGTH-1 : 0];
-
             CSR_MVUILENGTH_1: mvu_cfg_if.ilength[mvu_id][1]= apb.pwdata[BLENGTH-1 : 0];
             CSR_MVUILENGTH_2: mvu_cfg_if.ilength[mvu_id][2]= apb.pwdata[BLENGTH-1 : 0];
             CSR_MVUILENGTH_3: mvu_cfg_if.ilength[mvu_id][3]= apb.pwdata[BLENGTH-1 : 0];
             CSR_MVUILENGTH_4: mvu_cfg_if.ilength[mvu_id][4]= apb.pwdata[BLENGTH-1 : 0];
-
             CSR_MVUSLENGTH_1: mvu_cfg_if.slength[mvu_id][1]= apb.pwdata[BLENGTH-1 : 0];
-
             CSR_MVUBLENGTH_1: mvu_cfg_if.blength[mvu_id][1]= apb.pwdata[BLENGTH-1 : 0];
-
             CSR_MVUOLENGTH_1: mvu_cfg_if.olength[mvu_id][1]= apb.pwdata[BLENGTH-1 : 0];
             CSR_MVUOLENGTH_2: mvu_cfg_if.olength[mvu_id][2]= apb.pwdata[BLENGTH-1 : 0];
             CSR_MVUOLENGTH_3: mvu_cfg_if.olength[mvu_id][3]= apb.pwdata[BLENGTH-1 : 0];
             CSR_MVUOLENGTH_4: mvu_cfg_if.olength[mvu_id][4]= apb.pwdata[BLENGTH-1 : 0];
-
             CSR_MVUPRECISION: begin
                 mvu_cfg_if.wprecision[mvu_id] = apb.pwdata[BPREC-1 : 0];
                 mvu_cfg_if.iprecision[mvu_id] = apb.pwdata[2*BPREC-1 : BPREC];
@@ -106,12 +95,10 @@ always_comb begin
             CSR_MVUHPJUMP_2        : mvu_cfg_if.hpjump[mvu_id][2] = apb.pwdata[BJUMP-1:0];
             CSR_MVUHPJUMP_3        : mvu_cfg_if.hpjump[mvu_id][3] = apb.pwdata[BJUMP-1:0];
             CSR_MVUHPJUMP_4        : mvu_cfg_if.hpjump[mvu_id][4] = apb.pwdata[BJUMP-1:0];
-
             CSR_MVUHPLENGTH_1      : mvu_cfg_if.hplength[mvu_id][1] = apb.pwdata[BJUMP-1:0];
             CSR_MVUHPLENGTH_2      : mvu_cfg_if.hplength[mvu_id][2] = apb.pwdata[BJUMP-1:0];
             CSR_MVUHPLENGTH_3      : mvu_cfg_if.hplength[mvu_id][3] = apb.pwdata[BJUMP-1:0];
             CSR_MVUHPLENGTH_4      : mvu_cfg_if.hplength[mvu_id][4] = apb.pwdata[BJUMP-1:0];
-
             CSR_MVUUSESCALER_MEM   : mvu_cfg_if.usescaler_mem[mvu_id] = apb.pwdata[0];
             CSR_MVUUSEBIAS_MEM     : mvu_cfg_if.usebias_mem[mvu_id] = apb.pwdata[0];
             CSR_MVUUSEPOOLER4HPOUT : mvu_cfg_if.usepooler4hpout[mvu_id] = apb.pwdata[0];

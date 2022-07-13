@@ -173,121 +173,236 @@ class mvu_testbench_base extends BaseObj;
 
 
 // Executes a GMEV
-    // task automatic runGEMV(
-    //     int mvu,            // MVU number to execute on
-    //     int iprec,
-    //     int wprec,
-    //     int oprec,
-    //     int omsb,
-    //     int iaddr,
-    //     int waddr,
-    //     byte omvu,          // output mvus
-    //     int obank,
-    //     int oaddr,
-    //     int m_w,            // Matrix width / vector length
-    //     int m_h,            // Matrix height
-    //     int saddr = 0,
-    //     int baddr = 0,
-    //     logic isign = 0,    // True if input data are signed
-    //     logic wsign = 0,    // True if weights are signed
-    //     int scaler = 1,
-    //     logic usescalarmem = 0,
-    //     logic usebiasmem = 0
-    // );
+    task automatic runGEMV(
+        int mvu,            // MVU number to execute on
+        int iprec,
+        int wprec,
+        int oprec,
+        int omsb,
+        int iaddr,
+        int waddr,
+        byte omvu,          // output mvus
+        int obank,
+        int oaddr,
+        int m_w,            // Matrix width / vector length
+        int m_h,            // Matrix height
+        int saddr = 0,
+        int baddr = 0,
+        logic isign = 0,    // True if input data are signed
+        logic wsign = 0,    // True if weights are signed
+        int scaler = 1,
+        logic usescalarmem = 0,
+        logic usebiasmem = 0
+    );  
+        logic [BDBANKABS-1 : 0]     obank_sel = obank;
+        logic [BDBANKAWS-1 : 0]     oword_sel = oaddr;
 
-    //     logic [BDBANKABS-1 : 0]     obank_sel = obank;
-    //     logic [BDBANKAWS-1 : 0]     oword_sel = oaddr;
+        int countdown_val = m_w * m_h * iprec * wprec;
+        int pipeline_latency = 9;
+        int buffer_cycles = 10;
+        int cyclecount = countdown_val + pipeline_latency + oprec + buffer_cycles;
 
-    //     int countdown_val = m_w * m_h * iprec * wprec;
-    //     int pipeline_latency = 9;
-    //     int buffer_cycles = 10;
-    //     int cyclecount = countdown_val + pipeline_latency + oprec + buffer_cycles;
+        apb_strb = apb_strb_t'(4'hF);
 
-    //     // Check that the MVU number is okay
-    //     checkmvu(mvu);
+        // Check that the MVU number is okay
+        checkmvu(mvu);
 
-    //     // Configure paramters on the port of the DUT
-    //     intf.wprecision[mvu*BPREC +: BPREC] = wprec;
-    //     intf.iprecision[mvu*BPREC +: BPREC] = iprec;
-    //     intf.oprecision[mvu*BPREC +: BPREC] = oprec;
-    //     intf.quant_msbidx[mvu*BQMSBIDX +: BQMSBIDX] = omsb;
-    //     intf.wbaseaddr[mvu*BWBANKA +: BWBANKA] = waddr;
-    //     intf.ibaseaddr[mvu*BDBANKA +: BDBANKA] = iaddr;
-    //     intf.sbaseaddr[mvu*BSBANKA +: BSBANKA] = saddr;
-    //     intf.bbaseaddr[mvu*BBBANKA +: BBBANKA] = baddr;
-    //     intf.obaseaddr[mvu*BDBANKA +: BDBANKA] = {obank_sel, oword_sel};
-    //     intf.omvusel[mvu*NMVU +: NMVU]         = omvu;                   // Set the output MVUs
-    //     intf.wjump[mvu][0] = wprec;                        // move 1 tile ahead to next tile row
-    //     intf.wjump[mvu][1] = -wprec*(m_w-1);               // Move back to tile 0 of current tile row
-    //     intf.wjump[mvu][2] = wprec;                        // Move ahead one tile
-    //     intf.wjump[mvu][3] = 0;                            // Don't need this for GEMV
-    //     intf.wjump[mvu][4] = 0;                            // Don't need this for GEMV
-    //     intf.ijump[mvu][0] = -iprec*(m_w-1);               // Move back to beginning vector 
-    //     intf.ijump[mvu][1] = iprec;                        // Move ahead one tile
-    //     intf.ijump[mvu][2] = 0;                            // Don't need this for GEMV
-    //     intf.ijump[mvu][3] = 0;                            // Don't need this for GEMV
-    //     intf.ijump[mvu][4] = 0;                            // Don't need this for GEMV
-    //     intf.ojump[mvu][0] = 0;                            // Don't need this for GEMV
-    //     intf.ojump[mvu][1] = 0;                            // Don't need this for GEMV
-    //     intf.ojump[mvu][2] = 0;                            // Don't need this for GEMV
-    //     intf.ojump[mvu][3] = 0;                            // Don't need this for GEMV
-    //     intf.ojump[mvu][4] = 0;                            // Don't need this for GEMV
-    //     intf.wlength[mvu][1] = wprec*iprec-1;              // number bit combinations minus 1
-    //     intf.wlength[mvu][2] = m_w-1;                      // Number tiles in width minus 1
-    //     intf.wlength[mvu][3] = 0;                          // Don't need this for GEMV
-    //     intf.wlength[mvu][4] = 0;                          // Don't need this for GEMV
-    //     intf.ilength[mvu][1] = m_h-1;                      // Number tiles in height minus 1
-    //     intf.ilength[mvu][2] = 0;                          // Don't need this for GEMV
-    //     intf.ilength[mvu][3] = 0;                          // Don't need this for GEMV
-    //     intf.ilength[mvu][4] = 0;                          // Don't need this for GEMV
-    //     intf.olength[mvu][1] = 1;                          // Write out sequentially
-    //     intf.olength[mvu][2] = 0;                          // Don't need this for GEMV
-    //     intf.olength[mvu][3] = 0;                          // Don't need this for GEMV
-    //     intf.olength[mvu][4] = 0;                          // Don't need this for GEMV
-    //     intf.d_signed[mvu] = isign;
-    //     intf.w_signed[mvu] = wsign;
-    //     intf.scaler1_b[mvu] = scaler;
-    //     intf.shacc_load_sel[mvu] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
-    //     intf.zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
-    //     intf.countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
+        // Configure paramters on the port of the DUT
 
-    //     // Scaler and bias memory parameters
-    //     if (usescalarmem) begin
-    //         intf.usescaler_mem[mvu] = 1;
-    //         intf.sjump[mvu][0] = 1;
-    //         intf.sjump[mvu][1] = 0;
-    //         intf.sjump[mvu][2] = 0;
-    //         intf.sjump[mvu][3] = 0;
-    //         intf.sjump[mvu][4] = 0;
-    //         intf.slength[mvu][1] = 0;
-    //         intf.slength[mvu][2] = 0;
-    //         intf.slength[mvu][3] = 0;
-    //         intf.slength[mvu][4] = 0;
-    //     end else begin
-    //         intf.usescaler_mem[mvu] = 0;
-    //     end
-    //     if (usebiasmem) begin
-    //         intf.usebias_mem[mvu] = 1;
-    //         intf.bjump[mvu][0] = 1;
-    //         intf.bjump[mvu][1] = 0;
-    //         intf.bjump[mvu][2] = 0;
-    //         intf.bjump[mvu][3] = 0;
-    //         intf.bjump[mvu][4] = 0;
-    //         intf.blength[mvu][1] = 0;
-    //         intf.blength[mvu][2] = 0;
-    //         intf.blength[mvu][3] = 0;
-    //         intf.blength[mvu][4] = 0;
-    //     end else begin
-    //         intf.usebias_mem[mvu] = 0;
-    //     end
+        apb_data = apb_data_t'({6'b0, isign, wsign, 6'b0, BPREC'(oprec),BPREC'(iprec),BPREC'(wprec)});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUPRECISION});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
 
-    //     // Run the GEMV
-    //     intf.start[mvu] = 1'b1;
-    //     @(posedge intf.clk)
-    //     intf.start[mvu] = 1'b0;
-    //     for(int i=0; i<cyclecount; i++) @(posedge intf.clk);
+        apb_data = apb_data_t'({BQMSBIDX'(omsb), 5'b0});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUQUANT});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
 
-    // endtask
+        apb_data = apb_data_t'(BWBANKA'(waddr));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUWBASEPTR});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(BDBANKA'(iaddr));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUIBASEPTR});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(BSBANKA'(saddr));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSBASEPTR});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(BBBANKA'(baddr));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUBBASEPTR});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'({BDBANKA'({obank_sel, oword_sel})});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOBASEPTR});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'({NMVU'(omvu)});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOMVUSEL});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'({BJUMP'(wprec)});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUWJUMP_0});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'({BJUMP'(-wprec*(m_w-1))});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUWJUMP_1});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'({BJUMP'(wprec)});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUWJUMP_2});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+        
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUWJUMP_3});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+        
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUWJUMP_4});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'({BJUMP'(-iprec*(m_w-1))});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUIJUMP_0});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'({BJUMP'(iprec)});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUIJUMP_1});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUIJUMP_2});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+        
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUIJUMP_3});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+        
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUIJUMP_4});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOJUMP_0});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOJUMP_1});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOJUMP_2});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+        
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOJUMP_3});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+        
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOJUMP_4});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+
+        apb_data = apb_data_t'(BLENGTH'(wprec*iprec-1));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUWLENGTH_1});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(BLENGTH'(m_w-1));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUWLENGTH_2});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUWLENGTH_3});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUWLENGTH_4});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+
+        apb_data = apb_data_t'(BLENGTH'(m_h-1));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUILENGTH_1});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(BLENGTH'(0));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUILENGTH_2});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUILENGTH_3});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUILENGTH_4});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+
+        apb_data = apb_data_t'(BLENGTH'(1));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOLENGTH_1});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(BLENGTH'(0));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOLENGTH_2});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOLENGTH_3});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(0);
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOLENGTH_4});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        apb_data = apb_data_t'(BSCALERB'(scaler));
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSCALER});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        
+        mvu_ext_if.shacc_load_sel[mvu] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
+        mvu_ext_if.zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
+
+        // Scaler and bias memory parameters
+        if (usescalarmem) begin
+            
+            apb_data = apb_data_t'(1'b1);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUUSESCALER_MEM});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+            intf.sjump[mvu][0] = 1;
+            intf.sjump[mvu][1] = 0;
+            intf.sjump[mvu][2] = 0;
+            intf.sjump[mvu][3] = 0;
+            intf.sjump[mvu][4] = 0;
+            intf.slength[mvu][1] = 0;
+            intf.slength[mvu][2] = 0;
+            intf.slength[mvu][3] = 0;
+            intf.slength[mvu][4] = 0;
+        end else begin
+            intf.usescaler_mem[mvu] = 0;
+        end
+        if (usebiasmem) begin
+            intf.usebias_mem[mvu] = 1;
+            intf.bjump[mvu][0] = 1;
+            intf.bjump[mvu][1] = 0;
+            intf.bjump[mvu][2] = 0;
+            intf.bjump[mvu][3] = 0;
+            intf.bjump[mvu][4] = 0;
+            intf.blength[mvu][1] = 0;
+            intf.blength[mvu][2] = 0;
+            intf.blength[mvu][3] = 0;
+            intf.blength[mvu][4] = 0;
+        end else begin
+            intf.usebias_mem[mvu] = 0;
+        end
+
+        // Run the GEMV
+        intf.countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
+        intf.start[mvu] = 1'b1;
+        
+        @(posedge intf.clk)
+        intf.start[mvu] = 1'b0;
+        for(int i=0; i<cyclecount; i++) @(posedge intf.clk);
+
+    endtask
 // =================================================================================================
 // Class based test
 // =================================================================================================
@@ -333,11 +448,11 @@ class mvu_testbench_base extends BaseObj;
         repeat (10); @(posedge mvu_ext_if.clk);
 
         // // Turn some stuff on
-        for (int i=0; i<NMVU; i++) begin
-            apb_addr = apb_addr_t'({3'(i), mvu_pkg::CSR_MVUCOMMAND});
-            apb_strb = apb_strb_t'(4'hF);
-            apb_master.write(apb_addr, apb_data_t'(1), apb_strb, apb_resp);
-        end
+        // for (int i=0; i<NMVU; i++) begin
+        //     apb_addr = apb_addr_t'({3'(i), mvu_pkg::CSR_MVUCOMMAND});
+        //     apb_strb = apb_strb_t'(4'hF);
+        //     apb_master.write(apb_addr, apb_data_t'(1), apb_strb, apb_resp);
+        // end
         
         logger.print("Setup Phase Done ...");
     endtask
