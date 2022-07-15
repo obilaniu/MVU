@@ -194,6 +194,8 @@ class mvu_testbench_base extends BaseObj;
         logic usescalarmem = 0,
         logic usebiasmem = 0
     );  
+        logic maxpool_en;
+        logic [1:0] mul_mode;
         logic [BDBANKABS-1 : 0]     obank_sel = obank;
         logic [BDBANKAWS-1 : 0]     oword_sel = oaddr;
 
@@ -213,7 +215,7 @@ class mvu_testbench_base extends BaseObj;
         apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUPRECISION});
         apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
 
-        apb_data = apb_data_t'({BQMSBIDX'(omsb), 5'b0});
+        apb_data = apb_data_t'({BQMSBIDX'(omsb)});
         apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUQUANT});
         apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
 
@@ -357,50 +359,99 @@ class mvu_testbench_base extends BaseObj;
         apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
 
         
-        mvu_ext_if.shacc_load_sel[mvu] = 5'b00001;            // Load the shift/accumulator on when weight address jump 0 happens
-        mvu_ext_if.zigzag_step_sel[mvu] = 5'b00011;           // Bump the zig-zag on weight jumps 1 and 0
+        // Load the shift/accumulator on when weight address jump 0 happens
+        // Bump the zig-zag on weight jumps 1 and 0
+        apb_data = apb_data_t'({NJUMPS'(5'b00011), NJUMPS'(5'b00001)});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUCONFIG1});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
 
-        // Scaler and bias memory parameters
+    // Scaler and bias memory parameters
         if (usescalarmem) begin
             
             apb_data = apb_data_t'(1'b1);
             apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUUSESCALER_MEM});
             apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
 
-            intf.sjump[mvu][0] = 1;
-            intf.sjump[mvu][1] = 0;
-            intf.sjump[mvu][2] = 0;
-            intf.sjump[mvu][3] = 0;
-            intf.sjump[mvu][4] = 0;
-            intf.slength[mvu][1] = 0;
-            intf.slength[mvu][2] = 0;
-            intf.slength[mvu][3] = 0;
-            intf.slength[mvu][4] = 0;
+            apb_data = apb_data_t'(1'b1);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSJUMP_0});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSJUMP_1});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSJUMP_2});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSJUMP_3});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSJUMP_4});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSLENGTH_1});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSLENGTH_2});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSLENGTH_3});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUSLENGTH_4});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
         end else begin
-            intf.usescaler_mem[mvu] = 0;
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUUSESCALER_MEM});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
         end
         if (usebiasmem) begin
-            intf.usebias_mem[mvu] = 1;
-            intf.bjump[mvu][0] = 1;
-            intf.bjump[mvu][1] = 0;
-            intf.bjump[mvu][2] = 0;
-            intf.bjump[mvu][3] = 0;
-            intf.bjump[mvu][4] = 0;
-            intf.blength[mvu][1] = 0;
-            intf.blength[mvu][2] = 0;
-            intf.blength[mvu][3] = 0;
-            intf.blength[mvu][4] = 0;
+            apb_data = apb_data_t'(1'b1);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUUSEBIAS_MEM});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+            apb_data = apb_data_t'(1'b1);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUBJUMP_0});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUBJUMP_1});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUBJUMP_2});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUBJUMP_3});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUBJUMP_4});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUBLENGTH_1});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUBLENGTH_2});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUBLENGTH_3});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUBLENGTH_4});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
         end else begin
-            intf.usebias_mem[mvu] = 0;
+            apb_data = apb_data_t'(1'b0);
+            apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUUSEBIAS_MEM});
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
         end
 
         // Run the GEMV
-        intf.countdown[mvu*BCNTDWN +: BCNTDWN] = countdown_val;
-        intf.start[mvu] = 1'b1;
-        
-        @(posedge intf.clk)
-        intf.start[mvu] = 1'b0;
-        for(int i=0; i<cyclecount; i++) @(posedge intf.clk);
+        maxpool_en = 1'b1;
+        mul_mode = 2'b00;
+        apb_data = apb_data_t'({ mul_mode, maxpool_en ,BCNTDWN'(countdown_val)});
+        apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUCOMMAND});
+        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+
+        for(int i=0; i<cyclecount; i++) @(posedge mvu_ext_if.clk);
 
     endtask
 // =================================================================================================

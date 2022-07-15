@@ -46,14 +46,6 @@
           { value: 2048            , name: "BBBANKW"       , desc: " Bitwidth of Scaler BANK word"},
   ],
   registers: [
-    { name: "CSR_MVUWBASEPTR",
-      desc: "Base address for weight memory",
-      swaccess: "rw",
-      hwaccess: "hro",
-      fields: [
-        { bits: "BBWADDR-1: 0"}
-      ]
-    },
     {name: "CSR_MVUWBASEPTR",
      desc: "Base address for weight memory",
      swaccess: "rw",
@@ -291,7 +283,7 @@
      swaccess: "rw",
      hwaccess: "hro",
      fields: [
-       { bits: "BLENGTH-1: 0"}
+       { bits: "BJUMP-1: 0"}
      ]
      },
     {name: "CSR_MVUWLENGTH_0",
@@ -319,6 +311,14 @@
      ]
      },
     {name: "CSR_MVUWLENGTH_3",
+     desc: "Weight length in loops 3",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUWLENGTH_4",
      desc: "Weight length in loops 3",
      swaccess: "rw",
      hwaccess: "hro",
@@ -366,7 +366,55 @@
        { bits: "BLENGTH-1: 0"}
      ]
      },
+    {name: "CSR_MVUSLENGTH_2",
+     desc: "Scaler tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUSLENGTH_3",
+     desc: "Scaler tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUSLENGTH_4",
+     desc: "Scaler tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
     {name: "CSR_MVUBLENGTH_1",
+     desc: "Bias tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUBLENGTH_2",
+     desc: "Bias tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUBLENGTH_3",
+     desc: "Bias tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUBLENGTH_4",
      desc: "Bias tensor length 15 bits",
      swaccess: "rw",
      hwaccess: "hro",
@@ -461,7 +509,7 @@
      hwaccess: "hro",
      fields: [
               {bits: "NJUMPS-1 : 0", name:"shacc_load_sel[", desc:"Shift/accumulator load on jump select (only 0-4 valid)"},
-              {bits: "8+NJUMPS-1 : 8", name:"zigzag_step_sel", desc:"Pool/Activation clear on jump select (only 0-4 valid)"}
+              {bits: "8+NJUMPS-1 : NJUMPS", name:"zigzag_step_sel", desc:"Pool/Activation clear on jump select (only 0-4 valid)"}
      ]
      },
     {name: "CSR_MVUOMVUSEL",
@@ -536,7 +584,7 @@
        {bits:"BJUMP-1:0", name:"hpjump", desc: "Input jumps"}
      ]
      },
-    {name: "CSR_MVUHPLENGTH",
+    {name: "CSR_MVUHPLENGTH_1",
      desc: "Scaler length",
      swaccess: "rw",
      hwaccess: "hro",
@@ -544,7 +592,7 @@
        {bits:"BJUMP", name:"hplength", desc: "Scaler length"}
      ]
      },
-    {name: "CSR_MVUHPLENGTH",
+    {name: "CSR_MVUHPLENGTH_2",
      desc: "Scaler length",
      swaccess: "rw",
      hwaccess: "hro",
@@ -552,7 +600,7 @@
        {bits:"BJUMP", name:"hplength", desc: "Scaler length"}
      ]
      },
-    {name: "CSR_MVUHPLENGTH",
+    {name: "CSR_MVUHPLENGTH_3",
      desc: "Scaler length",
      swaccess: "rw",
      hwaccess: "hro",
@@ -560,7 +608,7 @@
        {bits:"BJUMP", name:"hplength", desc: "Scaler length"}
      ]
      },
-    {name: "CSR_MVUHPLENGTH",
+    {name: "CSR_MVUHPLENGTH_4",
      desc: "Scaler length",
      swaccess: "rw",
      hwaccess: "hro",
