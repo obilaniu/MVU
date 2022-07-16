@@ -43,12 +43,12 @@ class gemv_tester extends mvu_testbench_base;
         // (i.e. [hffffffffffffffff, hffffffffffffffff, 0000000000000000, hffffffffffffffff, hffffffffffffffff, 0000000000000000, ...)
         // (i.e. d3*d3*d64*d3 = d1728 = h6c0)
         // Result output to bank 2 starting at address 0
-        // logger.print("TEST gmev 4: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=all 1's");
-        // writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0000), .size(6), .stride(1));
-        // writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h0), .size(18), .stride(1));
-        // runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(10), 
-        //         .iaddr(0), .waddr(0), .omvu(omvu), .obank(2), .oaddr(0), 
-        //         .m_w(3), .m_h(3), .scaler(scaler));
+        logger.print("TEST gmev 4: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=all 1's");
+        writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0000), .size(6), .stride(1));
+        writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h0), .size(18), .stride(1));
+        runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(10), 
+                .iaddr(0), .waddr(0), .omvu(omvu), .obank(2), .oaddr(0), 
+                .m_w(3), .m_h(3), .scaler(scaler));
 
 
         // // TEST 5
