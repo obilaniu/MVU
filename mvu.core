@@ -6,10 +6,22 @@ filesets:
     rtl:
         file_type: verilogSource
         files:
+            - deps/common_cells/src/cf_math_pkg.sv:
+                file_type: systemVerilogSource
+            - deps/apb/include/apb/assign.svh:
+                is_include_file: True
+            - deps/apb/include/apb/typedef.svh:
+                is_include_file: True
+            - deps/apb/src/apb_test.sv:
+                file_type: systemVerilogSource
+            - deps/apb/src/apb_pkg.sv:
+                file_type: systemVerilogSource
+            - deps/apb/src/apb_intf.sv:
+                file_type: systemVerilogSource
             - verification/lib/mvu/mvu_pkg.sv:
                 file_type: systemVerilogSource
-            - verification/lib/mvu/mvu_inf.svh:
-                is_include_file: true
+            - verification/lib/mvu/mvu_intf.sv:
+                file_type: systemVerilogSource
             - verilog/bram64k.v
             - verilog/bank64k.v
             - verilog/bram2m.v
@@ -35,13 +47,15 @@ filesets:
                 file_type: systemVerilogSource
             - verilog/mvutop.sv:
                 file_type: systemVerilogSource
+            - verilog/mvutop_wrapper.sv:
+                file_type: systemVerilogSource
     synth:
         file_type: verilogSource
         files:
             - verification/lib/mvu/mvu_pkg.sv:
                 file_type: systemVerilogSource
-            - verification/lib/mvu/mvu_inf.svh:
-                is_include_file: true
+            - verification/lib/mvu/mvu_intf.sv:
+                file_type: systemVerilogSource
             - verilog/bram64k.v
             - verilog/bank64k.v
             - verilog/bram2m.v
@@ -83,8 +97,6 @@ filesets:
             - verification/lib/utils/utils.sv
             - verification/lib/testbench/testbench_config.sv
             - verification/lib/testbench/testbench_base.sv
-            - verification/tests/tb_base/base_tester.sv:
-                is_include_file: true
             - verification/tests/gemv/gemv_tester.sv:
                 is_include_file: true
             - verification/tests/gemv/gemv_tester_w_relu.sv:
@@ -100,6 +112,7 @@ filesets:
                 file_type: verilogSource
             - ip/build/xilinx/bram2m_xilinx/sim/bram2m_xilinx.v:
                 file_type: verilogSource
+            - verification/lib/testbench/testbench_top.sv
 targets:
     default: &default
         filesets:
@@ -112,7 +125,7 @@ targets:
         description: Simulate the design
         tools: 
             xsim:
-                xelab_options: [--debug, typical, -L, secureip, -L, unisims_ver, -L, unimacro_ver, -L, work.glbl, -L, blk_mem_gen_v8_4_3, --timescale, 1ns/1ps]
+                xelab_options: [--debug, typical, -L, secureip, -L, unisims_ver, -L, unimacro_ver, -L, work.glbl, -L, blk_mem_gen_v8_4_3, --timescale, 1ns/1ps, --stat]
         parameters: [XILINX]
         toplevel: testbench_top
     sim-gemv:
@@ -124,15 +137,18 @@ targets:
     sim-scalarbias:
         <<: *sim
         parameters: [XILINX, TB_SCALARBIAS]
+    sim-highprec:
+        <<: *sim
+        parameters: [XILINX, TB_HIGHPREC]
     synth:
+        <<: *default
         description: Synthesize the design for an FPGA board
-        filesets:
-            - synth
+        filesets_append:
             - synth_xilinx
         default_tool: vivado
         tools:
           vivado:
-            part: xcku115-flva1517-2-e
+            part: xcvu9p-flgb2104-2-e
             pnr: none
         parameters: [XILINX]
         toplevel: [mvutop]
@@ -150,6 +166,10 @@ parameters:
         default   : 1
         paramtype : vlogdefine
     TB_SCALARBIAS:
+        datatype  : int
+        default   : 1
+        paramtype : vlogdefine
+    TB_HIGHPREC:
         datatype  : int
         default   : 1
         paramtype : vlogdefine

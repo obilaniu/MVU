@@ -1,0 +1,652 @@
+// Copyright lowRISC contributors.
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
+
+{ name: "mvu",
+  clocking: [{clock: "clk_i", reset: "rst_ni"}],
+  regwidth: "32",
+  baseaddr: "0xF20",
+  enum: [
+          { value: 8               , name: "NMVU"          , desc: "Number of MVUs. Ideally a Power-of-2"},
+          { value: 64              , name: "N"             , desc: " N x N matrix-vector product size. Power-of-2. "},
+          { value: 32              , name: "NDBANK"        , desc: " Number of N-bit, 1024-element Data BANK."},
+          { value: 32              , name: "BBIAS"         , desc: " Bitwidth of bias values "},
+          { value: 3               , name: "BMVUA"         , desc: " Bitwidth of MVU          Address "},
+          { value: 9               , name: "BWBANKA"       , desc: " Bitwidth of Weights BANK Address "},
+          { value: 4096            , name: "BWBANKW"       , desc: " Bitwidth of Weights BANK Word"},
+          { value: 15              , name: "BDBANKA"       , desc: " Bitwidth of Data    BANK Address "},
+          { value: 8               , name: "BDBANKW"       , desc: " Bitwidth of Data    BANK Word "},
+          { value: 27              , name: "BACC"          , desc: " Bitwidth of Accumulators "},
+          { value: 27              , name: "BSCALERP"      , desc: " Bitwidth of the scaler output"},
+          { value: 32              , name: "BDHPBANKW"     , desc: " Bitwidth of high-precision data bank word"},
+          { value: 256             , name: "BDHPBUSW"      , desc: " Bitwidth of high-precision data word bus"},
+          { value: 12              , name: "BDHPBANKA"     , desc: " Bitwidth of high-precision data bank address"},
+          { value: 5               , name: "BQMSBIDX"      , desc: " Bitwidth of the quantizer MSB location specifier"},
+          { value: 5               , name: "BQBOUT"        , desc: " Bitwidth of the quantizer "},
+          { value: 5               , name: "QBWOUTBD"      , desc: " Bitwidth of the quantizer bit-depth out specifier"},
+          { value: 29              , name: "BCNTDWN"       , desc: " Bitwidth of the countdown ports"},
+          { value: 6               , name: "BPREC"         , desc: " Bitwidth of the precision ports"},
+          { value: 9               , name: "BBWADDR"       , desc: " Bitwidth of the weight base address ports"},
+          { value: 15              , name: "BBDADDR"       , desc: " Bitwidth of the data base address ports"},
+          { value: 15              , name: "BJUMP"         , desc: " Bitwidth of the stride ports"},
+          { value: 15              , name: "BLENGTH"       , desc: " Bitwidth of the length ports"},
+          { value: 16              , name: "BSCALERB"      , desc: " Bitwidth of the scaler parameter"},
+          { value: 3               , name: "VVPSTAGES"     , desc: " Number of stages in the VVP pipeline"},
+          { value: 3               , name: "SCALERLATENCY" , desc: " Number of stages in the scaler pipeline"},
+          { value: 1               , name: "HPADDERLATENCY", desc: " Latency of fixed point adder module"},
+          { value: 1               , name: "MAXPOOLSTAGES" , desc: " Number of max pool pipeline stages"},
+          { value: 2               , name: "MEMRDLATENCY"  , desc: " Memory read latency"},
+          { value: 5               , name: "NJUMPS"        , desc: " Number of address jump parameters available"},
+          { value: 5               , name: "BDBANKABS"     , desc: " Bitwidth of Data    BANK Address Bank Select "},
+          { value: 10              , name: "BDBANKAWS"     , desc: " Bitwidth of Data    BANK Address Word Select"},
+          { value: 6               , name: "BSBANKA"       , desc: " Bitwidth of Scaler BANK address"},
+          { value: 1024            , name: "BSBANKW"       , desc: " Bitwidth of Scaler BANK word"},
+          { value: 6               , name: "BBBANKA"       , desc: " Bitwidth of Scaler BANK address"},
+          { value: 2048            , name: "BBBANKW"       , desc: " Bitwidth of Scaler BANK word"},
+  ],
+  registers: [
+    {name: "CSR_MVUWBASEPTR",
+     desc: "Base address for weight memory",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BBDADDR-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUIBASEPTR",
+     desc: "Base address for input memory",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BSBANKA-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUSBASEPTR",
+     desc: "Base address for scaler memory (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BBBANKA-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUBBASEPTR",
+     desc: "Base address for bias memory (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BBDADDR-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUOBASEPTR",
+     desc: "Output base address",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUWJUMP_0",
+     desc: "Weight address jumps in loops 0",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUWJUMP_1",
+     desc: "Weight address jumps in loops 1",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUWJUMP_2",
+     desc: "Weight address jumps in loops 2",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUWJUMP_3",
+     desc: "Weight address jumps in loops 3",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUWJUMP_4",
+     desc: "Weight address jumps in loops 4",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUIJUMP_0",
+     desc: "Input data address jumps in loops 0",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUIJUMP_1",
+     desc: "Input data address jumps in loops 1",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUIJUMP_2",
+     desc: "Input data address jumps in loops 2",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUIJUMP_3",
+     desc: "Input data address jumps in loops 3",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUIJUMP_4",
+     desc: "Input data address jumps in loops 4",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUSJUMP_0",
+     desc: "Scaler memory address jumps (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUSJUMP_1",
+     desc: "Scaler memory address jumps (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUSJUMP_2",
+     desc: "Scaler memory address jumps (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUSJUMP_3",
+     desc: "Scaler memory address jumps (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUSJUMP_4",
+     desc: "Scaler memory address jumps (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUBJUMP_0",
+     desc: "Bias memory address jumps (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUBJUMP_1",
+     desc: "Bias memory address jumps (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUBJUMP_2",
+     desc: "Bias memory address jumps (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUBJUMP_3",
+     desc: "Bias memory address jumps (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUBJUMP_4",
+     desc: "Bias memory address jumps (6 bits)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUOJUMP_0",
+     desc: "Output data address jumps in loops 0",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUOJUMP_1",
+     desc: "Output data address jumps in loops 1",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUOJUMP_2",
+     desc: "Output data address jumps in loops 2",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUOJUMP_3",
+     desc: "Output data address jumps in loops 3",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1 : 0"}
+     ]
+     },
+    {name: "CSR_MVUOJUMP_4",
+     desc: "Output data address jumps in loops 4",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BJUMP-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUWLENGTH_0",
+     desc: "Weight length in loops 0",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUWLENGTH_1",
+     desc: "Weight length in loops 1",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUWLENGTH_2",
+     desc: "Weight length in loops 2",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUWLENGTH_3",
+     desc: "Weight length in loops 3",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUWLENGTH_4",
+     desc: "Weight length in loops 3",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUILENGTH_1",
+     desc: "Input data length in loops 0",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUILENGTH_2",
+     desc: "Input data length in loops 1",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUILENGTH_3",
+     desc: "Input data length in loops 2",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUILENGTH_4",
+     desc: "Input data length in loops 3",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUSLENGTH_1",
+     desc: "Scaler tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUSLENGTH_2",
+     desc: "Scaler tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUSLENGTH_3",
+     desc: "Scaler tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUSLENGTH_4",
+     desc: "Scaler tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUBLENGTH_1",
+     desc: "Bias tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUBLENGTH_2",
+     desc: "Bias tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUBLENGTH_3",
+     desc: "Bias tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUBLENGTH_4",
+     desc: "Bias tensor length 15 bits",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUOLENGTH_1",
+     desc: "Output data length in loops 0",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUOLENGTH_2",
+     desc: "Output data length in loops 1",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUOLENGTH_3",
+     desc: "Output data length in loops 2",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "BLENGTH-1: 0"}
+     ]
+     },
+    {name: "CSR_MVUOLENGTH_4",
+     desc: "Output data length in loops 3",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "7:0"}
+     ]
+     },
+    {name: "CSR_MVUPRECISION",
+     desc: "Precision in bits for all tensors",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+              {bits:"BPREC-1 : 0", name:"wprecision" , desc: "Weight precision"},
+              {bits:"2*BPREC-1 : BPREC", name:"iprecision" , desc: "Input precision"},
+              {bits:"3*BPREC-1 : 2*BPREC", name:"oprecision" , desc: "Output precision"},
+              {bits:"24", name:"w_signed" , desc: "Weight sign"},
+              {bits:"25", name:"d_signed" , desc: "Data sign"},
+     ]
+     },
+    {name: "CSR_MVUSTATUS",
+     desc: "Status of MVU",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       { bits: "0", name: "busy", desc: "MVU busy status"},
+       { bits: "1", name: "done", desc: "MVU done signal"},
+     ]
+     },
+    {name: "CSR_MVUCOMMAND",
+     desc: "Kick to send command.",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+              {bits: "BCNTDWN-1 : 0", name: "countdown", desc: "Clock cycle countdown"},
+              {bits: "29", name: "max_en", desc: "MaxPool enable"},
+              {bits: "31:30", name: "mul_mode", desc: "MulMode (00:{0,0} 01:{0,+1} 10:{-1,+1} 11:{0, -1})"},
+     ]
+     },
+    {name: "CSR_MVUQUANT",
+     desc: "MSB index position",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+              {bits: "BQMSBIDX-1:0", name: "quant_msbidx", desc: "MSB index position"},
+     ]
+     },
+    {name: "CSR_MVUSCALER ",
+     desc: "fixed point operand for multiplicative scaling",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+              {bits: "BSCALERB-1 : 0", name: "scaler1_b", desc:"fixed point operand for multiplicative scaling"},
+              {bits: "2*BSCALERB-1 : BSCALERB", name: "scaler2_b", desc:"fixed point operand for multiplicative scaling"},
+
+     ]
+     },
+    {name: "CSR_MVUCONFIG1",
+     desc: "Shift/accumulator load on jump select (only 0-4 valid) Pool/Activation clear on jump select (only 0-4 valid)",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+              {bits: "NJUMPS-1 : 0", name:"shacc_load_sel[", desc:"Shift/accumulator load on jump select (only 0-4 valid)"},
+              {bits: "8+NJUMPS-1 : NJUMPS", name:"zigzag_step_sel", desc:"Pool/Activation clear on jump select (only 0-4 valid)"}
+     ]
+     },
+    {name: "CSR_MVUOMVUSEL",
+     desc: "MVU selector bits for output",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"0", name:"omvusel", desc: "MVU selector bits for output"}
+     ]
+     },
+    {name: "CSR_MVUIHPBASEADDR",
+     desc: "high-precision data memory base address for input",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"0", name:"ihpbaseaddr", desc: "high-precision data memory base address for input"}
+     ]
+     },
+    {name: "CSR_MVUOHPBASEADDR",
+     desc: "high-precision data memory base address for output",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"BBDADDR-1:0", name:"ohpbaseaddr", desc: "high-precision data memory base address for output"}
+     ]
+     },
+    {name: "CSR_MVUOHPMVUSEL",
+     desc: "MVU selector bits for high-precision output",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"0", name:"ohpmvusel", desc: "MVU selector bits for high-precision output"}
+     ]
+     },
+    {name: "CSR_MVUHPJUMP_0",
+     desc: "Input jumps",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"BJUMP-1:0", name:"hpjump", desc: "Input jumps"}
+     ]
+     },
+    {name: "CSR_MVUHPJUMP_1",
+     desc: "Input jumps",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"BJUMP-1:0", name:"hpjump", desc: "Input jumps"}
+     ]
+     },
+    {name: "CSR_MVUHPJUMP_2",
+     desc: "Input jumps",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"BJUMP-1:0", name:"hpjump", desc: "Input jumps"}
+     ]
+     },
+    {name: "CSR_MVUHPJUMP_3",
+     desc: "Input jumps",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"BJUMP-1:0", name:"hpjump", desc: "Input jumps"}
+     ]
+     },
+    {name: "CSR_MVUHPJUMP_4",
+     desc: "Input jumps",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"BJUMP-1:0", name:"hpjump", desc: "Input jumps"}
+     ]
+     },
+    {name: "CSR_MVUHPLENGTH_1",
+     desc: "Scaler length",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"BJUMP", name:"hplength", desc: "Scaler length"}
+     ]
+     },
+    {name: "CSR_MVUHPLENGTH_2",
+     desc: "Scaler length",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"BJUMP", name:"hplength", desc: "Scaler length"}
+     ]
+     },
+    {name: "CSR_MVUHPLENGTH_3",
+     desc: "Scaler length",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"BJUMP", name:"hplength", desc: "Scaler length"}
+     ]
+     },
+    {name: "CSR_MVUHPLENGTH_4",
+     desc: "Scaler length",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"BJUMP", name:"hplength", desc: "Scaler length"}
+     ]
+     },
+    {name: "CSR_MVUUSESCALER_MEM",
+     desc: "Use scalar mem if 1; otherwise use the scaler_b input for scaling",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"0", name:"usescaler_mem", desc: "Use scalar mem if 1; otherwise use the scaler_b input for scaling"}
+     ]
+     },
+    {name: "CSR_MVUUSEBIAS_MEM",
+     desc: "Use the bias memory if 1; if not, not bias is added in the scaler",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"0", name:"usebias_mem", desc: "Use the bias memory if 1; if not, not bias is added in the scaler"}
+     ]
+     },
+    {name: "CSR_MVUUSEPOOLER4HPOUT",
+     desc: "For the high-precision interconnect, use the output of pooler if 1, or use output of scaler1 if 0",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"0", name:"usepooler4hpout", desc: "For the high-precision interconnect, use the output of pooler if 1, or use output of scaler1 if 0"}
+     ]
+     },
+    {name: "CSR_MVUUSEHPADDER",
+     desc:"Use the hpadder if 1",
+     swaccess: "rw",
+     hwaccess: "hro",
+     fields: [
+       {bits:"0", name:"usehpadder", desc: "Use the hpadder if 1"}
+     ]
+     }
+  ]
+}

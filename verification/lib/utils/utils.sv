@@ -148,4 +148,15 @@ function void print_matrix_from_array(inout integer array, integer row_len, inte
     end
 endfunction : print_matrix_from_array
 
+//==================================================================================================
+// Formats an array into a string. Useful for printing arrays 
+function string array2str(int array[]);
+    automatic string str ="[";
+    foreach (array[i]) begin
+        str = $sformatf("%s%d,", str, array[i]);
+    end
+    str = $sformatf("%s]", str);
+    return str;
+endfunction
+
 endpackage : utils
