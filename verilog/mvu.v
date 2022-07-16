@@ -123,7 +123,7 @@ localparam BSCALERA    = BACC;
 localparam BSCALERB    = 16;
 localparam BSCALERC    = 27;
 localparam BSCALERD    = 27;
-localparam BSCALERP    = 48;
+localparam BSCALERP    = 27;
 
 localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
 localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word

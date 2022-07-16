@@ -10,7 +10,7 @@ add_wave_group mvu
             add_wave -into pipeline {{/testbench_top/mvutop_wrapper/mvu/\mvuarray[0].mvunit /core_weights}}
             add_wave -into pipeline {{/testbench_top/mvutop_wrapper/mvu/\mvuarray[0].mvunit /core_out}}
             add_wave -into pipeline {{/testbench_top/mvutop_wrapper/mvu/\mvuarray[0].mvunit /shacc_out}}
-            add_wave -into pipeline {{/testbench_top/mvutop_wrapper/mvu/\mvuarray[0].mvunit /scaler1_out}}
+            add_wave -into pipeline {{/testbench_top/mvutop_wrapper/mvu/\mvuarray[0].mvunit /scaler_out}}
             add_wave -into pipeline {{/testbench_top/mvutop_wrapper/mvu/\mvuarray[0].mvunit /pool_out}}
             add_wave -into pipeline {{/testbench_top/mvutop_wrapper/mvu/\mvuarray[0].mvunit /quant_out}}
         add_wave_group -into mvu0 configs
@@ -20,7 +20,7 @@ add_wave_group mvu
             add_wave -into configs {{/testbench_top/mvutop_wrapper/mvu/quant_msbidx_q}}
             add_wave -into configs {{/testbench_top/mvutop_wrapper/mvu/countdown_q}}
             add_wave -into configs {{/testbench_top/mvutop_wrapper/mvu/\mvuarray[0].mvunit /mul_mode}}
-            add_wave -into configs {{/testbench_top/mvutop_wrapper/mvu/\mvuarray[0].mvunit /scaler1_b}}
+            add_wave -into configs {{/testbench_top/mvutop_wrapper/mvu/\mvuarray[0].mvunit /scaler_b}}
 add_wave_group mvu_ext
     add_wave -into mvu_ext {{/testbench_top/mvutop_wrapper/mvu_ext_if/start}}
     add_wave -into mvu_ext {{/testbench_top/mvutop_wrapper/mvu_ext_if/irq}}

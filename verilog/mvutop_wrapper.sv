@@ -101,7 +101,7 @@ always_comb begin
                 mvu_cfg_if.shacc_load_sel[mvu_id] = apb.pwdata[NJUMPS-1 : 0];
                 mvu_cfg_if.zigzag_step_sel[mvu_id]= apb.pwdata[2*NJUMPS-1 : NJUMPS];
             end
-            mvu_pkg::CSR_MVUOMVUSEL         : mvu_cfg_if.omvusel[mvu_id] = apb.pwdata[0];
+            mvu_pkg::CSR_MVUOMVUSEL         : mvu_cfg_if.omvusel[mvu_id] = apb.pwdata[NMVU-1:0];
             mvu_pkg::CSR_MVUIHPBASEADDR     : mvu_cfg_if.ihpbaseaddr[mvu_id] = apb.pwdata[BBDADDR-1:0];
             mvu_pkg::CSR_MVUOHPBASEADDR     : mvu_cfg_if.ohpbaseaddr[mvu_id] = apb.pwdata[BBDADDR-1:0];
             mvu_pkg::CSR_MVUOHPMVUSEL       : mvu_cfg_if.ohpmvusel[mvu_id] = apb.pwdata[0];

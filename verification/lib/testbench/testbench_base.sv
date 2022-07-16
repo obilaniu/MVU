@@ -171,6 +171,28 @@ class mvu_testbench_base extends BaseObj;
         writeBiasesRepeat(.mvu(mvu), .word({(BBBANKW){32'h00000000}}), .startaddr(0), .size(2**BBBANKA));
     endtask
 
+    task wait_for_irq(int mvu_id);
+    // Vivado hdl hierarchy can be built only at compile time,
+    // no dynamic referencing is allowed, so:
+        logger.print($sformatf("Waiting for an interrupt from MVU[%0d] ...", mvu_id));
+        if (mvu_id==0) begin
+            @(`hdl_path_top_mvu0_irq);
+        end else if (mvu_id==1) begin
+            @(`hdl_path_top_mvu1_irq);
+        end else if (mvu_id==2) begin
+            @(`hdl_path_top_mvu2_irq);
+        end else if (mvu_id==3) begin
+            @(`hdl_path_top_mvu3_irq);
+        end else if (mvu_id==4) begin
+            @(`hdl_path_top_mvu4_irq);
+        end else if (mvu_id==5) begin
+            @(`hdl_path_top_mvu5_irq);
+        end else if (mvu_id==6) begin
+            @(`hdl_path_top_mvu6_irq);
+        end else if (mvu_id==7) begin
+            @(`hdl_path_top_mvu7_irq);
+        end
+    endtask
 
 // Executes a GMEV
     task automatic runGEMV(
@@ -446,13 +468,13 @@ class mvu_testbench_base extends BaseObj;
 
         // Run the GEMV
         maxpool_en = 1'b1;
-        mul_mode = 2'b00;
+        mul_mode = 2'b01;
         apb_data = apb_data_t'({ mul_mode, maxpool_en ,BCNTDWN'(countdown_val)});
         apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUCOMMAND});
-        apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
-
-        for(int i=0; i<cyclecount; i++) @(posedge mvu_ext_if.clk);
-
+        fork
+            apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
+            wait_for_irq(omvu);
+        join
     endtask
 // =================================================================================================
 // Class based test
