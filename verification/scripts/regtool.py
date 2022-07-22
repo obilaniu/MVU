@@ -27,8 +27,7 @@ def process_reg_file(file, args):
                 # import ipdb as pdb; pdb.set_trace()
                 out_str += "\t{}={}'h{:x},//{}\n".format(regs['name'], reg_addr_length, addr, regs['desc'])
             elif args['format']=="c-header":
-                addr_str = str(hex(addr))
-                out_str += "{}".format(regs['name'], addr_str)
+                out_str += "#define {} 0x{:x}//{}\n".format(regs['name'], addr, regs['desc'])
             addr += 1
         if args['format']=="sv":
             out_str += "} mvu_csr_t;"

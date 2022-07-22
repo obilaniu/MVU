@@ -7,7 +7,6 @@ import mvu_pkg::*;
 
 class mvu_testbench_base extends BaseObj;
 
-    string firmware;
     virtual APB_DV #(
       .ADDR_WIDTH(mvu_pkg::APB_ADDR_WIDTH),
       .DATA_WIDTH(mvu_pkg::APB_DATA_WIDTH)
