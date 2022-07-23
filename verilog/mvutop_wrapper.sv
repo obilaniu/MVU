@@ -129,7 +129,7 @@ end
 
     // Circuit for generating start Signal
     always @(posedge mvu_ext_if.clk) begin
-        if (~mvu_ext.rst_n) begin
+        if (~mvu_ext_if.rst_n) begin
             mvu_ext_if.start <= 1'b0;
         end else begin
             if (apb_write) begin
