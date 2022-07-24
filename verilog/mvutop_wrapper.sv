@@ -130,16 +130,16 @@ end
     // Circuit for generating start Signal
     always @(posedge mvu_ext_if.clk) begin
         if (~mvu_ext_if.rst_n) begin
-            mvu_ext_if.start <= 1'b0;
+            mvu_ext_if.start <= {NMVU{1'b0}};
         end else begin
             if (apb_write) begin
                 if (((mvu_pkg::mvu_csr_t'(register_adr[11:0])) == mvu_pkg::CSR_MVUCOMMAND) && (mvu_ext_if.start==1'b0)) begin
-                    mvu_ext_if.start <= 1'b1;
+                    mvu_ext_if.start[mvu_id] <= 1'b1;
                 end else begin
-                    mvu_ext_if.start <= 1'b0;
+                    mvu_ext_if.start[mvu_id] <= 1'b0;
                 end
             end else begin
-                mvu_ext_if.start <= 1'b0;
+                mvu_ext_if.start <= {NMVU{1'b0}};
             end
         end
     end
