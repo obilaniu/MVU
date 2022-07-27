@@ -51,11 +51,11 @@ class gemv_tester extends mvu_testbench_base;
                 .m_w(3), .m_h(3), .scaler(scaler));
 
 
-        // // TEST 5
-        // // Expected result: accumulators get to value h180, output to data memory is b001 for each element
-        // // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
-        // // (i.e. d2*d1*d64*d3 = d384 = h180)
-        // // Result output to bank 3 starting at address 0
+        // TEST 5
+        // Expected result: accumulators get to value h180, output to data memory is b001 for each element
+        // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, 0000000000000000, hffffffffffffffff, 0000000000000000, ...)
+        // (i.e. d2*d1*d64*d3 = d384 = h180)
+        // Result output to bank 3 starting at address 0
         logger.print("TEST gemv 5: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=b10, weights=b01");
         writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0000), .size(3), .stride(2));      // MSB=1  \
         writeDataRepeat(.mvu(mvu), .word('h0000000000000000), .startaddr('h0001), .size(3), .stride(2));      // LSB=0  - = b10
@@ -184,7 +184,7 @@ class gemv_tester extends mvu_testbench_base;
         logger.print_banner("GEMV tests: mvu0 -> mvu0");
         gemvTests(.mvu(0), .omvu('b00000001), .scaler(1));
 
-        // // Run signed gemv tests, mvu0 -> mvu0
+        // Run signed gemv tests, mvu0 -> mvu0
         logger.print_banner("Signed GEMV tests: mvu0 -> mvu0");
         gemvSignedTests(.mvu(0), .omvu('b00000001), .scaler(1));
 
@@ -213,20 +213,20 @@ class gemv_tester extends mvu_testbench_base;
         // Interconnect tests
         // 
 
-        // // Repeat the unsigned gemv tests, mvu0 -> mvu1
+        // Repeat the unsigned gemv tests, mvu0 -> mvu1
         logger.print_banner("GEMV tests: mvu0 -> mvu1");
         gemvTests(.mvu(0), .omvu('b00000010), .scaler(1));
 
-        // // Repeat the unsigned gemv tests, mvu2 -> mvu3
+        // Repeat the unsigned gemv tests, mvu2 -> mvu3
         logger.print_banner("GEMV tests: mvu2 -> mvu3");
         gemvTests(.mvu(2), .omvu('b00001000), .scaler(1));
 
-        // // Repeat the unsigned gemv tests, mvu3-> mvu2
+        // Repeat the unsigned gemv tests, mvu3-> mvu2
         logger.print_banner("GEMV tests: mvu3 -> mvu2");
         gemvTests(.mvu(3), .omvu('b00000100), .scaler(1));
 
-        // // Repeat the unsigned gemv tests, mvu7-> mvu0
-        // // Blank out mvu0's memory banks first
+        // Repeat the unsigned gemv tests, mvu7-> mvu0
+        // Blank out mvu0's memory banks first
         logger.print_banner("GEMV tests: mvu7 -> mvu0");
         writeDataRepeat(0, 'h0000000000000000, 'h0000, 9, 1);
         writeDataRepeat(0, 'h0000000000000000, {5'b00001, 10'b0000000000}, 9, 1);
@@ -234,11 +234,11 @@ class gemv_tester extends mvu_testbench_base;
         writeDataRepeat(0, 'h0000000000000000, {5'b00011, 10'b0000000000}, 9, 1);
         gemvTests(.mvu(7), .omvu('b00000001), .scaler(1));
 
-        // //
-        // // Broadcast tests
-        // //
+        //
+        // Broadcast tests
+        //
 
-        // // Repeat the unsigned gemv tests, mvu4-> mvu5, mvu6
+        // Repeat the unsigned gemv tests, mvu4-> mvu5, mvu6
         logger.print_banner("GEMV tests: mvu4 -> mvu5,6");
         gemvTests(.mvu(4), .omvu('b01100000), .scaler(1));
 

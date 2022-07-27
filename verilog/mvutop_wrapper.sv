@@ -104,7 +104,7 @@ always_comb begin
             mvu_pkg::CSR_MVUOMVUSEL         : mvu_cfg_if.omvusel[mvu_id] = apb.pwdata[NMVU-1:0];
             mvu_pkg::CSR_MVUIHPBASEADDR     : mvu_cfg_if.ihpbaseaddr[mvu_id] = apb.pwdata[BBDADDR-1:0];
             mvu_pkg::CSR_MVUOHPBASEADDR     : mvu_cfg_if.ohpbaseaddr[mvu_id] = apb.pwdata[BBDADDR-1:0];
-            mvu_pkg::CSR_MVUOHPMVUSEL       : mvu_cfg_if.ohpmvusel[mvu_id] = apb.pwdata[0];
+            mvu_pkg::CSR_MVUOHPMVUSEL       : mvu_cfg_if.ohpmvusel[mvu_id] = apb.pwdata[NMVU-1:0];
             mvu_pkg::CSR_MVUHPJUMP_0        : mvu_cfg_if.hpjump[mvu_id][0] = apb.pwdata[BJUMP-1:0];
             mvu_pkg::CSR_MVUHPJUMP_1        : mvu_cfg_if.hpjump[mvu_id][1] = apb.pwdata[BJUMP-1:0];
             mvu_pkg::CSR_MVUHPJUMP_2        : mvu_cfg_if.hpjump[mvu_id][2] = apb.pwdata[BJUMP-1:0];

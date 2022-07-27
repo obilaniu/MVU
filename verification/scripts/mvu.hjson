@@ -42,8 +42,8 @@
           { value: 10              , name: "BDBANKAWS"     , desc: " Bitwidth of Data    BANK Address Word Select"},
           { value: 6               , name: "BSBANKA"       , desc: " Bitwidth of Scaler BANK address"},
           { value: 1024            , name: "BSBANKW"       , desc: " Bitwidth of Scaler BANK word"},
-          { value: 6               , name: "BBBANKA"       , desc: " Bitwidth of Scaler BANK address"},
-          { value: 2048            , name: "BBBANKW"       , desc: " Bitwidth of Scaler BANK word"},
+          { value: 6               , name: "BBBANKA"       , desc: " Bitwidth of Bias BANK address"},
+          { value: 2048            , name: "BBBANKW"       , desc: " Bitwidth of Bias BANK word"},
   ],
   registers: [
     {name: "CSR_MVUWBASEPTR",

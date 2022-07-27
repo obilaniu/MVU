@@ -46,8 +46,8 @@ localparam BDBANKAWS = 10;              // Bitwidth of Data    BANK Address Word
 // Scalar and Bias memory bank parameters
 localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
 localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word
-localparam BBBANKA     = 6;             // Bitwidth of Scaler BANK address
-localparam BBBANKW     = BBIAS*N;       // Bitwidth of Scaler BANK word
+localparam BBBANKA     = 6;             // Bitwidth of Bias BANK address
+localparam BBBANKW     = BBIAS*N;       // Bitwidth of Bias BANK word
 
 // APB simulation and synthesis parameter
 localparam APB_ADDR_WIDTH = 15;  // $clog2(4KB CSR x 8 MVUs)
