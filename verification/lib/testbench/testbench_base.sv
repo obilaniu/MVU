@@ -472,7 +472,7 @@ class mvu_testbench_base extends BaseObj;
         apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUCOMMAND});
         fork
             apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
-            wait_for_irq(omvu);
+            wait_for_irq(mvu);
         join
     endtask
 // =================================================================================================
