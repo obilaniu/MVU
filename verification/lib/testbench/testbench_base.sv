@@ -83,6 +83,14 @@ class mvu_testbench_base extends BaseObj;
         mvu_ext_if.wrc_addr = addr;
         mvu_ext_if.wrc_word = word;
         mvu_ext_if.wrc_en[mvu] = 1'b1;
+        while (1) begin
+            @(posedge mvu_ext_if.clk);
+            if (mvu_ext_if.wrc_grnt[mvu] == 1) begin
+                break;
+            end else begin
+                logger.print($sformatf("writeData: did not get grant signal for MVU %0d for address %x, so waiting until next cycle.", mvu, addr));
+            end
+        end
         @(posedge mvu_ext_if.clk)
         mvu_ext_if.wrc_en[mvu] = 1'b0;
     endtask
