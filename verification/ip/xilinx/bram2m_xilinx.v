@@ -48,7 +48,7 @@
 
 
 // IP VLNV: xilinx.com:ip:blk_mem_gen:8.4
-// IP Revision: 4
+// IP Revision: 3
 
 `timescale 1ns/1ps
 
@@ -86,7 +86,7 @@ input wire [8 : 0] addrb;
 (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM_PORTB DOUT" *)
 output wire [4095 : 0] doutb;
 
-  blk_mem_gen_v8_4_4 #(
+  blk_mem_gen_v8_4_3 #(
     .C_FAMILY("kintexu"),
     .C_XDEVICEFAMILY("kintexu"),
     .C_ELABORATION_DIR("./"),
