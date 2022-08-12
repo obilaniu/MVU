@@ -128,21 +128,24 @@ end
     assign apb.pslverr = 1'b0;
 
     // Circuit for generating start Signal
-    always @(posedge mvu_ext_if.clk) begin
-        if (~mvu_ext_if.rst_n) begin
-            mvu_ext_if.start <= {NMVU{1'b0}};
-        end else begin
-            if (apb_write) begin
-                if (((mvu_pkg::mvu_csr_t'(register_adr[11:0])) == mvu_pkg::CSR_MVUCOMMAND) && (mvu_ext_if.start==1'b0)) begin
-                    mvu_ext_if.start[mvu_id] <= 1'b1;
-                end else begin
-                    mvu_ext_if.start[mvu_id] <= 1'b0;
-                end
+    genvar i;
+    generate for(i=0; i < NMVU; i = i+1) begin
+        always @(posedge mvu_ext_if.clk) begin
+            if (~mvu_ext_if.rst_n) begin
+                mvu_ext_if.start[i] <= 1'b0;
             end else begin
-                mvu_ext_if.start <= {NMVU{1'b0}};
+                if (apb_write) begin
+                    if (((mvu_pkg::mvu_csr_t'(register_adr[11:0])) == mvu_pkg::CSR_MVUCOMMAND) && (i==mvu_id)) begin
+                        mvu_ext_if.start[i] <= 1'b1;
+                    end else begin
+                        mvu_ext_if.start[i] <= 1'b0;
+                    end
+                end else begin
+                    mvu_ext_if.start[i] <= 1'b0;
+                end
             end
         end
-    end
+    end endgenerate
 
 endmodule
 
