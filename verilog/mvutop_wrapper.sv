@@ -137,6 +137,8 @@ end
                 if (apb_write) begin
                     if (((mvu_pkg::mvu_csr_t'(register_adr[11:0])) == mvu_pkg::CSR_MVUCOMMAND) && (i==mvu_id)) begin
                         mvu_ext_if.start[i] <= 1'b1;
+                    end else begin
+                        mvu_ext_if.start[i] <= 1'b0;
                     end
                 end else begin
                     mvu_ext_if.start[i] <= 1'b0;
