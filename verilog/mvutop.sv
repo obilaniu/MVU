@@ -536,6 +536,7 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
         ) mvunit
         (
             .clk            (intf.clk                               ),
+            .run            (run[i]                                 ),
             .mul_mode       (mul_mode_q[i]                          ),
             .neg_acc        (neg_acc_dly[i]                         ),
             .shacc_clr      (shacc_clr_int[i]                       ),

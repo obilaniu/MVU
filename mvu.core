@@ -70,7 +70,6 @@ filesets:
     synth_xilinx:
         file_type: xci
         files:
-            - ip/build/xilinx/bram2m_xilinx/bram2m_xilinx.xci
             - ip/build/xilinx/bram64k_64x1024_xilinx/bram64k_64x1024_xilinx.xci
             - mvu.xdc:
                 file_type: xdc
@@ -132,7 +131,7 @@ targets:
         default_tool: vivado
         tools:
           vivado:
-            part: xcku115-flva1517-2-e
+            part: xcvu9p-flgb2104-2-e
             pnr: none
         parameters: [XILINX]
         toplevel: [mvutop]
