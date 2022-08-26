@@ -15,13 +15,13 @@ class gemv_tester extends mvu_testbench_base;
 
         logger.print("TEST gemv 1: matrix-vector mult: 1x1 x 1 tiles, 1x1 => 1 bit precision, , input=all 0's");
         runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
-                .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(0), .oaddr(0), 
+                .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(1), .oaddr(0), 
                 .m_w(1), .m_h(1), .scaler(scaler));
 
 
         logger.print("TEST gemv 2: matrix-vector mult: 2x2 x 2 tiles, 1x1 => 1 bit precision, input=all 0's");
         runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
-                .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(0), .oaddr(0), 
+                .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(1), .oaddr(0), 
                 .m_w(2), .m_h(2), .scaler(scaler));
 
 
