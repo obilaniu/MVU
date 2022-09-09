@@ -48,16 +48,6 @@ genvar i;
 
 
 /* Wiring */
-/*   Muxed Write */
-/* DOES NOT WORK IN SIM
-generate for(i=0;i<w;i=i+1) begin:mux
-    reg[2:0] wr_bits;
-    always @(wri_word or wrd_word or wrc_word or wr_muxcode) begin
-    wr_bits = {wri_word[i], wrd_word[i], wrc_word[i]};
-    wr_word[i] = wr_bits[wr_muxcode];
-    end
-end endgenerate
-*/
 always @(wri_word or wrd_word or wrc_word or wr_muxcode) begin
     case (wr_muxcode)
         2'b00: wr_word = wri_word;
@@ -82,7 +72,7 @@ assign dinb = 0;
 /* 64k internal BRAM */
 `ifdef INTEL
     bram64k b (clk, wr_word, rd_addr, wr_addr, wr_en, rd_word);
-`elsif XILINX
+`elsif XILINX_BRAM_IP
     bram64k_64x1024_xilinx b (
         .clka(clk),    // input wire clka
         .ena(1'b1),         // always enabled
@@ -98,7 +88,18 @@ assign dinb = 0;
         .doutb(rd_word)  // output wire [64 : 0] doutb
     );
 `else
-    $display("ERROR: INTEL or XILINX macro not defined!");
+    ram_simple2port #(
+        .BDADDR (a),
+        .BDWORD (w)        
+    ) data_ram (
+        .clk(clk),
+        .rd_en(rd_en),
+        .rd_addr(rd_addr),
+        .rd_word(rd_word),
+        .wr_en(wr_en),
+        .wr_addr(wr_addr),
+        .wr_word(wr_word)
+    );
 `endif
 
 

@@ -27,7 +27,7 @@ always @(posedge clk) begin
     if (rd_en) begin
         rd_word <= mem[rd_addr];
     end else begin
-        rd_word <= {BDWORD{1'bX}};
+        rd_word <= {BDWORD{1'b0}};
     end
     if (wr_en) begin
         mem[wr_addr] <= wr_word;

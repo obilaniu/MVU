@@ -67,9 +67,10 @@ filesets:
                 file_type: systemVerilogSource
             - verilog/mvutop.sv:
                 file_type: systemVerilogSource
-    synth_xilinx:
+    synth_xilinx_bram_ip:
         file_type: xci
         files:
+            - ip/build/xilinx/bram64k_64x1024_xilinx/bram2m_xilinx.xci
             - ip/build/xilinx/bram64k_64x1024_xilinx/bram64k_64x1024_xilinx.xci
             - mvu.xdc:
                 file_type: xdc
@@ -91,14 +92,13 @@ filesets:
             - verification/tests/scalar_bias/scalar_bias_tester.sv:
                 is_include_file: true
             - verification/lib/testbench/testbench_top.sv
-            - ip/build/xilinx/bram64k_64x1024_xilinx/simulation/blk_mem_gen_v8_4.v:
-                file_type: verilogSource
-            - ip/build/xilinx/bram64k_64x1024_xilinx/sim/bram64k_64x1024_xilinx.v:
-                file_type: verilogSource
-            - ip/build/xilinx/bram2m_xilinx/simulation/blk_mem_gen_v8_4.v:
-                file_type: verilogSource
-            - ip/build/xilinx/bram2m_xilinx/sim/bram2m_xilinx.v:
-                file_type: verilogSource
+    tb_xilinx_bram_ip:
+        file_type: verilogSource
+        files:
+            - ip/build/xilinx/bram64k_64x1024_xilinx/simulation/blk_mem_gen_v8_4.v
+            - ip/build/xilinx/bram64k_64x1024_xilinx/sim/bram64k_64x1024_xilinx.v
+            - ip/build/xilinx/bram2m_xilinx/simulation/blk_mem_gen_v8_4.v
+            - ip/build/xilinx/bram2m_xilinx/sim/bram2m_xilinx.v
 targets:
     default: &default
         filesets:
