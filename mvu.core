@@ -35,43 +35,13 @@ filesets:
                 file_type: systemVerilogSource
             - verilog/mvutop.sv:
                 file_type: systemVerilogSource
-    synth:
-        file_type: verilogSource
-        files:
-            - verification/lib/mvu/mvu_pkg.sv:
-                file_type: systemVerilogSource
-            - verification/lib/mvu/mvu_inf.svh:
-                is_include_file: true
-            - verilog/bram64k.v
-            - verilog/bank64k.v
-            - verilog/bram2m.v
-            - verilog/cdru.v
-            - verilog/cdwu.v
-            - verilog/maxpool.v
-            - verilog/mvp.v
-            - verilog/mvu.v
-            - verilog/shacc.v
-            - verilog/vvp.v
-            - verilog/interconn.v
-            - verilog/quantser.v
-            - verilog/quantser_ctrl.v
-            - verilog/outagu.v
-            - verilog/zigzagu.v
-            - verilog/controller.v
-            - verilog/shiftreg.v
-            - verilog/fixedpointscaler.v
-            - verilog/ram_simple2port.v
-            - verilog/inagu.sv:
-                file_type: systemVerilogSource
-            - verilog/agu.sv:
-                file_type: systemVerilogSource
-            - verilog/mvutop.sv:
-                file_type: systemVerilogSource
     synth_xilinx_bram_ip:
         file_type: xci
         files:
             - ip/build/xilinx/bram64k_64x1024_xilinx/bram2m_xilinx.xci
             - ip/build/xilinx/bram64k_64x1024_xilinx/bram64k_64x1024_xilinx.xci
+    synth_xilinx:
+        files:
             - mvu.xdc:
                 file_type: xdc
     tb:
@@ -126,14 +96,13 @@ targets:
     synth:
         description: Synthesize the design for an FPGA board
         filesets:
-            - synth
+            - rtl
             - synth_xilinx
         default_tool: vivado
         tools:
           vivado:
             part: xcvu9p-flgb2104-2-e
             pnr: none
-        parameters: [XILINX]
         toplevel: [mvutop]
 parameters:
     XILINX:
