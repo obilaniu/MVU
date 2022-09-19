@@ -2,8 +2,8 @@
 
 class gemv_tester extends mvu_testbench_base;
 
-    function new(Logger logger, virtual mvu_interface intf);
-        super.new(logger, intf);
+    function new(Logger logger, virtual MVU_EXT_INTERFACE mvu_ext_if,  virtual APB_DV apb);
+        super.new(logger, mvu_ext_if, apb);
     endfunction
 
     //
@@ -17,7 +17,7 @@ class gemv_tester extends mvu_testbench_base;
         writeDataRepeat(.mvu(mvu), .word('h0000000000000000), .startaddr('h0000), .size(1), .stride(1));
         writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b0}}), .startaddr('h0), .size(1), .stride(1));
         runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
-                .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(0), .oaddr(0), 
+                .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(1), .oaddr(0), 
                 .m_w(1), .m_h(1), .scaler(scaler));
 
 
@@ -25,7 +25,7 @@ class gemv_tester extends mvu_testbench_base;
         writeDataRepeat(.mvu(mvu), .word('h0000000000000000), .startaddr('h0000), .size(2), .stride(1));
         writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b0}}), .startaddr('h0), .size(4), .stride(1));
         runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
-                .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(0), .oaddr(0), 
+                .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(1), .oaddr(0), 
                 .m_w(2), .m_h(2), .scaler(scaler));
 
 
@@ -200,7 +200,7 @@ class gemv_tester extends mvu_testbench_base;
         // Test 5 -> -d512, b100 in bank 14
         // Test 6 -> -d774, b001 in bank 15
         // Test 7 -> d198, b011 in bank 16
-        //gemvSignedTests(.mvu(0), .omvu(0), .scaler(2));
+        gemvSignedTests(.mvu(0), .omvu(0), .scaler(2));
 
         // Repeat signed gemv tests, but with scaler set to 5, mvu0 -> mvu0
         // Expected outcomes:
@@ -211,7 +211,7 @@ class gemv_tester extends mvu_testbench_base;
         // Test 5 -> -d1280, b110 in bank 14
         // Test 6 -> -d1935, b000 in bank 15
         // Test 7 -> d495, b111 in bank 16
-        //gemvSignedTests(.mvu(0), .omvu(0), .scaler(5));
+        gemvSignedTests(.mvu(0), .omvu(0), .scaler(5));
 
         //
         // Interconnect tests

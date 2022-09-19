@@ -10,7 +10,7 @@
     `include "base_tester.sv"
 `endif
 
-`include "mvu_inf.svh"
+`include "assign.svh"
 
 module testbench_top import utils::*;import testbench_pkg::*; ();
 //==================================================================================================
@@ -19,8 +19,19 @@ module testbench_top import utils::*;import testbench_pkg::*; ();
     string sim_log_file = "test.log";
 //==================================================================================================
     logic clk;
-    mvu_interface mvu_inf(clk);
-    mvutop mvu(mvu_inf.system_interface);
+
+    APB_DV #(
+        .ADDR_WIDTH(mvu_pkg::APB_ADDR_WIDTH), 
+        .DATA_WIDTH(mvu_pkg::APB_DATA_WIDTH)
+    ) apb_slave_dv(clk);
+    APB #(
+        .ADDR_WIDTH(mvu_pkg::APB_ADDR_WIDTH), 
+        .DATA_WIDTH(mvu_pkg::APB_DATA_WIDTH)
+    ) apb_slave();
+    `APB_ASSIGN ( apb_slave, apb_slave_dv )
+    
+    MVU_EXT_INTERFACE mvu_ext(clk);
+    mvutop_wrapper mvutop_wrapper(mvu_ext, apb_slave);
 
     // Select which testbench to run
 `ifdef TB_GEMV 
@@ -35,7 +46,7 @@ module testbench_top import utils::*;import testbench_pkg::*; ();
 
     initial begin
         logger = new(sim_log_file);
-        tb = new(logger, mvu_inf.tb_interface);
+        tb = new(logger, mvu_ext, apb_slave_dv);
 
         tb.tb_setup();
         tb.run();
