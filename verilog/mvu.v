@@ -45,6 +45,7 @@
 `timescale 1 ns / 1 ps
 /**** Module mvu ****/
 module mvu( clk,
+            run,
             mul_mode,
             neg_acc,
             shacc_clr,
@@ -136,6 +137,7 @@ parameter  QMSBLOCBD  = $clog2(BSCALERP);   // Bitwidth of the quantizer MSB loc
 
 /* Interface */
 input  wire                 clk;
+input  wire                 run;
 input  wire[        1 : 0]  mul_mode;
 input  wire                 neg_acc;                 // Negate the inputs to the accumulators
 input  wire                 shacc_clr;
@@ -214,8 +216,10 @@ wire[BDBANKA-1 : 0] rd_addr;
 wire                wr_en;
 wire[1 : 0]         wr_muxcode;
 wire[BDBANKA-1 : 0] wr_addr;
+wire                rdw_en;
+wire[BWBANKW-1 : 0] rdw_word;
 
-wire[BWBANKW-1 : 0]     core_weights;
+reg [BWBANKW-1 : 0]     core_weights;
 wire[BDBANKW-1 : 0]     core_data;
 wire[BSUM*N-1  : 0]     core_out;
 wire signed[BSUM-1 : 0] core_out_signed [N-1 : 0];
@@ -258,9 +262,13 @@ mvp     #(N, 'b0010101) matrix_core  (clk, mul_mode, core_weights, core_data, co
 
 
 /* Weight memory banks */
+
+assign rdw_en = run;
+always @(posedge clk) core_weights <= rdw_word;
+
 `ifdef INTEL
     bram2m          weights_bank (clk, {BWBANKW{1'b0}}, rdw_addr, {BWBANKA{1'b0}}, 1'b0, core_weights);
-`elsif XILINX
+`elsif XILINX_BRAM_IP
     bram2m_xilinx   weights_bank (
         .clka	(clk),			// input wire clka
         .ena    (1'b1),         // always enable
@@ -273,7 +281,18 @@ mvp     #(N, 'b0010101) matrix_core  (clk, mul_mode, core_weights, core_data, co
         .doutb	(core_weights)	// weight word to MVU core        
     );
  `else
-    $display("ERROR: INTEL or XILINX macro not defined!");
+    ram_simple2port #(
+        .BDADDR (BWBANKA),
+        .BDWORD (BWBANKW)        
+    ) weights_bank(
+        .clk(clk),
+        .rd_en(rdw_en),
+        .rd_addr(rdw_addr),
+        .rd_word(rdw_word),
+        .wr_en(wrw_en),
+        .wr_addr(wrw_addr),
+        .wr_word(wrw_word)
+    );
  `endif
 
 
