@@ -56,3 +56,18 @@ And for synthesis:
 
 This should open the project for you. Make sure you have run simulation or synthesis atleast once, otherwise fusesoc would not create a 
 project file for you.
+
+
+# Publication
+
+If you liked this project, please consider citing our paper:
+
+    @INPROCEEDINGS{8702332,
+        author={Bilaniuk, Olexa and Wagner, Sean and Savaria, Yvon and David, Jean-Pierre},
+        booktitle={2019 IEEE International Symposium on Circuits and Systems (ISCAS)}, 
+        title={Bit-Slicing FPGA Accelerator for Quantized Neural Networks}, 
+        year={2019},
+        volume={},
+        number={},
+        pages={1-5},
+        doi={10.1109/ISCAS.2019.8702332}}
