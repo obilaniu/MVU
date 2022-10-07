@@ -211,8 +211,6 @@ genvar i, j;
 
 /* Local Wires */
 wire                rd_en;
-wire[1 : 0]         rd_muxcode;
-wire[BDBANKA-1 : 0] rd_addr;
 wire                wr_en;
 wire[1 : 0]         wr_muxcode;
 wire[BDBANKA-1 : 0] wr_addr;
@@ -249,7 +247,7 @@ wire[BBIAS-1 : 0]          scaler_post_op[N-1 : 0]; // Scaler input postadd oper
 cdru    #(BDBANKABS, BDBANKAWS)    read_cdu     (rdi_en, rdi_addr, rdi_grnt,
                                       rdd_en, rdd_addr, rdd_grnt,
                                       rdc_en, rdc_addr, rdc_grnt,
-                                      rd_en,  rd_addr,  rd_muxcode);
+                                      rd_en);
 
 cdwu    #(BDBANKABS, BDBANKAWS)    write_cdu    (wri_en, wri_addr, wri_grnt,
                                       wrd_en, wrd_addr, wrd_grnt,
@@ -393,9 +391,18 @@ end endgenerate
 
 /* Data Banks */
 generate for(i=0;i<NDBANK;i=i+1) begin:bankarray
+    wire                rdi_bankhit = rdi_addr[BDBANKAWS +: BDBANKABS] == i;
+    wire                rdd_bankhit = rdd_addr[BDBANKAWS +: BDBANKABS] == i;
+    wire                rdc_bankhit = rdc_addr[BDBANKAWS +: BDBANKABS] == i;
+    wire                rd_bankhit  = rdi_bankhit | rdd_bankhit | rdc_bankhit;
+    wire                wr_bankhit  = wr_addr [BDBANKAWS +: BDBANKABS] == i;
+    wire[BDBANKA-1 : 0] rd_addr     = (rdi_grnt & rdi_bankhit) ? rdi_addr :
+                                      (rdd_grnt & rdd_bankhit) ? rdd_addr : rdc_addr);
+    wire[1 : 0]         rd_muxcode  = (rdi_grnt & rdi_bankhit) ?     2'd0 :
+                                      (rdd_grnt & rdd_bankhit) ?     2'd1 : 2'd2);
     bank64k #(BDBANKW, BDBANKAWS) db (clk,
-        rd_en & (rd_addr[BDBANKAWS +: BDBANKABS] == i), rd_addr[0 +: BDBANKAWS], rd_muxcode,
-        wr_en & (wr_addr[BDBANKAWS +: BDBANKABS] == i), wr_addr[0 +: BDBANKAWS], wr_muxcode,
+        rd_en & rd_bankhit, rd_addr[0 +: BDBANKAWS], rd_muxcode,
+        wr_en & wr_bankhit, wr_addr[0 +: BDBANKAWS], wr_muxcode,
         rdi_words[i*BDBANKW +: BDBANKW], wri_word,
         rdd_words[i*BDBANKW +: BDBANKW], wrd_word,
         rdc_words[i*BDBANKW +: BDBANKW], wrc_word
