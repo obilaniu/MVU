@@ -408,11 +408,9 @@ generate for(i=0;i<NDBANK;i=i+1) begin:bankarray
 end endgenerate
 generate for(i=0;i<BDBANKW;i=i+1) begin:reduxrdwords
     always @(posedge clk) begin
-        if(clk) begin
-            rdd_word[i] <= |rdd_words_t[i*NDBANK +: NDBANK];
-            rdi_word[i] <= |rdi_words_t[i*NDBANK +: NDBANK];
-            rdc_word[i] <= |rdc_words_t[i*NDBANK +: NDBANK];
-        end
+        rdd_word[i] <= |rdd_words_t[i*NDBANK +: NDBANK];
+        rdi_word[i] <= |rdi_words_t[i*NDBANK +: NDBANK];
+        rdc_word[i] <= |rdc_words_t[i*NDBANK +: NDBANK];
     end
 end endgenerate
 
