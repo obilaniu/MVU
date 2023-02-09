@@ -27,7 +27,7 @@ class mvu_testbench_base extends BaseObj;
     mvu_pkg::apb_data_t apb_data;
     mvu_pkg::apb_strb_t apb_strb;
 
-    function new (Logger logger, virtual MVU_EXT_INTERFACE mvu_ext_if, virtual APB_DV apb_slave_dv);
+    function new (Logger logger, virtual MVU_EXT_INTERFACE mvu_ext_if, virtual APB_DV #(.ADDR_WIDTH(mvu_pkg::APB_ADDR_WIDTH), .DATA_WIDTH(mvu_pkg::APB_DATA_WIDTH))  apb_slave_dv);
         super.new(logger);
         cfg = new(logger);
         void'(cfg.parse_args());
