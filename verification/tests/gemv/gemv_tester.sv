@@ -1,4 +1,5 @@
 `include "testbench_base.sv"
+`include "testbench_macros.svh"
 
 class gemv_tester extends mvu_testbench_base;
 
@@ -19,6 +20,9 @@ class gemv_tester extends mvu_testbench_base;
         runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
                 .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(1), .oaddr(0), 
                 .m_w(1), .m_h(1), .scaler(scaler));
+        // THE FOLLOWING LINE WILL FAIL BUILD
+        // NEED TO FIND A BETTER WAY TO DO THIS
+        $display("Word:", `hdl_path_mvu_data_mem_word(mvu, 1, 0));
 
 
         logger.print("TEST gemv 2: matrix-vector mult: 2x2 x 2 tiles, 1x1 => 1 bit precision, input=all 0's");
@@ -40,6 +44,7 @@ class gemv_tester extends mvu_testbench_base;
         runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(2), .omsb(10), 
                 .iaddr(0), .waddr(0), .omvu(omvu), .obank(1), .oaddr(0), 
                 .m_w(2), .m_h(2), .scaler(scaler));
+
 
 
         // TEST 4
