@@ -136,7 +136,7 @@ typedef enum logic [11:0] {
 
 typedef logic [APB_ADDR_WIDTH-1:0] apb_addr_t;
 typedef logic [APB_DATA_WIDTH-1:0] apb_data_t;
-typedef logic [APB_DATA_WIDTH-1:0] apb_strb_t;
+typedef logic [APB_STRB_WIDTH-1:0] apb_strb_t;
 
 typedef logic [BWBANKW-1 : 0 ] w_data_t;
 typedef w_data_t w_data_q_t[$];
