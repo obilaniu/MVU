@@ -6,8 +6,8 @@
 
 
  module ram_simple2port #(
-    BDADDR = 12,
-    BDWORD = 32*64
+    parameter BDADDR = 12,
+    parameter BDWORD = 32*64
 )(
     input   wire                clk,
     input   wire                rd_en,
