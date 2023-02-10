@@ -118,13 +118,13 @@ localparam BDBANKA     = BDBANKABS+     /* Bitwidth of Data    BANK Address */
                          BDBANKAWS;
 localparam BDBANKW     = N;             /* Bitwidth of Data    BANK Word */
 localparam BSUM        = CLOG2N+2;      /* Bitwidth of Sums */
-localparam BACC        = 27;            /* Bitwidth of Accumulators */
+parameter BACC         = 27;            /* Bitwidth of Accumulators */
 
-localparam BSCALERA    = BACC;
-localparam BSCALERB    = 16;
-localparam BSCALERC    = 27;
-localparam BSCALERD    = 27;
-localparam BSCALERP    = 27;
+parameter BSCALERA     = BACC;
+parameter BSCALERB     = 16;
+parameter BSCALERC     = 27;
+parameter BSCALERD     = 27;
+parameter BSCALERP     = 27;
 
 localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
 localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word
@@ -241,7 +241,7 @@ wire[BDBANKW*NDBANK-1 : 0] rdc_words_t;
 wire[BSBANKW-1 : 0]        rds_word;                // Scaler memory: read word
 wire[BBBANKW-1 : 0]        rdb_word;                // Bias memory: read word
 wire[BSCALERB-1 : 0]       scaler_mult_op[N-1 : 0]; // Scaler input multiplier operand
-wire[BBIAS-1 : 0]          scaler_post_op[N-1 : 0]; // Scaler input postadd operand
+wire[BSCALERC-1 : 0]       scaler_post_op[N-1 : 0]; // Scaler input postadd operand
 
 
 
