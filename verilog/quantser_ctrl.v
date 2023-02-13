@@ -18,7 +18,7 @@ module quantser_ctrl #(
 
 
 // Internal registers
-reg     [BWBWOUT-1 : 0]   counter;          // Countdown counter
+reg     [BWBWOUT-1 : 0]   counter = 0;          // Countdown counter
 
 
 // Countdown counter

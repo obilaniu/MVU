@@ -496,7 +496,6 @@ class mvu_testbench_base extends BaseObj;
         repeat (10); @(posedge mvu_ext_if.clk);
 
         mvu_ext_if.rst_n = 0;
-
         mvu_ext_if.start = 0;
         mvu_ext_if.ic_clr = 0;
         mvu_ext_if.shacc_clr = 0;

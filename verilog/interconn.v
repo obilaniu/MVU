@@ -129,7 +129,7 @@ end else begin:single
             recv_addr <= 0;
             recv_from <= 0;
             recv_word <= 0;
-        end else if(clk) begin
+        end else begin
             recv_from <= send_to;
             recv_en <= send_en;
             recv_addr <= send_addr;

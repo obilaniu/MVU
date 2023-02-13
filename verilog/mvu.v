@@ -241,7 +241,7 @@ wire[BDBANKW*NDBANK-1 : 0] rdc_words_t;
 wire[BSBANKW-1 : 0]        rds_word;                // Scaler memory: read word
 wire[BBBANKW-1 : 0]        rdb_word;                // Bias memory: read word
 wire[BSCALERB-1 : 0]       scaler_mult_op[N-1 : 0]; // Scaler input multiplier operand
-wire[BBIAS-1 : 0]          scaler_post_op[N-1 : 0]; // Scaler input postadd operand
+wire[BSCALERC-1 : 0]       scaler_post_op[N-1 : 0]; // Scaler input postadd operand
 
 
 

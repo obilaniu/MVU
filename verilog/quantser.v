@@ -30,7 +30,7 @@ reg             [    BWIN-1 : 0]    sr;         // Shift register
 always @(posedge clk) begin
     if (clr) begin
         sr <= 0;
-    end else if (clk) begin
+    end else begin
 		if (load) begin
             sr <= din;
         end else if (step) begin
