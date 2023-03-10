@@ -40,6 +40,8 @@ localparam MAXPOOLSTAGES = 1;  // Number of max pool pipeline stages
 localparam MEMRDLATENCY  = 2;  // Memory read latency
 localparam NJUMPS        = 5;  // Number of address jump parameters available
 
+localparam PIPELINE_DLY  = VVPSTAGES + SCALERLATENCY + HPADDERLATENCY + MAXPOOLSTAGES + MEMRDLATENCY;
+
 localparam BDBANKABS = $clog2(NDBANK);  // Bitwidth of Data    BANK Address Bank Select 
 localparam BDBANKAWS = 10;              // Bitwidth of Data    BANK Address Word Select
 
@@ -56,6 +58,7 @@ localparam APB_STRB_WIDTH = cf_math_pkg::ceil_div(APB_DATA_WIDTH, 8);
 
 localparam time APB_ApplTime  = 2ns; // taken from https://github.com/pulp-platform/apb/blob/master/test/tb_apb_regs.sv#L31
 localparam time APB_TestTime  = 8ns; //
+
 
 typedef enum logic [11:0] {
 	CSR_MVUWBASEPTR=12'hf20,//Base address for weight memory

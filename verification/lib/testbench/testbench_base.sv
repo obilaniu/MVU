@@ -178,6 +178,328 @@ class mvu_testbench_base extends BaseObj;
         writeBiasesRepeat(.mvu(mvu), .word({(BBBANKW){32'h00000000}}), .startaddr(0), .size(2**BBBANKA));
     endtask
 
+    // Back-door function to read MVU data memory
+    function logic[BWBANKW-1: 0] peekData(int mvu, int bank, int addr);
+        case (mvu)
+            0 : begin
+                case (bank)
+                    0:      return `hdl_path_mvu_data_mem_bank_ram(0, 0)[addr];
+                    1:      return `hdl_path_mvu_data_mem_bank_ram(0, 1)[addr];
+                    2:      return `hdl_path_mvu_data_mem_bank_ram(0, 2)[addr];
+                    3:      return `hdl_path_mvu_data_mem_bank_ram(0, 3)[addr];
+                    4:      return `hdl_path_mvu_data_mem_bank_ram(0, 4)[addr];
+                    5:      return `hdl_path_mvu_data_mem_bank_ram(0, 5)[addr];
+                    6:      return `hdl_path_mvu_data_mem_bank_ram(0, 6)[addr];
+                    7:      return `hdl_path_mvu_data_mem_bank_ram(0, 7)[addr];
+                    8:      return `hdl_path_mvu_data_mem_bank_ram(0, 8)[addr];
+                    9:      return `hdl_path_mvu_data_mem_bank_ram(0, 9)[addr];
+                    10:     return `hdl_path_mvu_data_mem_bank_ram(0, 10)[addr];
+                    11:     return `hdl_path_mvu_data_mem_bank_ram(0, 11)[addr];
+                    12:     return `hdl_path_mvu_data_mem_bank_ram(0, 12)[addr];
+                    13:     return `hdl_path_mvu_data_mem_bank_ram(0, 13)[addr];
+                    14:     return `hdl_path_mvu_data_mem_bank_ram(0, 14)[addr];
+                    15:     return `hdl_path_mvu_data_mem_bank_ram(0, 15)[addr];
+                    16:     return `hdl_path_mvu_data_mem_bank_ram(0, 16)[addr];
+                    17:     return `hdl_path_mvu_data_mem_bank_ram(0, 17)[addr];
+                    18:     return `hdl_path_mvu_data_mem_bank_ram(0, 18)[addr];
+                    19:     return `hdl_path_mvu_data_mem_bank_ram(0, 19)[addr];
+                    20:     return `hdl_path_mvu_data_mem_bank_ram(0, 20)[addr];
+                    21:     return `hdl_path_mvu_data_mem_bank_ram(0, 21)[addr];
+                    22:     return `hdl_path_mvu_data_mem_bank_ram(0, 22)[addr];
+                    23:     return `hdl_path_mvu_data_mem_bank_ram(0, 23)[addr];
+                    24:     return `hdl_path_mvu_data_mem_bank_ram(0, 24)[addr];
+                    25:     return `hdl_path_mvu_data_mem_bank_ram(0, 25)[addr];
+                    26:     return `hdl_path_mvu_data_mem_bank_ram(0, 26)[addr];
+                    27:     return `hdl_path_mvu_data_mem_bank_ram(0, 27)[addr];
+                    28:     return `hdl_path_mvu_data_mem_bank_ram(0, 28)[addr];
+                    29:     return `hdl_path_mvu_data_mem_bank_ram(0, 29)[addr];
+                    30:     return `hdl_path_mvu_data_mem_bank_ram(0, 30)[addr];
+                    31:     return `hdl_path_mvu_data_mem_bank_ram(0, 31)[addr];
+                    default:
+                        $error("Invalid address");
+                endcase
+            end
+            1: begin
+                case (bank)
+                    0:      return `hdl_path_mvu_data_mem_bank_ram(1, 0)[addr];
+                    1:      return `hdl_path_mvu_data_mem_bank_ram(1, 1)[addr];
+                    2:      return `hdl_path_mvu_data_mem_bank_ram(1, 2)[addr];
+                    3:      return `hdl_path_mvu_data_mem_bank_ram(1, 3)[addr];
+                    4:      return `hdl_path_mvu_data_mem_bank_ram(1, 4)[addr];
+                    5:      return `hdl_path_mvu_data_mem_bank_ram(1, 5)[addr];
+                    6:      return `hdl_path_mvu_data_mem_bank_ram(1, 6)[addr];
+                    7:      return `hdl_path_mvu_data_mem_bank_ram(1, 7)[addr];
+                    8:      return `hdl_path_mvu_data_mem_bank_ram(1, 8)[addr];
+                    9:      return `hdl_path_mvu_data_mem_bank_ram(1, 9)[addr];
+                    10:     return `hdl_path_mvu_data_mem_bank_ram(1, 10)[addr];
+                    11:     return `hdl_path_mvu_data_mem_bank_ram(1, 11)[addr];
+                    12:     return `hdl_path_mvu_data_mem_bank_ram(1, 12)[addr];
+                    13:     return `hdl_path_mvu_data_mem_bank_ram(1, 13)[addr];
+                    14:     return `hdl_path_mvu_data_mem_bank_ram(1, 14)[addr];
+                    15:     return `hdl_path_mvu_data_mem_bank_ram(1, 15)[addr];
+                    16:     return `hdl_path_mvu_data_mem_bank_ram(1, 16)[addr];
+                    17:     return `hdl_path_mvu_data_mem_bank_ram(1, 17)[addr];
+                    18:     return `hdl_path_mvu_data_mem_bank_ram(1, 18)[addr];
+                    19:     return `hdl_path_mvu_data_mem_bank_ram(1, 19)[addr];
+                    20:     return `hdl_path_mvu_data_mem_bank_ram(1, 20)[addr];
+                    21:     return `hdl_path_mvu_data_mem_bank_ram(1, 21)[addr];
+                    22:     return `hdl_path_mvu_data_mem_bank_ram(1, 22)[addr];
+                    23:     return `hdl_path_mvu_data_mem_bank_ram(1, 23)[addr];
+                    24:     return `hdl_path_mvu_data_mem_bank_ram(1, 24)[addr];
+                    25:     return `hdl_path_mvu_data_mem_bank_ram(1, 25)[addr];
+                    26:     return `hdl_path_mvu_data_mem_bank_ram(1, 26)[addr];
+                    27:     return `hdl_path_mvu_data_mem_bank_ram(1, 27)[addr];
+                    28:     return `hdl_path_mvu_data_mem_bank_ram(1, 28)[addr];
+                    29:     return `hdl_path_mvu_data_mem_bank_ram(1, 29)[addr];
+                    30:     return `hdl_path_mvu_data_mem_bank_ram(1, 30)[addr];
+                    31:     return `hdl_path_mvu_data_mem_bank_ram(1, 31)[addr];
+                    default:
+                        $error("Invalid address");
+                endcase
+            end
+            2: begin
+                case (bank)
+                    0:      return `hdl_path_mvu_data_mem_bank_ram(2, 0)[addr];
+                    1:      return `hdl_path_mvu_data_mem_bank_ram(2, 1)[addr];
+                    2:      return `hdl_path_mvu_data_mem_bank_ram(2, 2)[addr];
+                    3:      return `hdl_path_mvu_data_mem_bank_ram(2, 3)[addr];
+                    4:      return `hdl_path_mvu_data_mem_bank_ram(2, 4)[addr];
+                    5:      return `hdl_path_mvu_data_mem_bank_ram(2, 5)[addr];
+                    6:      return `hdl_path_mvu_data_mem_bank_ram(2, 6)[addr];
+                    7:      return `hdl_path_mvu_data_mem_bank_ram(2, 7)[addr];
+                    8:      return `hdl_path_mvu_data_mem_bank_ram(2, 8)[addr];
+                    9:      return `hdl_path_mvu_data_mem_bank_ram(2, 9)[addr];
+                    10:     return `hdl_path_mvu_data_mem_bank_ram(2, 10)[addr];
+                    11:     return `hdl_path_mvu_data_mem_bank_ram(2, 11)[addr];
+                    12:     return `hdl_path_mvu_data_mem_bank_ram(2, 12)[addr];
+                    13:     return `hdl_path_mvu_data_mem_bank_ram(2, 13)[addr];
+                    14:     return `hdl_path_mvu_data_mem_bank_ram(2, 14)[addr];
+                    15:     return `hdl_path_mvu_data_mem_bank_ram(2, 15)[addr];
+                    16:     return `hdl_path_mvu_data_mem_bank_ram(2, 16)[addr];
+                    17:     return `hdl_path_mvu_data_mem_bank_ram(2, 17)[addr];
+                    18:     return `hdl_path_mvu_data_mem_bank_ram(2, 18)[addr];
+                    19:     return `hdl_path_mvu_data_mem_bank_ram(2, 19)[addr];
+                    20:     return `hdl_path_mvu_data_mem_bank_ram(2, 20)[addr];
+                    21:     return `hdl_path_mvu_data_mem_bank_ram(2, 21)[addr];
+                    22:     return `hdl_path_mvu_data_mem_bank_ram(2, 22)[addr];
+                    23:     return `hdl_path_mvu_data_mem_bank_ram(2, 23)[addr];
+                    24:     return `hdl_path_mvu_data_mem_bank_ram(2, 24)[addr];
+                    25:     return `hdl_path_mvu_data_mem_bank_ram(2, 25)[addr];
+                    26:     return `hdl_path_mvu_data_mem_bank_ram(2, 26)[addr];
+                    27:     return `hdl_path_mvu_data_mem_bank_ram(2, 27)[addr];
+                    28:     return `hdl_path_mvu_data_mem_bank_ram(2, 28)[addr];
+                    29:     return `hdl_path_mvu_data_mem_bank_ram(2, 29)[addr];
+                    30:     return `hdl_path_mvu_data_mem_bank_ram(2, 30)[addr];
+                    31:     return `hdl_path_mvu_data_mem_bank_ram(2, 31)[addr];
+                    default:
+                        $error("Invalid address");
+                endcase
+            end
+            3: begin
+                case (bank)
+                    0:      return `hdl_path_mvu_data_mem_bank_ram(3, 0)[addr];
+                    1:      return `hdl_path_mvu_data_mem_bank_ram(3, 1)[addr];
+                    2:      return `hdl_path_mvu_data_mem_bank_ram(3, 2)[addr];
+                    3:      return `hdl_path_mvu_data_mem_bank_ram(3, 3)[addr];
+                    4:      return `hdl_path_mvu_data_mem_bank_ram(3, 4)[addr];
+                    5:      return `hdl_path_mvu_data_mem_bank_ram(3, 5)[addr];
+                    6:      return `hdl_path_mvu_data_mem_bank_ram(3, 6)[addr];
+                    7:      return `hdl_path_mvu_data_mem_bank_ram(3, 7)[addr];
+                    8:      return `hdl_path_mvu_data_mem_bank_ram(3, 8)[addr];
+                    9:      return `hdl_path_mvu_data_mem_bank_ram(3, 9)[addr];
+                    10:     return `hdl_path_mvu_data_mem_bank_ram(3, 10)[addr];
+                    11:     return `hdl_path_mvu_data_mem_bank_ram(3, 11)[addr];
+                    12:     return `hdl_path_mvu_data_mem_bank_ram(3, 12)[addr];
+                    13:     return `hdl_path_mvu_data_mem_bank_ram(3, 13)[addr];
+                    14:     return `hdl_path_mvu_data_mem_bank_ram(3, 14)[addr];
+                    15:     return `hdl_path_mvu_data_mem_bank_ram(3, 15)[addr];
+                    16:     return `hdl_path_mvu_data_mem_bank_ram(3, 16)[addr];
+                    17:     return `hdl_path_mvu_data_mem_bank_ram(3, 17)[addr];
+                    18:     return `hdl_path_mvu_data_mem_bank_ram(3, 18)[addr];
+                    19:     return `hdl_path_mvu_data_mem_bank_ram(3, 19)[addr];
+                    20:     return `hdl_path_mvu_data_mem_bank_ram(3, 20)[addr];
+                    21:     return `hdl_path_mvu_data_mem_bank_ram(3, 21)[addr];
+                    22:     return `hdl_path_mvu_data_mem_bank_ram(3, 22)[addr];
+                    23:     return `hdl_path_mvu_data_mem_bank_ram(3, 23)[addr];
+                    24:     return `hdl_path_mvu_data_mem_bank_ram(3, 24)[addr];
+                    25:     return `hdl_path_mvu_data_mem_bank_ram(3, 25)[addr];
+                    26:     return `hdl_path_mvu_data_mem_bank_ram(3, 26)[addr];
+                    27:     return `hdl_path_mvu_data_mem_bank_ram(3, 27)[addr];
+                    28:     return `hdl_path_mvu_data_mem_bank_ram(3, 28)[addr];
+                    29:     return `hdl_path_mvu_data_mem_bank_ram(3, 29)[addr];
+                    30:     return `hdl_path_mvu_data_mem_bank_ram(3, 30)[addr];
+                    31:     return `hdl_path_mvu_data_mem_bank_ram(3, 31)[addr];
+                    default:
+                        $error("Invalid address");
+                endcase
+            end
+            4: begin
+                case (bank)
+                    0:      return `hdl_path_mvu_data_mem_bank_ram(4, 0)[addr];
+                    1:      return `hdl_path_mvu_data_mem_bank_ram(4, 1)[addr];
+                    2:      return `hdl_path_mvu_data_mem_bank_ram(4, 2)[addr];
+                    3:      return `hdl_path_mvu_data_mem_bank_ram(4, 3)[addr];
+                    4:      return `hdl_path_mvu_data_mem_bank_ram(4, 4)[addr];
+                    5:      return `hdl_path_mvu_data_mem_bank_ram(4, 5)[addr];
+                    6:      return `hdl_path_mvu_data_mem_bank_ram(4, 6)[addr];
+                    7:      return `hdl_path_mvu_data_mem_bank_ram(4, 7)[addr];
+                    8:      return `hdl_path_mvu_data_mem_bank_ram(4, 8)[addr];
+                    9:      return `hdl_path_mvu_data_mem_bank_ram(4, 9)[addr];
+                    10:     return `hdl_path_mvu_data_mem_bank_ram(4, 10)[addr];
+                    11:     return `hdl_path_mvu_data_mem_bank_ram(4, 11)[addr];
+                    12:     return `hdl_path_mvu_data_mem_bank_ram(4, 12)[addr];
+                    13:     return `hdl_path_mvu_data_mem_bank_ram(4, 13)[addr];
+                    14:     return `hdl_path_mvu_data_mem_bank_ram(4, 14)[addr];
+                    15:     return `hdl_path_mvu_data_mem_bank_ram(4, 15)[addr];
+                    16:     return `hdl_path_mvu_data_mem_bank_ram(4, 16)[addr];
+                    17:     return `hdl_path_mvu_data_mem_bank_ram(4, 17)[addr];
+                    18:     return `hdl_path_mvu_data_mem_bank_ram(4, 18)[addr];
+                    19:     return `hdl_path_mvu_data_mem_bank_ram(4, 19)[addr];
+                    20:     return `hdl_path_mvu_data_mem_bank_ram(4, 20)[addr];
+                    21:     return `hdl_path_mvu_data_mem_bank_ram(4, 21)[addr];
+                    22:     return `hdl_path_mvu_data_mem_bank_ram(4, 22)[addr];
+                    23:     return `hdl_path_mvu_data_mem_bank_ram(4, 23)[addr];
+                    24:     return `hdl_path_mvu_data_mem_bank_ram(4, 24)[addr];
+                    25:     return `hdl_path_mvu_data_mem_bank_ram(4, 25)[addr];
+                    26:     return `hdl_path_mvu_data_mem_bank_ram(4, 26)[addr];
+                    27:     return `hdl_path_mvu_data_mem_bank_ram(4, 27)[addr];
+                    28:     return `hdl_path_mvu_data_mem_bank_ram(4, 28)[addr];
+                    29:     return `hdl_path_mvu_data_mem_bank_ram(4, 29)[addr];
+                    30:     return `hdl_path_mvu_data_mem_bank_ram(4, 30)[addr];
+                    31:     return `hdl_path_mvu_data_mem_bank_ram(4, 31)[addr];
+                    default:
+                        $error("Invalid address");
+                endcase
+            end
+            5: begin
+                case (bank)
+                    0:      return `hdl_path_mvu_data_mem_bank_ram(5, 0)[addr];
+                    1:      return `hdl_path_mvu_data_mem_bank_ram(5, 1)[addr];
+                    2:      return `hdl_path_mvu_data_mem_bank_ram(5, 2)[addr];
+                    3:      return `hdl_path_mvu_data_mem_bank_ram(5, 3)[addr];
+                    4:      return `hdl_path_mvu_data_mem_bank_ram(5, 4)[addr];
+                    5:      return `hdl_path_mvu_data_mem_bank_ram(5, 5)[addr];
+                    6:      return `hdl_path_mvu_data_mem_bank_ram(5, 6)[addr];
+                    7:      return `hdl_path_mvu_data_mem_bank_ram(5, 7)[addr];
+                    8:      return `hdl_path_mvu_data_mem_bank_ram(5, 8)[addr];
+                    9:      return `hdl_path_mvu_data_mem_bank_ram(5, 9)[addr];
+                    10:     return `hdl_path_mvu_data_mem_bank_ram(5, 10)[addr];
+                    11:     return `hdl_path_mvu_data_mem_bank_ram(5, 11)[addr];
+                    12:     return `hdl_path_mvu_data_mem_bank_ram(5, 12)[addr];
+                    13:     return `hdl_path_mvu_data_mem_bank_ram(5, 13)[addr];
+                    14:     return `hdl_path_mvu_data_mem_bank_ram(5, 14)[addr];
+                    15:     return `hdl_path_mvu_data_mem_bank_ram(5, 15)[addr];
+                    16:     return `hdl_path_mvu_data_mem_bank_ram(5, 16)[addr];
+                    17:     return `hdl_path_mvu_data_mem_bank_ram(5, 17)[addr];
+                    18:     return `hdl_path_mvu_data_mem_bank_ram(5, 18)[addr];
+                    19:     return `hdl_path_mvu_data_mem_bank_ram(5, 19)[addr];
+                    20:     return `hdl_path_mvu_data_mem_bank_ram(5, 20)[addr];
+                    21:     return `hdl_path_mvu_data_mem_bank_ram(5, 21)[addr];
+                    22:     return `hdl_path_mvu_data_mem_bank_ram(5, 22)[addr];
+                    23:     return `hdl_path_mvu_data_mem_bank_ram(5, 23)[addr];
+                    24:     return `hdl_path_mvu_data_mem_bank_ram(5, 24)[addr];
+                    25:     return `hdl_path_mvu_data_mem_bank_ram(5, 25)[addr];
+                    26:     return `hdl_path_mvu_data_mem_bank_ram(5, 26)[addr];
+                    27:     return `hdl_path_mvu_data_mem_bank_ram(5, 27)[addr];
+                    28:     return `hdl_path_mvu_data_mem_bank_ram(5, 28)[addr];
+                    29:     return `hdl_path_mvu_data_mem_bank_ram(5, 29)[addr];
+                    30:     return `hdl_path_mvu_data_mem_bank_ram(5, 30)[addr];
+                    31:     return `hdl_path_mvu_data_mem_bank_ram(5, 31)[addr];
+                    default:
+                        $error("Invalid address");
+                endcase
+            end
+            6: begin
+                case (bank)
+                    0:      return `hdl_path_mvu_data_mem_bank_ram(6, 0)[addr];
+                    1:      return `hdl_path_mvu_data_mem_bank_ram(6, 1)[addr];
+                    2:      return `hdl_path_mvu_data_mem_bank_ram(6, 2)[addr];
+                    3:      return `hdl_path_mvu_data_mem_bank_ram(6, 3)[addr];
+                    4:      return `hdl_path_mvu_data_mem_bank_ram(6, 4)[addr];
+                    5:      return `hdl_path_mvu_data_mem_bank_ram(6, 5)[addr];
+                    6:      return `hdl_path_mvu_data_mem_bank_ram(6, 6)[addr];
+                    7:      return `hdl_path_mvu_data_mem_bank_ram(6, 7)[addr];
+                    8:      return `hdl_path_mvu_data_mem_bank_ram(6, 8)[addr];
+                    9:      return `hdl_path_mvu_data_mem_bank_ram(6, 9)[addr];
+                    10:     return `hdl_path_mvu_data_mem_bank_ram(6, 10)[addr];
+                    11:     return `hdl_path_mvu_data_mem_bank_ram(6, 11)[addr];
+                    12:     return `hdl_path_mvu_data_mem_bank_ram(6, 12)[addr];
+                    13:     return `hdl_path_mvu_data_mem_bank_ram(6, 13)[addr];
+                    14:     return `hdl_path_mvu_data_mem_bank_ram(6, 14)[addr];
+                    15:     return `hdl_path_mvu_data_mem_bank_ram(6, 15)[addr];
+                    16:     return `hdl_path_mvu_data_mem_bank_ram(6, 16)[addr];
+                    17:     return `hdl_path_mvu_data_mem_bank_ram(6, 17)[addr];
+                    18:     return `hdl_path_mvu_data_mem_bank_ram(6, 18)[addr];
+                    19:     return `hdl_path_mvu_data_mem_bank_ram(6, 19)[addr];
+                    20:     return `hdl_path_mvu_data_mem_bank_ram(6, 20)[addr];
+                    21:     return `hdl_path_mvu_data_mem_bank_ram(6, 21)[addr];
+                    22:     return `hdl_path_mvu_data_mem_bank_ram(6, 22)[addr];
+                    23:     return `hdl_path_mvu_data_mem_bank_ram(6, 23)[addr];
+                    24:     return `hdl_path_mvu_data_mem_bank_ram(6, 24)[addr];
+                    25:     return `hdl_path_mvu_data_mem_bank_ram(6, 25)[addr];
+                    26:     return `hdl_path_mvu_data_mem_bank_ram(6, 26)[addr];
+                    27:     return `hdl_path_mvu_data_mem_bank_ram(6, 27)[addr];
+                    28:     return `hdl_path_mvu_data_mem_bank_ram(6, 28)[addr];
+                    29:     return `hdl_path_mvu_data_mem_bank_ram(6, 29)[addr];
+                    30:     return `hdl_path_mvu_data_mem_bank_ram(6, 30)[addr];
+                    31:     return `hdl_path_mvu_data_mem_bank_ram(6, 31)[addr];
+                    default:
+                        $error("Invalid address");
+                endcase
+            end
+            7: begin
+                case (bank)
+                    0:      return `hdl_path_mvu_data_mem_bank_ram(7, 0)[addr];
+                    1:      return `hdl_path_mvu_data_mem_bank_ram(7, 1)[addr];
+                    2:      return `hdl_path_mvu_data_mem_bank_ram(7, 2)[addr];
+                    3:      return `hdl_path_mvu_data_mem_bank_ram(7, 3)[addr];
+                    4:      return `hdl_path_mvu_data_mem_bank_ram(7, 4)[addr];
+                    5:      return `hdl_path_mvu_data_mem_bank_ram(7, 5)[addr];
+                    6:      return `hdl_path_mvu_data_mem_bank_ram(7, 6)[addr];
+                    7:      return `hdl_path_mvu_data_mem_bank_ram(7, 7)[addr];
+                    8:      return `hdl_path_mvu_data_mem_bank_ram(7, 8)[addr];
+                    9:      return `hdl_path_mvu_data_mem_bank_ram(7, 9)[addr];
+                    10:     return `hdl_path_mvu_data_mem_bank_ram(7, 10)[addr];
+                    11:     return `hdl_path_mvu_data_mem_bank_ram(7, 11)[addr];
+                    12:     return `hdl_path_mvu_data_mem_bank_ram(7, 12)[addr];
+                    13:     return `hdl_path_mvu_data_mem_bank_ram(7, 13)[addr];
+                    14:     return `hdl_path_mvu_data_mem_bank_ram(7, 14)[addr];
+                    15:     return `hdl_path_mvu_data_mem_bank_ram(7, 15)[addr];
+                    16:     return `hdl_path_mvu_data_mem_bank_ram(7, 16)[addr];
+                    17:     return `hdl_path_mvu_data_mem_bank_ram(7, 17)[addr];
+                    18:     return `hdl_path_mvu_data_mem_bank_ram(7, 18)[addr];
+                    19:     return `hdl_path_mvu_data_mem_bank_ram(7, 19)[addr];
+                    20:     return `hdl_path_mvu_data_mem_bank_ram(7, 20)[addr];
+                    21:     return `hdl_path_mvu_data_mem_bank_ram(7, 21)[addr];
+                    22:     return `hdl_path_mvu_data_mem_bank_ram(7, 22)[addr];
+                    23:     return `hdl_path_mvu_data_mem_bank_ram(7, 23)[addr];
+                    24:     return `hdl_path_mvu_data_mem_bank_ram(7, 24)[addr];
+                    25:     return `hdl_path_mvu_data_mem_bank_ram(7, 25)[addr];
+                    26:     return `hdl_path_mvu_data_mem_bank_ram(7, 26)[addr];
+                    27:     return `hdl_path_mvu_data_mem_bank_ram(7, 27)[addr];
+                    28:     return `hdl_path_mvu_data_mem_bank_ram(7, 28)[addr];
+                    29:     return `hdl_path_mvu_data_mem_bank_ram(7, 29)[addr];
+                    30:     return `hdl_path_mvu_data_mem_bank_ram(7, 30)[addr];
+                    31:     return `hdl_path_mvu_data_mem_bank_ram(7, 31)[addr];
+                    default:
+                        $error("Invalid address");
+                endcase
+            end
+            default:
+                $error("Invalid MVU value.");
+        endcase
+    endfunction
+
+    //
+    //function logic[BWBANKW-1: 0] peekData(int mvu, int addr);
+    //    int bank = addr >> BDBANKAWS;
+    //    return peekData(mvu, bank, addr);
+    //endfunction
+
+    task wait_for_pipeline_after_irq(int oprec);
+        repeat (PIPELINE_DLY + oprec); @(posedge mvu_ext_if.clk);
+    endtask
+
     task wait_for_irq(int mvu_id);
     // Vivado hdl hierarchy can be built only at compile time,
     // no dynamic referencing is allowed, so:
@@ -482,6 +804,7 @@ class mvu_testbench_base extends BaseObj;
             apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
             wait_for_irq(mvu);
         join
+        wait_for_pipeline_after_irq(oprec);
     endtask
 // =================================================================================================
 // Class based test
