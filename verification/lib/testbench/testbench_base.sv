@@ -497,7 +497,7 @@ class mvu_testbench_base extends BaseObj;
     //endfunction
 
     task wait_for_pipeline_after_irq(int oprec);
-        repeat (PIPELINE_DLY + oprec); @(posedge mvu_ext_if.clk);
+        repeat (PIPELINE_DLY + oprec) @(posedge mvu_ext_if.clk);
     endtask
 
     task wait_for_irq(int mvu_id);
@@ -800,11 +800,14 @@ class mvu_testbench_base extends BaseObj;
         mul_mode = 2'b01;
         apb_data = apb_data_t'({ mul_mode, maxpool_en ,BCNTDWN'(countdown_val)});
         apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUCOMMAND});
-        fork
+ //       fork
             apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
-            wait_for_irq(mvu);
-        join
-        wait_for_pipeline_after_irq(oprec);
+ //           begin
+                wait_for_irq(mvu);
+                wait_for_pipeline_after_irq(oprec);
+ //           end
+ //       join
+        
     endtask
 // =================================================================================================
 // Class based test
