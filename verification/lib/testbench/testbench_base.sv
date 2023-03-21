@@ -496,8 +496,14 @@ class mvu_testbench_base extends BaseObj;
     //    return peekData(mvu, bank, addr);
     //endfunction
 
-    task wait_for_pipeline_after_irq(int oprec);
-        repeat (PIPELINE_DLY + oprec) @(posedge mvu_ext_if.clk);
+    task wait_for_pipeline_after_irq(int mvu, int omvu[], int oprec);
+        repeat (PIPELINE_DLY + oprec + 1) @(posedge mvu_ext_if.clk);
+        for (int i=0; i < omvu.size; i++) begin
+            if (mvu != omvu[i]) begin
+                repeat (MVU_INTERCONN_DLY) @(posedge mvu_ext_if.clk);
+                break;
+            end
+        end
     endtask
 
     task wait_for_irq(int mvu_id);
@@ -532,7 +538,7 @@ class mvu_testbench_base extends BaseObj;
         int omsb,
         int iaddr,
         int waddr,
-        byte omvu,          // output mvus
+        int omvu[],         // output mvus
         int obank,
         int oaddr,
         int m_w,            // Matrix width / vector length
@@ -554,6 +560,13 @@ class mvu_testbench_base extends BaseObj;
         int pipeline_latency = 9;
         int buffer_cycles = 10;
         int cyclecount = countdown_val + pipeline_latency + oprec + buffer_cycles;
+
+        logic [NMVU-1 : 0] omvusel = NMVU'('b0);
+        logic [NMVU-1 : 0] mask;
+        for (int i=0; i < omvu.size; i++) begin
+            mask = NMVU'('b1) << omvu[i];
+            omvusel = omvusel | mask;
+        end
 
         apb_strb = apb_strb_t'(4'hF);
 
@@ -590,7 +603,7 @@ class mvu_testbench_base extends BaseObj;
         apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOBASEPTR});
         apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
 
-        apb_data = apb_data_t'({NMVU'(omvu)});
+        apb_data = apb_data_t'({NMVU'(omvusel)});
         apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUOMVUSEL});
         apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
 
@@ -804,7 +817,7 @@ class mvu_testbench_base extends BaseObj;
             apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
  //           begin
                 wait_for_irq(mvu);
-                wait_for_pipeline_after_irq(oprec);
+                wait_for_pipeline_after_irq(.mvu(mvu), .omvu(omvu), .oprec(oprec));
  //           end
  //       join
         

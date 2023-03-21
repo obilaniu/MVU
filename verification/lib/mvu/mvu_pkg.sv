@@ -39,8 +39,10 @@ localparam HPADDERLATENCY= 1;  // Latency of fixed point adder module
 localparam MAXPOOLSTAGES = 1;  // Number of max pool pipeline stages
 localparam MEMRDLATENCY  = 2;  // Memory read latency
 localparam NJUMPS        = 5;  // Number of address jump parameters available
+localparam MVU_INTERCONN_DLY = 1;
 
 localparam PIPELINE_DLY  = VVPSTAGES + SCALERLATENCY + HPADDERLATENCY + MAXPOOLSTAGES + MEMRDLATENCY;
+
 
 localparam BDBANKABS = $clog2(NDBANK);  // Bitwidth of Data    BANK Address Bank Select 
 localparam BDBANKAWS = 10;              // Bitwidth of Data    BANK Address Word Select
