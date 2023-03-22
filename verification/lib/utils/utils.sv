@@ -41,6 +41,9 @@ class Logger;
         log = $sformatf("[%5s] %12s %s ", id, time_stamp, msg);
         if (verbosity<VERB_MEDIUM) begin
             if (log_to_std_out == 1) begin
+                if (id == "ERROR") begin
+                    log = $sformatf("\033[31m%s\033[0m", log);
+                end
                 $display("%s", log);
             end
         end

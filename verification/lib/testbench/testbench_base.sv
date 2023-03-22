@@ -18,7 +18,7 @@ class mvu_testbench_base extends BaseObj;
         .TT        (mvu_pkg::APB_TestTime  )
     ) apb_master;
     virtual MVU_EXT_INTERFACE mvu_ext_if;
-    test_stats_t test_stat;
+    test_stats_t test_stat = '{pass_cnt: 0, fail_cnt: 0};
     tb_config cfg;
 
     // APB signals
@@ -883,8 +883,6 @@ class mvu_testbench_base extends BaseObj;
     endtask 
 
     virtual task report();
-        test_stats_t test_stat;
-        test_stat = '{pass_cnt: 0, fail_cnt: 0};
         logger.print_banner("Testbench Report phase");
         print_result(test_stat, VERB_LOW, logger);
     endtask 

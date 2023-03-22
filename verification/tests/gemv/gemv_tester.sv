@@ -8,6 +8,26 @@ class gemv_tester extends mvu_testbench_base;
     endfunction
 
     //
+    // Checks the results in data memory match a given array of expected words
+    //
+    function bit checkResult(int omvu[], int bank, int startaddr, logic [BWBANKW-1 : 0] expected[]);
+        logic [BWBANKW-1 : 0] memdata;
+        for (int m=0; m < omvu.size; m++) begin
+            for (int i=0; i < expected.size; i++) begin
+                memdata = peekData(.mvu(omvu[m]), .bank(bank), .addr(startaddr + i));
+                if (memdata != expected[i]) begin
+                    logger.print($sformatf("FAIL: Value h%16h at bank %2d addr h%h in MVU %1d does not match expected h%16h", memdata, bank, startaddr+i, omvu[m], expected[i]), "ERROR");
+                    test_stat.fail_cnt += 1;
+                    return 0;
+                end
+            end
+            logger.print("PASS");
+            test_stat.pass_cnt += 1;
+        end
+        return 1;
+    endfunction
+
+    //
     // Matrix-vector multiplication (GEMV) test
     //
     task gemvTests(int mvu, int omvu[], int scaler);
@@ -20,8 +40,7 @@ class gemv_tester extends mvu_testbench_base;
         runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
                 .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(1), .oaddr(0), 
                 .m_w(1), .m_h(1), .scaler(scaler));
-        $display("Word: %0H", peekData(.mvu(omvu[0]), .bank(1), .addr(0)));
-
+        checkResult(.omvu(omvu), .bank(1), .startaddr(0), .expected({64'h0}));
 
         logger.print("TEST gemv 2: matrix-vector mult: 2x2 x 2 tiles, 1x1 => 1 bit precision, input=all 0's");
         writeDataRepeat(.mvu(mvu), .word('h0000000000000000), .startaddr('h0000), .size(2), .stride(1));
@@ -29,7 +48,7 @@ class gemv_tester extends mvu_testbench_base;
         runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
                 .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(2), .oaddr(0), 
                 .m_w(2), .m_h(2), .scaler(scaler));
-        $display("Word: %0H", peekData(.mvu(omvu[0]), .bank(2), .addr(0)));
+        checkResult(.omvu(omvu), .bank(2), .startaddr(0), .expected({64'h0}));
 
         // TEST 3
         // Expected result: accumulators get to value h480, output to data memory is b10 for each element
@@ -42,10 +61,7 @@ class gemv_tester extends mvu_testbench_base;
         runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(2), .omsb(10), 
                 .iaddr(0), .waddr(0), .omvu(omvu), .obank(3), .oaddr(0), 
                 .m_w(2), .m_h(2), .scaler(scaler));
-        $display("Word: %0H", peekData(.mvu(omvu[0]), .bank(3), .addr(0)));
-        $display("Word: %0H", peekData(.mvu(omvu[0]), .bank(3), .addr(1)));
-        $display("Word: %0H", peekData(.mvu(omvu[0]), .bank(3), .addr(2)));
-        $display("Word: %0H", peekData(.mvu(omvu[0]), .bank(3), .addr(3)));
+        checkResult(.omvu(omvu), .bank(3), .startaddr(0), .expected({64'hffffffffffffffff, 64'h0, 64'hffffffffffffffff, 64'h0}));
 
         // TEST 4
         // Expected result: accumulators get to value h6c0, output to data memory is b110 for each element
@@ -55,10 +71,15 @@ class gemv_tester extends mvu_testbench_base;
         logger.print("TEST gmev 4: matrix-vector mult: 3x3 x 3 tiles, 2x2 => 3 bit precision, input=all 1's");
         writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr('h0000), .size(6), .stride(1));
         writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h0), .size(18), .stride(1));
-        runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(4), .omsb(10), 
-                .iaddr(0), .waddr(0), .omvu(omvu), .obank(2), .oaddr(0), 
+        runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(10), 
+                .iaddr(0), .waddr(0), .omvu(omvu), .obank(4), .oaddr(0), 
                 .m_w(3), .m_h(3), .scaler(scaler));
-
+        checkResult(.omvu(omvu), .bank(4), .startaddr(0), .expected({64'hffffffffffffffff,
+                                                                     64'hffffffffffffffff, 
+                                                                     64'h0,
+                                                                     64'hffffffffffffffff,
+                                                                     64'hffffffffffffffff, 
+                                                                     64'h0}));
 
         // TEST 5
         // Expected result: accumulators get to value h180, output to data memory is b001 for each element
@@ -70,9 +91,18 @@ class gemv_tester extends mvu_testbench_base;
         writeDataRepeat(.mvu(mvu), .word('h0000000000000000), .startaddr('h0001), .size(3), .stride(2));      // LSB=0  - = b10
         writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b0}}), .startaddr('h0), .size(9), .stride(2));         // MSB=0 \
         writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b1}}), .startaddr('h1), .size(9), .stride(2));         // LSB=1 - = b01
-        runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(5), .omsb(10), 
-                .iaddr(0), .waddr(0), .omvu(omvu), .obank(3), .oaddr(0), 
+        runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(10), 
+                .iaddr(0), .waddr(0), .omvu(omvu), .obank(5), .oaddr(0), 
                 .m_w(3), .m_h(3), .scaler(scaler));
+        checkResult(.omvu(omvu), .bank(5), .startaddr(0), .expected({64'h0,
+                                                                     64'h0, 
+                                                                     64'hffffffffffffffff,
+                                                                     64'h0,
+                                                                     64'h0, 
+                                                                     64'hffffffffffffffff,
+                                                                     64'h0,
+                                                                     64'h0, 
+                                                                     64'hffffffffffffffff}));
 
     endtask
 
