@@ -28,9 +28,36 @@ class gemv_tester extends mvu_testbench_base;
     endfunction
 
     //
+    // Calculates expected result
+    //
+    function automatic void calcExpected(int d, int w, int s, int tile_w, int tile_h, int oprec, int omsb, ref logic[BWBANKW-1:0] expected[]);
+        int value;
+        int idx;
+        int obit;
+        
+        expected = new[tile_h*oprec];
+        value = s * 64 * tile_w * d * w;
+        value = value >> (omsb-oprec+1);
+        for (int j = 0; j < tile_h; j++) begin
+            for (int i = 0; i < oprec; i++) begin
+                idx = j*oprec + i;
+                obit = oprec - i - 1;
+                if (value[obit] == 'b1) begin
+                    expected[idx] = 64'hffffffffffffffff;
+                end else begin
+                    expected[idx] = 64'h0000000000000000;
+                end
+                logger.print($sformatf("expected[%2d]=%16h", idx, expected[idx]));
+            end
+        end
+        return;
+    endfunction
+
+    //
     // Matrix-vector multiplication (GEMV) test
     //
     task gemvTests(int mvu, int omvu[], int scaler);
+        logic[BWBANKW-1:0] expected[];
 
         logger.print_banner("Matrix-vector multiplication (GEMV) test");
 
@@ -40,7 +67,8 @@ class gemv_tester extends mvu_testbench_base;
         runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
                 .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(1), .oaddr(0), 
                 .m_w(1), .m_h(1), .scaler(scaler));
-        checkResult(.omvu(omvu), .bank(1), .startaddr(0), .expected({64'h0}));
+        calcExpected(.d(0), .w(0), .s(scaler), .tile_w(1), .tile_h(1), .oprec(1), .omsb(0), .expected(expected));
+        checkResult(.omvu(omvu), .bank(1), .startaddr(0), .expected(expected));
 
         logger.print("TEST gemv 2: matrix-vector mult: 2x2 x 2 tiles, 1x1 => 1 bit precision, input=all 0's");
         writeDataRepeat(.mvu(mvu), .word('h0000000000000000), .startaddr('h0000), .size(2), .stride(1));
@@ -48,6 +76,7 @@ class gemv_tester extends mvu_testbench_base;
         runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(1), 
                 .omsb(0), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(2), .oaddr(0), 
                 .m_w(2), .m_h(2), .scaler(scaler));
+        calcExpected(.d(0), .w(0), .s(scaler), .tile_w(2), .tile_h(2), .oprec(1), .omsb(0), .expected(expected));
         checkResult(.omvu(omvu), .bank(2), .startaddr(0), .expected({64'h0}));
 
         // TEST 3
@@ -61,7 +90,8 @@ class gemv_tester extends mvu_testbench_base;
         runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(2), .omsb(10), 
                 .iaddr(0), .waddr(0), .omvu(omvu), .obank(3), .oaddr(0), 
                 .m_w(2), .m_h(2), .scaler(scaler));
-        checkResult(.omvu(omvu), .bank(3), .startaddr(0), .expected({64'hffffffffffffffff, 64'h0, 64'hffffffffffffffff, 64'h0}));
+        calcExpected(.d(3), .w(3), .s(scaler), .tile_w(2), .tile_h(2), .oprec(2), .omsb(10), .expected(expected));
+        checkResult(.omvu(omvu), .bank(3), .startaddr(0), .expected(expected)); //.expected({64'hffffffffffffffff, 64'h0, 64'hffffffffffffffff, 64'h0}));
 
         // TEST 4
         // Expected result: accumulators get to value h6c0, output to data memory is b110 for each element
@@ -74,12 +104,8 @@ class gemv_tester extends mvu_testbench_base;
         runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(10), 
                 .iaddr(0), .waddr(0), .omvu(omvu), .obank(4), .oaddr(0), 
                 .m_w(3), .m_h(3), .scaler(scaler));
-        checkResult(.omvu(omvu), .bank(4), .startaddr(0), .expected({64'hffffffffffffffff,
-                                                                     64'hffffffffffffffff, 
-                                                                     64'h0,
-                                                                     64'hffffffffffffffff,
-                                                                     64'hffffffffffffffff, 
-                                                                     64'h0}));
+        calcExpected(.d(3), .w(3), .s(scaler), .tile_w(3), .tile_h(3), .oprec(3), .omsb(10), .expected(expected));
+        checkResult(.omvu(omvu), .bank(4), .startaddr(0), .expected(expected));
 
         // TEST 5
         // Expected result: accumulators get to value h180, output to data memory is b001 for each element
@@ -94,15 +120,8 @@ class gemv_tester extends mvu_testbench_base;
         runGEMV(.mvu(mvu), .iprec(2), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(10), 
                 .iaddr(0), .waddr(0), .omvu(omvu), .obank(5), .oaddr(0), 
                 .m_w(3), .m_h(3), .scaler(scaler));
-        checkResult(.omvu(omvu), .bank(5), .startaddr(0), .expected({64'h0,
-                                                                     64'h0, 
-                                                                     64'hffffffffffffffff,
-                                                                     64'h0,
-                                                                     64'h0, 
-                                                                     64'hffffffffffffffff,
-                                                                     64'h0,
-                                                                     64'h0, 
-                                                                     64'hffffffffffffffff}));
+        calcExpected(.d(2), .w(1), .s(scaler), .tile_w(3), .tile_h(3), .oprec(3), .omsb(10), .expected(expected));
+        checkResult(.omvu(omvu), .bank(5), .startaddr(0), .expected(expected));
 
     endtask
 
