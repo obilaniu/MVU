@@ -2,6 +2,10 @@
 module mvu_mem_subsystem import rv32_pkg::*;import mvu_pkg::*;
 #(
     parameter int unsigned MVU_RAM_BEGIN_ADDR   = 32'h7000_0000,
+    parameter int unsigned MVU_WRAM_SZ          = 32'h0200_0000,
+    parameter int unsigned MVU_DRAM_SZ          = 32'h0200_0000,
+    parameter int unsigned MVU_SRAM_SZ          = 32'h0200_0000,
+    parameter int unsigned MVU_BRAM_SZ          = 32'h0200_0000,
     parameter int unsigned AxiIdWidth           = 6,
     parameter int unsigned AxiAddrWidth         = 32,
     parameter int unsigned AxiDataWidth         = 32,
@@ -15,24 +19,12 @@ module mvu_mem_subsystem import rv32_pkg::*;import mvu_pkg::*;
 )(
     input  logic            clk_i,
     input  logic            rst_ni,
-    output rv32_data_t      pito_dmem_wdata_o,
-    input  rv32_data_t      pito_dmem_rdata_i,
-    output rv32_dmem_addr_t pito_dmem_addr_o,
-    output logic            pito_dmem_req_o,
-    output logic            pito_dmem_we_o,
-    output dmem_be_t        pito_dmem_be_o,
-    output rv32_data_t      pito_imem_wdata_o,
-    input  rv32_data_t      pito_imem_rdata_i,
-    output rv32_imem_addr_t pito_imem_addr_o,
-    output logic            pito_imem_req_o,
-    output logic            pito_imem_we_o,
-    output imem_be_t        pito_imem_be_o,
-    output rv32_data_t      mvumem_wdata_o,
-    input  rv32_data_t      mvumem_rdata_i,
-    output rv32_imem_addr_t mvumem_addr_o,
-    output logic            mvumem_req_o,
-    output logic            mvumem_we_o,
-    output imem_be_t        mvumem_be_o,
+    output rv32_data_t      mvuwmem_wdata_o,
+    input  rv32_data_t      mvuwmem_rdata_i,
+    output rv32_imem_addr_t mvuwmem_addr_o,
+    output logic            mvuwmem_req_o,
+    output logic            mvuwmem_we_o,
+    output imem_be_t        mvuwmem_be_o,
     AXI_BUS.Slave           m_axi
 );
 `include "axi/assign.svh"
