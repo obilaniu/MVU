@@ -8,8 +8,16 @@ class gemv_tester extends mvu_testbench_base;
     endfunction
 
     //
-    // Checks the results in data memory match a given array of expected words
+    // Check result
     //
+    // Checks the results in data memory match a given array of expected words.
+    //
+    // Params:
+    //      omvu: output MVU number
+    //      bank: memory bank number
+    //      startaddr: starting address of the result data
+    //      expected: array containing the expected result in bit transposed format
+    // 
     function bit checkResult(int omvu[], int bank, int startaddr, logic [BDBANKW-1 : 0] expected[]);
         logic [BWBANKW-1 : 0] memdata;
         for (int m=0; m < omvu.size; m++) begin
@@ -28,7 +36,17 @@ class gemv_tester extends mvu_testbench_base;
     endfunction
 
     //
-    // Calculates expected result
+    // Calculate expected result
+    //
+    // Use this function when the input weight matrix and data vector have repeated values in every element. E.g. [1, 1, 1, ... 1]
+    //
+    // Params:
+    //      d: repeated input data element value
+    //      w: repeated input weight matrix element value
+    //      s: scaler to multiply the results by
+    //      tile_w: width size of weight matrix and input data vector in tiles of 64 elements
+    //      tile_h: height size of weight matrix in tiles of 64 elements
+    //      expected: reference to an array that will output the expected result in bit transposed format
     //
     function automatic void calcExpected(int d, int w, int s, int tile_w, int tile_h, int oprec, int omsb, ref logic[BDBANKW-1:0] expected[]);
         int value;
@@ -53,7 +71,15 @@ class gemv_tester extends mvu_testbench_base;
     endfunction
 
     //
-    // Calculated GEMV
+    // Calculate GEMV
+    //
+    // Use this function to calculate the expected value of the resultant vector
+    // from a given matrix m and vector v. 
+    //
+    //  Params:
+    //      m: input matrix
+    //      v: input vector
+    //      out: reference to vector that will contain the output vector
     // 
     function automatic void calcGEMV(int m[][], int v[], ref int out[]);
         out = new[v.size];
@@ -68,7 +94,20 @@ class gemv_tester extends mvu_testbench_base;
     endfunction
 
     //
-    // Calculated expected results from the full input matrix and vector
+    // Calculate expected result
+    //
+    // Calculates expected results from the full input matrix and vector in the same bit transposed
+    // format output by the MVU. Use this function when the input matrix w and vector d are arbitary.
+    //
+    // Params:
+    //      d: input data vector
+    //      w: input weight matrix
+    //      s: scaler to multiply the results by
+    //      tile_w: width size of weight matrix and input data vector in tiles of 64 elements
+    //      tile_h: height size of weight matrix in tiles of 64 elements
+    //      oprec: output precision/bit depth
+    //      omsb: output MSB position
+    //      expected: reference to an array that will output the expected result in bit transposed format
     //
     function automatic void calcExpectedFull(int d[], int w[][], int s, int tile_w, int tile_h, int oprec, int omsb, ref logic[BDBANKW-1:0] expected[]);
         // Compute GEMV
@@ -95,6 +134,12 @@ class gemv_tester extends mvu_testbench_base;
     //
     // Generates repeated pattern for a matrix
     //
+    // Params:
+    //      d: input data array of integer pattern to repeat
+    //      width: width of output matrix
+    //      height: height of output matrix
+    //      out: reference of matrix that will contain the output of this function
+    //
     function automatic void generateRepeatPatternMatrix(int d[], int width, int height=1, ref int out[][]);
         out = new[height];
         for (int j=0; j < height; j++) begin
@@ -108,6 +153,10 @@ class gemv_tester extends mvu_testbench_base;
     // 
     // Generates a repeated pattern for a vector
     //
+    //      d: input data array of integer pattern to repeat
+    //      width: width of output matrix
+    //      out: reference of vector that will contain the output of this function
+    //
     function automatic void generateRepeatPatternVector(int d[], int width, ref int out[]);
         int innerout[][];
         generateRepeatPatternMatrix(d, width, 1, innerout);
@@ -116,6 +165,11 @@ class gemv_tester extends mvu_testbench_base;
 
     //
     // Matrix-vector multiplication (GEMV) test
+    //
+    // Params:
+    //      mvu: MVU on which to do the calculations
+    //      omvu: array containing list of MVUs to output results to
+    //      scaler: scaler to multiply the results by
     //
     task gemvTests(int mvu, int omvu[], int scaler);
         int d[];
@@ -239,6 +293,11 @@ class gemv_tester extends mvu_testbench_base;
     // Test signed Matrix-Vector multiplication (gemv signed)
     //
     // Note: the expected values in the comments of each test assume scaler=1
+    //
+    // Params:
+    //      mvu: MVU on which to do the calculations
+    //      omvu: array containing list of MVUs to output results to
+    //      scaler: scaler to multiply the results by
     //
     task gemvSignedTests(int mvu, int omvu[], int scaler);
         logic[BDBANKW-1:0] expected[];
@@ -424,6 +483,9 @@ class gemv_tester extends mvu_testbench_base;
         super.tb_setup();
     endtask
 
+    // --------------------------------
+    // MAIN TESTBENCH RUN FUNCTION
+    // --------------------------------
     task run();
         logger.print_banner("Testbench Run phase");
         // Run gemv tests, mvu0 -> mvu0
