@@ -123,16 +123,26 @@ typedef struct packed
 //==================================================================================================
 // A function to report results
 function void print_result(test_stats_t test_stat, print_verbosity_t verbosity=VERB_LOW, Logger logger=null, string id="INFO");
+    automatic string pass_fmt = "";
+    automatic string fail_fmt = "";
+    automatic string reset_fmt = "\033[0m";
+
+    if (test_stat.fail_cnt > 0) begin
+        fail_fmt = "\033[31m";
+    end else begin
+        pass_fmt = "\033[32m";
+    end
+
     if (logger == null) begin
         `print_banner("INFO", "Test results", verbosity)
         `test_print("INFO", $sformatf("Total Number of tests  = %0d", test_stat.pass_cnt+test_stat.fail_cnt), verbosity)
-        `test_print("INFO", $sformatf("Number of passed tests = %0d", test_stat.pass_cnt), verbosity)
-        `test_print("INFO", $sformatf("Number of failed tests = %0d\n", test_stat.fail_cnt), verbosity)
+        `test_print("INFO", $sformatf("%sNumber of passed tests = %0d%s", pass_fmt, test_stat.pass_cnt, reset_fmt), verbosity)
+        `test_print("INFO", $sformatf("%sNumber of failed tests = %0d%s\n", fail_fmt, test_stat.fail_cnt, reset_fmt), verbosity)
     end else begin
         logger.print_banner("Test results", id, verbosity);
         logger.print($sformatf("Total Number of tests  = %0d", test_stat.pass_cnt+test_stat.fail_cnt));
-        logger.print($sformatf("Number of passed tests = %0d", test_stat.pass_cnt));
-        logger.print($sformatf("Number of failed tests = %0d", test_stat.fail_cnt));
+        logger.print($sformatf("%sNumber of passed tests = %0d%s", pass_fmt, test_stat.pass_cnt, reset_fmt));
+        logger.print($sformatf("%sNumber of failed tests = %0d%s", fail_fmt, test_stat.fail_cnt, reset_fmt));
     end
 endfunction : print_result
 
