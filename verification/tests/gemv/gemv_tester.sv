@@ -306,35 +306,60 @@ class gemv_tester extends mvu_testbench_base;
         calcExpectedFull(.d(data), .w(weights), .s(scaler), .tile_w(m_w), .tile_h(m_h), .oprec(oprec), .omsb(omsb), .expected(expected));
         checkResult(.omvu(omvu), .bank(obank), .startaddr(oaddr), .expected(expected));
 
-
         // Expected result: accumulators get to value hfffffffffffffe7d, output to data memory is b100 for each element
         // (i.e. [hffffffffffffffff, 0000000000000000, 0000000000000000, ...)
         // (i.e. (d3*-d2*d32 + d2*d1*d31 + d1*d1*d1)*d3 = -d387 = 32'hfffffffffffffe7d)
         // Result output to bank 15 starting at address 0
         logger.print("TEST gemv signed 6: matrix-vector mult: 3x3 x 3 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
+        m_w = 3; 
+        m_h = 3;
+        oprec = 3;
+        omsb = 9;
+        obank = 15;
+        oaddr = 0;
+        generateRepeatPatternMatrix({-2, 1}, N*m_w, N*m_h, weights);
+        generateRepeatPatternVector({3, 2}, N*m_w, data);
+        for (int i=0; i < m_w; i++) begin
+            data[i*N + N-1] = 'd1;
+        end
         writeDataRepeat(mvu, 'h0000000000000000, 'h0000, 3, 3);      // MSB  ={0,0}... \
         writeDataRepeat(mvu, 'hfffffffffffffffe, 'h0001, 3, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
         writeDataRepeat(mvu, 'haaaaaaaaaaaaaaab, 'h0002, 3, 3);      // LSB  ={1,0}... /
         writeWeightsRepeat(mvu, {BWBANKW/2{2'b10}}, 'h0, 9, 2);      // MSB  ={1,0}... \
         writeWeightsRepeat(mvu, {BWBANKW/2{2'b01}}, 'h1, 9, 2);      // LSB  ={0,1}... - = {b10,b01} = {-d2, d1}
-        runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(9), 
-           .iaddr(0), .waddr(0), .omvu(omvu), .obank(15), .oaddr(0), 
-           .m_w(3), .m_h(3), .isign(1), .wsign(1), .scaler(scaler)); 
-
+        runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .saddr(0), .baddr(0), .oprec(oprec), .omsb(omsb), 
+           .iaddr(0), .waddr(0), .omvu(omvu), .obank(obank), .oaddr(oaddr), 
+           .m_w(m_w), .m_h(m_h), .isign(1), .wsign(1), .scaler(scaler));
+        calcExpectedFull(.d(data), .w(weights), .s(scaler), .tile_w(m_w), .tile_h(m_h), .oprec(oprec), .omsb(omsb), .expected(expected));
+        checkResult(.omvu(omvu), .bank(obank), .startaddr(oaddr), .expected(expected));
 
         // Expected result: accumulators get to value h0000000000000063, output to data memory is b001 for each element
         // (i.e. [0000000000000000, 0000000000000000, hffffffffffffffff, ...)
         // (i.e. (d3*d1*d32 + d2*-d1*d31 + d1*-d1*d1)*d3 = d99 = 32'h0000000000000063)
         // Result output to bank 16 starting at address 0
-        logger.print("TEST gemv signed 7: matrix-vector mult: 3x3 x 3 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-2,1}, except one product term per tile with 1x1=1");
+        logger.print("TEST gemv signed 7: matrix-vector mult: 3x3 x 3 tiles, 3s X 2s => 3 bit precision, input: alternating d={3,2}, w={-1,1}, except one product term per tile with 1x(-1)=1");
+        m_w = 3; 
+        m_h = 3;
+        oprec = 3;
+        omsb = 8;
+        obank = 16;
+        oaddr = 0;
+        generateRepeatPatternMatrix({1, -1}, N*m_w, N*m_h, weights);
+        generateRepeatPatternVector({3, 2}, N*m_w, data);
+        for (int i=0; i < m_w; i++) begin
+            data[i*N + N-1] = 1;
+        end
         writeDataRepeat(mvu, 'h0000000000000000, 'h0000, 3, 3);      // MSB  ={0,0}... \
         writeDataRepeat(mvu, 'hfffffffffffffffe, 'h0001, 3, 3);      // MSB-1={1,1}... - = {b011,b110} = {d3,d2}
         writeDataRepeat(mvu, 'haaaaaaaaaaaaaaab, 'h0002, 3, 3);      // LSB  ={1,0}... /
         writeWeightsRepeat(mvu, {BWBANKW/2{2'b01}}, 'h0, 9, 2);      // MSB  ={1,0}... \
-        writeWeightsRepeat(mvu, {BWBANKW/2{2'b11}}, 'h1, 9, 2);      // LSB  ={0,1}... - = {b10,b01} = {-d2, d1}
-        runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .saddr(0), .baddr(0), .oprec(3), .omsb(8), 
-           .iaddr(0), .waddr(0), .omvu(omvu), .obank(16), .oaddr(0), 
-           .m_w(3), .m_h(3), .isign(1), .wsign(1), .scaler(scaler)); 
+        writeWeightsRepeat(mvu, {BWBANKW/2{2'b11}}, 'h1, 9, 2);      // LSB  ={0,1}... - = {b10,b01} = {-d1, d1}
+        runGEMV(.mvu(mvu), .iprec(3), .wprec(2), .saddr(0), .baddr(0), .oprec(oprec), .omsb(omsb), 
+           .iaddr(0), .waddr(0), .omvu(omvu), .obank(obank), .oaddr(oaddr), 
+           .m_w(m_w), .m_h(m_h), .isign(1), .wsign(1), .scaler(scaler)); 
+        calcExpectedFull(.d(data), .w(weights), .s(scaler), .tile_w(m_w), .tile_h(m_h), .oprec(oprec), .omsb(omsb), .expected(expected));
+        checkResult(.omvu(omvu), .bank(obank), .startaddr(oaddr), .expected(expected));
+        
 
 
     endtask
