@@ -24,7 +24,7 @@ class gemv_tester extends mvu_testbench_base;
             for (int i=0; i < expected.size; i++) begin
                 memdata = peekData(.mvu(omvu[m]), .bank(bank), .addr(startaddr + i));
                 if (memdata != expected[i]) begin
-                    logger.print($sformatf("FAIL: Value h%16h at bank %2d addr h%h in MVU %1d does not match expected h%16h", memdata, bank, startaddr+i, omvu[m], expected[i]), "ERROR");
+                    logger.print($sformatf("FAIL: Value h%016h at bank %2d addr h%h in MVU %1d does not match expected h%016h", memdata, bank, startaddr+i, omvu[m], expected[i]), "ERROR");
                     test_stat.fail_cnt += 1;
                     return 0;
                 end
@@ -193,13 +193,6 @@ class gemv_tester extends mvu_testbench_base;
         omsb = 0;
         obank = 1;
         oaddr = 0;
-        d = new[BDBANKW];
-        foreach (d[i]) d[i] = 0;
-        w = new[BWBANKW];
-        foreach (w[i]) begin
-            w[i] = new[BWBANKW];
-            foreach (w[i][j]) w[i][j] = 0;
-        end
         writeDataRepeat(.mvu(mvu), .word('h0000000000000000), .startaddr('h0000), .size(1), .stride(1));
         writeWeightsRepeat(.mvu(mvu), .word({BWBANKW{1'b0}}), .startaddr('h0), .size(1), .stride(1));
         runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(oprec), 
@@ -530,15 +523,6 @@ class gemv_tester extends mvu_testbench_base;
         // Repeat the unsigned gemv tests, mvu2 -> mvu3
         logger.print_banner("GEMV tests: mvu2 -> mvu3");
         gemvTests(.mvu(2), .omvu({3}), .scaler(1));
-
-        // Repeat the unsigned gemv tests, mvu7-> mvu0
-        // Blank out mvu0's memory banks first
-        //logger.print_banner("GEMV tests: mvu7 -> mvu0");
-        //writeDataRepeat(0, 'h0000000000000000, 'h0000, 9, 1);
-        //writeDataRepeat(0, 'h0000000000000000, {5'b00001, 10'b0000000000}, 9, 1);
-        //writeDataRepeat(0, 'h0000000000000000, {5'b00010, 10'b0000000000}, 9, 1);
-        //writeDataRepeat(0, 'h0000000000000000, {5'b00011, 10'b0000000000}, 9, 1);
-        //gemvTests(.mvu(7), .omvu({0}), .scaler(1));
 
         //
         // Broadcast tests
