@@ -14,3 +14,11 @@
 //================================================================
 // hard coded HDL paths for verification 
 //================================================================
+
+
+// ===============================================================
+// MVU Data memory access macros
+// ===============================================================
+`define hdl_path_mvu_data_mem(mvu_num) `hdl_path_mvu_top.mvu.mvuarray[mvu_num]
+`define hdl_path_mvu_data_mem_bank(mvu_num, bank) `hdl_path_mvu_data_mem(mvu_num).mvuunit.bankarray[bank]
+`define hdl_path_mvu_data_mem_bank_ram(mvu_num, bank) `hdl_path_mvu_data_mem_bank(mvu_num, bank).db.data_ram.mem
