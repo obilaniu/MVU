@@ -397,9 +397,9 @@ generate for(i=0;i<NDBANK;i=i+1) begin:bankarray
     wire                rd_bankhit  = rdi_bankhit | rdd_bankhit | rdc_bankhit;
     wire                wr_bankhit  = wr_addr [BDBANKAWS +: BDBANKABS] == i;
     wire[BDBANKA-1 : 0] rd_addr     = (rdi_grnt & rdi_bankhit) ? rdi_addr :
-                                      (rdd_grnt & rdd_bankhit) ? rdd_addr : rdc_addr);
+									  ((rdd_grnt & rdd_bankhit) ? rdd_addr : rdc_addr);
     wire[1 : 0]         rd_muxcode  = (rdi_grnt & rdi_bankhit) ?     2'd0 :
-                                      (rdd_grnt & rdd_bankhit) ?     2'd1 : 2'd2);
+									  ((rdd_grnt & rdd_bankhit) ?     2'd1 : 2'd2);
     bank64k #(BDBANKW, BDBANKAWS) db (clk,
         rd_en & rd_bankhit, rd_addr[0 +: BDBANKAWS], rd_muxcode,
         wr_en & wr_bankhit, wr_addr[0 +: BDBANKAWS], wr_muxcode,
