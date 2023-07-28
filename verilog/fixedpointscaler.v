@@ -14,11 +14,11 @@
 `timescale 1ns/1ps
 
  module fixedpointscaler #(
-     BA     = 27,
-     BB     = 16,
-     BC     = 27,
-     BD     = 27,
-     BP     = 48
+     parameter BA     = 27,
+     parameter BB     = 16,
+     parameter BC     = 27,
+     parameter BD     = 27,
+     parameter BP     = 48
  )
  (
      input  wire                                clk,            // clock

@@ -39,6 +39,10 @@ localparam HPADDERLATENCY= 1;  // Latency of fixed point adder module
 localparam MAXPOOLSTAGES = 1;  // Number of max pool pipeline stages
 localparam MEMRDLATENCY  = 2;  // Memory read latency
 localparam NJUMPS        = 5;  // Number of address jump parameters available
+localparam MVU_INTERCONN_DLY = 1;
+
+localparam PIPELINE_DLY  = VVPSTAGES + SCALERLATENCY + HPADDERLATENCY + MAXPOOLSTAGES + MEMRDLATENCY;
+
 
 localparam BDBANKABS = $clog2(NDBANK);  // Bitwidth of Data    BANK Address Bank Select 
 localparam BDBANKAWS = 10;              // Bitwidth of Data    BANK Address Word Select
@@ -56,6 +60,7 @@ localparam APB_STRB_WIDTH = cf_math_pkg::ceil_div(APB_DATA_WIDTH, 8);
 
 localparam time APB_ApplTime  = 2ns; // taken from https://github.com/pulp-platform/apb/blob/master/test/tb_apb_regs.sv#L31
 localparam time APB_TestTime  = 8ns; //
+
 
 typedef enum logic [11:0] {
 	CSR_MVUWBASEPTR=12'hf20,//Base address for weight memory
@@ -136,7 +141,7 @@ typedef enum logic [11:0] {
 
 typedef logic [APB_ADDR_WIDTH-1:0] apb_addr_t;
 typedef logic [APB_DATA_WIDTH-1:0] apb_data_t;
-typedef logic [APB_DATA_WIDTH-1:0] apb_strb_t;
+typedef logic [APB_STRB_WIDTH-1:0] apb_strb_t;
 
 typedef logic [BWBANKW-1 : 0 ] w_data_t;
 typedef w_data_t w_data_q_t[$];

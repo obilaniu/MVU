@@ -534,7 +534,7 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
     mvu #(
             .N              (N),
             .NDBANK         (NDBANK)
-        ) mvunit
+        ) mvuunit
         (
             .clk            (mvu_ext.clk                            ),
             .run            (run[i]                                 ),

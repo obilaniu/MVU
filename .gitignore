@@ -97,3 +97,7 @@ conv2d_jumps
 
 # Fusesoc
 fusesoc.conf
+
+*.zip
+
+test/
