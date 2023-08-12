@@ -1,5 +1,5 @@
 `include "testbench_macros.svh"
-`include "testbench_config.sv"
+// `include "testbench_config.sv"
 
 import utils::*;
 import testbench_pkg::*;
@@ -45,10 +45,10 @@ class mvu_testbench_base extends BaseObj;
         logic unsigned [NMVU-1 : 0] grnt;
         logger.print_banner("Controller memory access test");
         // Read/Write tests
-        writeData(0, 'hdeadbeefdeadbeef, 0);
+        writeData(0, 64'hdeadbeefdeadbeef, 0);
         readData(0, 0, word, grnt);
         logger.print($sformatf("word=%x, grnt=%b", word, grnt));
-        writeData(0, 'hbeefdeadbeefdead, 1);
+        writeData(0, 64'hbeefdeadbeefdead, 1);
         readData(0, 1, word, grnt);
         logger.print($sformatf("word=%x, grnt=%b", word, grnt));
     endtask
@@ -78,7 +78,7 @@ class mvu_testbench_base extends BaseObj;
         end
     endtask
 
-    task writeData(int mvu, unsigned[BDBANKW-1 : 0] word, unsigned[BDBANKA-1 : 0] addr);
+    task writeData(int mvu, logic unsigned [BDBANKW-1 : 0] word, logic[BDBANKA-1 : 0] addr);
         checkmvu(mvu);
         mvu_ext_if.wrc_addr = addr;
         mvu_ext_if.wrc_word = word;
