@@ -36,6 +36,9 @@ class cdru_tester extends mvu_testbench_base;
         logic [BDBANKA-1 : 0] caddr;
         logic [BDBANKA-1 : 0] iaddr;
 
+        int jobread_latency = MEMRDLATENCY + 2;
+
+
         // Test 1 - read data on same MVU but different banks
         //
         // Setup:
@@ -56,10 +59,21 @@ class cdru_tester extends mvu_testbench_base;
         cbank = 1;
         iaddr = calc_addr(ibank, 0);
         caddr = calc_addr(cbank, 0);
-        runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(oprec), 
+        setupGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(oprec), 
                 .omsb(omsb), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(obank), .oaddr(oaddr), 
                 .m_w(m_w), .m_h(m_h), .scaler(scaler));
-        readData(mvu, caddr, cword_out, cgrnt);
+        fork
+            // Thread 1
+            begin
+                runGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(oprec), 
+                        .omvu(omvu), .m_w(m_w), .m_h(m_h));
+            end
+            // Thread 2
+            begin
+                repeat (jobread_latency) @(posedge mvu_ext_if.clk);
+                readData(mvu, caddr, cword_out, cgrnt);
+            end
+        join
 
         // Test 2 - read data on same MVU but same bank
         //

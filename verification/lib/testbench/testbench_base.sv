@@ -529,8 +529,8 @@ class mvu_testbench_base extends BaseObj;
         end
     endtask
 
-// Executes a GMEV
-    task automatic runGEMV(
+// Sets up the configuration registers to run a GEMV
+    task automatic setupGEMV(
         int mvu,            // MVU number to execute on
         int iprec,
         int wprec,
@@ -556,10 +556,9 @@ class mvu_testbench_base extends BaseObj;
         logic [BDBANKABS-1 : 0]     obank_sel = obank;
         logic [BDBANKAWS-1 : 0]     oword_sel = oaddr;
 
-        int countdown_val = m_w * m_h * iprec * wprec;
         int pipeline_latency = 9;
         int buffer_cycles = 10;
-        int cyclecount = countdown_val + pipeline_latency + oprec + buffer_cycles;
+        //int cyclecount = countdown_val + pipeline_latency + oprec + buffer_cycles;
 
         logic [NMVU-1 : 0] omvusel = NMVU'('b0);
         logic [NMVU-1 : 0] mask;
@@ -807,19 +806,31 @@ class mvu_testbench_base extends BaseObj;
             apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUUSEBIAS_MEM});
             apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
         end
+    endtask
 
-        // Run the GEMV
-        maxpool_en = 1'b1;
-        mul_mode = 2'b01;
+    // Run the GEMV
+    task runGEMV(
+        int mvu,
+        int iprec,
+        int wprec,
+        int oprec,
+        int omvu[],
+        int m_w,            // Matrix width / vector length
+        int m_h             // Matrix height
+    );
+        logic maxpool_en = 1'b1;
+        logic [1:0] mul_mode = 2'b01;
+        int countdown_val = m_w * m_h * iprec * wprec;
+
         apb_data = apb_data_t'({ mul_mode, maxpool_en ,BCNTDWN'(countdown_val)});
         apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUCOMMAND});
- //       fork
+        fork
             apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
- //           begin
+            begin
                 wait_for_irq(mvu);
                 wait_for_pipeline_after_irq(.mvu(mvu), .omvu(omvu), .oprec(oprec));
- //           end
- //       join
+            end
+        join
         
     endtask
 // =================================================================================================
