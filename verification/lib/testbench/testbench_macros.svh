@@ -16,9 +16,15 @@
 //================================================================
 
 
+
 // ===============================================================
 // MVU Data memory access macros
 // ===============================================================
 `define hdl_path_mvu_data_mem(mvu_num) `hdl_path_mvu_top.mvu.mvuarray[mvu_num]
 `define hdl_path_mvu_data_mem_bank(mvu_num, bank) `hdl_path_mvu_data_mem(mvu_num).mvuunit.bankarray[bank]
 `define hdl_path_mvu_data_mem_bank_ram(mvu_num, bank) `hdl_path_mvu_data_mem_bank(mvu_num, bank).db.data_ram.mem
+
+
+`define hdl_path_mvu_rdd_grnt(mvu_num) `hdl_path_mvu_data_mem(mvu_num).mvuunit.rdd_grnt
+`define hdl_path_mvu_rdc_grnt(mvu_num) `hdl_path_mvu_data_mem(mvu_num).mvuunit.rdc_grnt
+`define hdl_path_mvu_rdi_grnt(mvu_num) `hdl_path_mvu_data_mem(mvu_num).mvuunit.rdi_grnt

@@ -40,6 +40,12 @@ class mvu_testbench_base extends BaseObj;
 // Utility Tasks
 // =================================================================================================
 
+    // Function: Calculate the flat address for data banks
+    //
+    function logic[BDBANKA-1 : 0] calc_addr(int bank, int offset);
+        return 1024*bank + offset;
+    endfunction
+
     task controllerMemTest();
         logic unsigned [BDBANKW-1 : 0] word;
         logic unsigned [NMVU-1 : 0] grnt;
@@ -487,6 +493,45 @@ class mvu_testbench_base extends BaseObj;
             end
             default:
                 $error("Invalid MVU value.");
+        endcase
+    endfunction
+
+    function logic peek_rdd_grnt(int mvu);
+        case (mvu)
+            0: return `hdl_path_mvu_rdd_grnt(0);
+            1: return `hdl_path_mvu_rdd_grnt(1);
+            2: return `hdl_path_mvu_rdd_grnt(2);
+            3: return `hdl_path_mvu_rdd_grnt(3);
+            4: return `hdl_path_mvu_rdd_grnt(4);
+            5: return `hdl_path_mvu_rdd_grnt(5);
+            6: return `hdl_path_mvu_rdd_grnt(6);
+            7: return `hdl_path_mvu_rdd_grnt(7);
+        endcase
+    endfunction
+
+    function logic peek_rdc_grnt(int mvu);
+        case (mvu)
+            0: return `hdl_path_mvu_rdc_grnt(0);
+            1: return `hdl_path_mvu_rdc_grnt(1);
+            2: return `hdl_path_mvu_rdc_grnt(2);
+            3: return `hdl_path_mvu_rdc_grnt(3);
+            4: return `hdl_path_mvu_rdc_grnt(4);
+            5: return `hdl_path_mvu_rdc_grnt(5);
+            6: return `hdl_path_mvu_rdc_grnt(6);
+            7: return `hdl_path_mvu_rdc_grnt(7);
+        endcase
+    endfunction
+
+    function logic peek_rdi_grnt(int mvu);
+        case (mvu)
+            0: return `hdl_path_mvu_rdi_grnt(0);
+            1: return `hdl_path_mvu_rdi_grnt(1);
+            2: return `hdl_path_mvu_rdi_grnt(2);
+            3: return `hdl_path_mvu_rdi_grnt(3);
+            4: return `hdl_path_mvu_rdi_grnt(4);
+            5: return `hdl_path_mvu_rdi_grnt(5);
+            6: return `hdl_path_mvu_rdi_grnt(6);
+            7: return `hdl_path_mvu_rdi_grnt(7);
         endcase
     endfunction
 
