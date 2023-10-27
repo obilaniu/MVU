@@ -24,9 +24,9 @@ class cdru_tester extends mvu_testbench_base;
         int obank;
         int oaddr;
         int cbank;
-        int ibank;
+        int dbank;
         logic [BDBANKA-1 : 0] caddr;
-        logic [BDBANKA-1 : 0] iaddr;
+        logic [BDBANKA-1 : 0] daddr;
 
         int jobread_latency = MEMRDLATENCY + 2;
 
@@ -47,14 +47,14 @@ class cdru_tester extends mvu_testbench_base;
         omsb = 0;
         obank = 1;
         oaddr = 0;
-        ibank = 0;
+        dbank = 0;
         cbank = 1;
-        iaddr = calc_addr(ibank, 0);
+        daddr = calc_addr(dbank, 0);
         caddr = calc_addr(cbank, 0);
-        writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr(iaddr), .size(1), .stride(1));
+        writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr(daddr), .size(1), .stride(1));
         writeDataRepeat(.mvu(mvu), .word('haaaaaaaaaaaaaaaa), .startaddr(caddr), .size(1), .stride(1));
         setupGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(oprec), 
-                .omsb(omsb), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(obank), .oaddr(oaddr), 
+                .omsb(omsb), .iaddr(daddr), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(obank), .oaddr(oaddr), 
                 .m_w(m_w), .m_h(m_h), .scaler(scaler));
         fork
             // Thread 1: run GEMV operation, which will do memory bank reads
@@ -98,14 +98,14 @@ class cdru_tester extends mvu_testbench_base;
         omsb = 0;
         obank = 1;
         oaddr = 0;
-        ibank = 0;
+        dbank = 0;
         cbank = 0;
-        iaddr = calc_addr(ibank, 0);
+        daddr = calc_addr(dbank, 0);
         caddr = calc_addr(cbank, 0);
-        writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr(iaddr), .size(1), .stride(1));
+        writeDataRepeat(.mvu(mvu), .word('hffffffffffffffff), .startaddr(daddr), .size(1), .stride(1));
         writeDataRepeat(.mvu(mvu), .word('haaaaaaaaaaaaaaaa), .startaddr(caddr), .size(1), .stride(1));
         setupGEMV(.mvu(mvu), .iprec(1), .wprec(1), .oprec(oprec), 
-                .omsb(omsb), .iaddr(0), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(obank), .oaddr(oaddr), 
+                .omsb(omsb), .iaddr(daddr), .waddr(0), .saddr(0), .baddr(0), .omvu(omvu), .obank(obank), .oaddr(oaddr), 
                 .m_w(m_w), .m_h(m_h), .scaler(scaler));
         fork
             // Thread 1: run GEMV operation, which will do memory bank reads
@@ -132,7 +132,7 @@ class cdru_tester extends mvu_testbench_base;
                 end
             end
         join
-        
+
 
     endtask
 
