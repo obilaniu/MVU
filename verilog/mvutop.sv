@@ -19,32 +19,36 @@ genvar i;
 // Local registers
 logic[      NMVU-1 : 0] start_q;                                  // Delayed start signal
 logic[           1 : 0] mul_mode_q        [NMVU-1 : 0];           // Config: multiply mode
-logic[  BQMSBIDX-1 : 0] quant_msbidx_q    [NMVU-1 : 0];           // Quantizer: bit position index of the MSB
+logic[  BQMSBIDX-1 : 0] quant_msbidx_q    [NMVU-1 : 0];           // Quantizer: bit position index of the MSB (TO PIPELINED)
 logic[   BCNTDWN-1 : 0] countdown_q       [NMVU-1 : 0];           // Config: number of clocks to countdown for given task
 logic[     BPREC-1 : 0] wprecision_q      [NMVU-1 : 0];           // Config: weight precision
 logic[     BPREC-1 : 0] iprecision_q      [NMVU-1 : 0];           // Config: input precision
-logic[     BPREC-1 : 0] oprecision_q      [NMVU-1 : 0];           // Config: output precision
+logic[     BPREC-1 : 0] oprecision_q      [NMVU-1 : 0];           // Config: output precision (TO PIPELINED)
 logic[   BBWADDR-1 : 0] wbaseaddr_q       [NMVU-1 : 0];           // Config: weight memory base address
 logic[   BBDADDR-1 : 0] ibaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for input
-logic[   BSBANKA-1 : 0] sbaseaddr_q       [NMVU-1 : 0];           // Config: scaler memory base address
-logic[   BBBANKA-1 : 0] bbaseaddr_q       [NMVU-1 : 0];           // Config: bias memory base address
-logic[   BBDADDR-1 : 0] obaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for output
-logic[      NMVU-1 : 0] omvusel_q         [NMVU-1 : 0];           // Config: MVU selection bits for output
+logic[   BSBANKA-1 : 0] sbaseaddr_q       [NMVU-1 : 0];           // Config: scaler memory base address (TO PIPELINED)
+logic[   BBBANKA-1 : 0] bbaseaddr_q       [NMVU-1 : 0];           // Config: bias memory base address (TO PIPELINED)
+logic[   BBDADDR-1 : 0] obaseaddr_q       [NMVU-1 : 0];           // Config: data memory base address for output (TO PIPELINED)
+logic[      NMVU-1 : 0] omvusel_q         [NMVU-1 : 0];           // Config: MVU selection bits for output (TO PIPELINED)
 logic[   BWBANKA-1 : 0] wjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: weight jumps
 logic[   BDBANKA-1 : 0] ijump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: input jumps
-logic[   BSBANKA-1 : 0] sjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: scaler jump
-logic[   BBBANKA-1 : 0] bjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: bias jump
-logic[   BDBANKA-1 : 0] ojump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: output jump
+logic[   BSBANKA-1 : 0] sjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: scaler jump (TO PIPELINED)
+logic[   BBBANKA-1 : 0] bjump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: bias jump (TO PIPELINED)
+logic[   BDBANKA-1 : 0] ojump_q           [NMVU-1 : 0][NJUMPS-1 : 0];           // Config: output jump (TO PIPELINED)
 logic[   BLENGTH-1 : 0] wlength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: weight length
 logic[   BLENGTH-1 : 0] ilength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: input length
-logic[   BLENGTH-1 : 0] slength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: scaler length
-logic[   BLENGTH-1 : 0] blength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: bias length
-logic[   BLENGTH-1 : 0] olength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: output length
-logic[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];                         // Config: multiplicative scaler (operand 'b')
-logic                   usescaler_mem_q   [NMVU-1 : 0];                         // Config: use scalar mem if 1; otherwise use the scaler_b input for scaling
-logic                   usebias_mem_q     [NMVU-1 : 0];                         // Config: use the bias memory if 1; if not, not bias is added in the scaler
-logic[    NJUMPS-1 : 0] shacc_load_sel_q  [NMVU-1 : 0];                         // Config: select jump trigger for shift/accumultor load
-logic[    NJUMPS-1 : 0] zigzag_step_sel_q [NMVU-1 : 0];                         // Config: select jump trigger for stepping the zig-zag address generator
+logic[   BLENGTH-1 : 0] slength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: scaler length (TO PIPELINED)
+logic[   BLENGTH-1 : 0] blength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: bias length (TO PIPELINED)
+logic[   BLENGTH-1 : 0] olength_q         [NMVU-1 : 0][NJUMPS-1 : 1];           // Config: output length (TO PIPELINED)
+logic[  BSCALERB-1 : 0] scaler_b_q        [NMVU-1 : 0];                         // Config: multiplicative scaler (operand 'b') (TO PIPELINED)
+logic                   usescaler_mem_q   [NMVU-1 : 0];                         // Config: use scalar mem if 1; otherwise use the scaler_b input for scaling (TO PIPELINED)
+logic                   usebias_mem_q     [NMVU-1 : 0];                         // Config: use the bias memory if 1; if not, not bias is added in the scaler (TO PIPELINED)
+logic[    NJUMPS-1 : 0] shacc_load_sel_q  [NMVU-1 : 0];                         // Config: select jump trigger for shift/accumultor load (TO PIPELINED)
+logic[    NJUMPS-1 : 0] zigzag_step_sel_q [NMVU-1 : 0];                         // Config: select jump trigger for stepping the zig-zag address generator (TO PIPELINED)
+
+// Pipelined output config registers
+logic[  BQMSBIDX-1 : 0] quant_msbidx_q_piped    [NMVU-1 : 0];           // Quantizer: bit position index of the MSB
+
 
 /* Local Wires */
 
@@ -529,6 +533,23 @@ generate for(i=0; i < NMVU; i = i+1) begin: ctrl_delayarray
 end endgenerate
 
 
+// Insert pipeline delays for configuration registers
+generate for(i=0; i < NMVU; i=i+1) begin: config_pipeline 
+
+    // quant_msbidx_q
+    shiftreg #(
+        .N      (VVPSTAGES+MEMRDLATENCY+SCALERLATENCY+MAXPOOLSTAGES + 1)
+    ) quant_msbidx_q_delayarrayunit (
+        .clk    (mvu_ext.clk),
+        .clr    (~mvu_ext.rst_n),
+        .step   (1'b1),
+        .in     (quant_msbidx_q[i]),
+        .out    (quant_msbidx_q_piped[i])
+    );  
+
+end endgenerate
+
+
 /*   Cores... */
 generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
     mvu #(
@@ -552,7 +573,7 @@ generate for(i=0;i<NMVU;i=i+1) begin:mvuarray
             .max_clr        (mvu_cfg.max_clr[i]                     ),
             .max_pool       (mvu_cfg.max_pool[i]                    ),
             .quant_clr      (quant_clr_int[i]                       ),
-            .quant_msbidx   (quant_msbidx_q[i]                      ),
+            .quant_msbidx   (quant_msbidx_q_piped[i]                ),
             .quant_load     (quant_load[i]                          ),
             .quant_step     (quant_step[i]                          ),
             .rdw_addr       (rdw_addr[i*BWBANKA +: BWBANKA]         ),

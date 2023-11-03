@@ -19,11 +19,11 @@ class gemv_tester extends mvu_testbench_base;
     //      expected: array containing the expected result in bit transposed format
     // 
     function bit checkResult(int omvu[], int bank, int startaddr, logic [BDBANKW-1 : 0] expected[]);
-        logic [BWBANKW-1 : 0] memdata;
+        logic [BDBANKW-1 : 0] memdata;
         for (int m=0; m < omvu.size; m++) begin
             for (int i=0; i < expected.size; i++) begin
                 memdata = peekData(.mvu(omvu[m]), .bank(bank), .addr(startaddr + i));
-                if (memdata != expected[i]) begin
+                if (memdata !== expected[i]) begin
                     logger.print($sformatf("FAIL: Value h%016h at bank %2d addr h%h in MVU %1d does not match expected h%016h", memdata, bank, startaddr+i, omvu[m], expected[i]), "ERROR");
                     test_stat.fail_cnt += 1;
                     return 0;

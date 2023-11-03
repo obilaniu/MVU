@@ -4,13 +4,14 @@
 
 `timescale 1ns/1ps
 module shiftreg #(
-    parameter N = 1
+    parameter N = 1,
+    parameter width = 1
 ) (
-    input   wire    clk,
-    input   wire    clr,
-    input   wire    step,
-    input   wire    in,
-    output  wire    out
+    input   wire                clk,
+    input   wire                clr,
+    input   wire                step,
+    input   wire[width-1 : 0]   in,
+    output  wire[width-1 : 0]   out
 );
 
 
