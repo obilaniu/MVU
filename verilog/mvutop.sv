@@ -537,8 +537,9 @@ end endgenerate
 generate for(i=0; i < NMVU; i=i+1) begin: config_pipeline 
 
     // quant_msbidx_q
-    shiftreg #(
-        .N      (VVPSTAGES+MEMRDLATENCY+SCALERLATENCY+MAXPOOLSTAGES + 1)
+    regdelay #(
+        .N      (VVPSTAGES+MEMRDLATENCY+SCALERLATENCY+MAXPOOLSTAGES + 1),
+        .width  (BQMSBIDX)
     ) quant_msbidx_q_delayarrayunit (
         .clk    (mvu_ext.clk),
         .clr    (~mvu_ext.rst_n),
