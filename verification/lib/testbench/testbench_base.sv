@@ -43,7 +43,7 @@ class mvu_testbench_base extends BaseObj;
     // Function: Calculate the flat address for data banks
     //
     function logic[BDBANKA-1 : 0] calc_addr(int bank, int offset);
-        return 1024*bank + offset;
+        return (bank << BDBANKAWS) + offset;
     endfunction
 
     task controllerMemTest();
