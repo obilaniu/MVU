@@ -40,6 +40,12 @@ class mvu_testbench_base extends BaseObj;
 // Utility Tasks
 // =================================================================================================
 
+    // Function: Calculate the flat address for data banks
+    //
+    function logic[BDBANKA-1 : 0] calc_addr(int bank, int offset);
+        return (bank << BDBANKAWS) + offset;
+    endfunction
+
     task controllerMemTest();
         logic unsigned [BDBANKW-1 : 0] word;
         logic unsigned [NMVU-1 : 0] grnt;
@@ -490,6 +496,45 @@ class mvu_testbench_base extends BaseObj;
         endcase
     endfunction
 
+    function logic peek_rdd_grnt(int mvu);
+        case (mvu)
+            0: return `hdl_path_mvu_rdd_grnt(0);
+            1: return `hdl_path_mvu_rdd_grnt(1);
+            2: return `hdl_path_mvu_rdd_grnt(2);
+            3: return `hdl_path_mvu_rdd_grnt(3);
+            4: return `hdl_path_mvu_rdd_grnt(4);
+            5: return `hdl_path_mvu_rdd_grnt(5);
+            6: return `hdl_path_mvu_rdd_grnt(6);
+            7: return `hdl_path_mvu_rdd_grnt(7);
+        endcase
+    endfunction
+
+    function logic peek_rdc_grnt(int mvu);
+        case (mvu)
+            0: return `hdl_path_mvu_rdc_grnt(0);
+            1: return `hdl_path_mvu_rdc_grnt(1);
+            2: return `hdl_path_mvu_rdc_grnt(2);
+            3: return `hdl_path_mvu_rdc_grnt(3);
+            4: return `hdl_path_mvu_rdc_grnt(4);
+            5: return `hdl_path_mvu_rdc_grnt(5);
+            6: return `hdl_path_mvu_rdc_grnt(6);
+            7: return `hdl_path_mvu_rdc_grnt(7);
+        endcase
+    endfunction
+
+    function logic peek_rdi_grnt(int mvu);
+        case (mvu)
+            0: return `hdl_path_mvu_rdi_grnt(0);
+            1: return `hdl_path_mvu_rdi_grnt(1);
+            2: return `hdl_path_mvu_rdi_grnt(2);
+            3: return `hdl_path_mvu_rdi_grnt(3);
+            4: return `hdl_path_mvu_rdi_grnt(4);
+            5: return `hdl_path_mvu_rdi_grnt(5);
+            6: return `hdl_path_mvu_rdi_grnt(6);
+            7: return `hdl_path_mvu_rdi_grnt(7);
+        endcase
+    endfunction
+
     //
     //function logic[BWBANKW-1: 0] peekData(int mvu, int addr);
     //    int bank = addr >> BDBANKAWS;
@@ -529,8 +574,8 @@ class mvu_testbench_base extends BaseObj;
         end
     endtask
 
-// Executes a GMEV
-    task automatic runGEMV(
+// Sets up the configuration registers to run a GEMV
+    task automatic setupGEMV(
         int mvu,            // MVU number to execute on
         int iprec,
         int wprec,
@@ -556,10 +601,9 @@ class mvu_testbench_base extends BaseObj;
         logic [BDBANKABS-1 : 0]     obank_sel = obank;
         logic [BDBANKAWS-1 : 0]     oword_sel = oaddr;
 
-        int countdown_val = m_w * m_h * iprec * wprec;
         int pipeline_latency = 9;
         int buffer_cycles = 10;
-        int cyclecount = countdown_val + pipeline_latency + oprec + buffer_cycles;
+        //int cyclecount = countdown_val + pipeline_latency + oprec + buffer_cycles;
 
         logic [NMVU-1 : 0] omvusel = NMVU'('b0);
         logic [NMVU-1 : 0] mask;
@@ -807,19 +851,31 @@ class mvu_testbench_base extends BaseObj;
             apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUUSEBIAS_MEM});
             apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
         end
+    endtask
 
-        // Run the GEMV
-        maxpool_en = 1'b1;
-        mul_mode = 2'b01;
+    // Run the GEMV
+    task runGEMV(
+        int mvu,
+        int iprec,
+        int wprec,
+        int oprec,
+        int omvu[],
+        int m_w,            // Matrix width / vector length
+        int m_h             // Matrix height
+    );
+        logic maxpool_en = 1'b1;
+        logic [1:0] mul_mode = 2'b01;
+        int countdown_val = m_w * m_h * iprec * wprec;
+
         apb_data = apb_data_t'({ mul_mode, maxpool_en ,BCNTDWN'(countdown_val)});
         apb_addr = apb_addr_t'({3'(mvu), mvu_pkg::CSR_MVUCOMMAND});
- //       fork
+        fork
             apb_master.write(apb_addr, apb_data, apb_strb, apb_resp);
- //           begin
+            begin
                 wait_for_irq(mvu);
                 wait_for_pipeline_after_irq(.mvu(mvu), .omvu(omvu), .oprec(oprec));
- //           end
- //       join
+            end
+        join
         
     endtask
 // =================================================================================================
