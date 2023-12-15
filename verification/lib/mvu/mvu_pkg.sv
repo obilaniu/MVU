@@ -34,6 +34,7 @@ localparam BJUMP         = 15; // Bitwidth of the stride ports
 localparam BLENGTH       = 15; // Bitwidth of the length ports
 localparam BSCALERB      = 16; // Bitwidth of the scaler parameter
 localparam VVPSTAGES     = 3;  // Number of stages in the VVP pipeline
+localparam SHACCLATENCY  = 1;  // Latency of the shift-accumulator
 localparam SCALERLATENCY = 3;  // Number of stages in the scaler pipeline
 localparam HPADDERLATENCY= 1;  // Latency of fixed point adder module
 localparam MAXPOOLSTAGES = 1;  // Number of max pool pipeline stages

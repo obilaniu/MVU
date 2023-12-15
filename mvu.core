@@ -41,6 +41,7 @@ filesets:
             - verilog/shiftreg.v
             - verilog/fixedpointscaler.v
             - verilog/ram_simple2port.v
+            - verilog/regdelay.v
             - verilog/inagu.sv:
                 file_type: systemVerilogSource
             - verilog/agu.sv:
