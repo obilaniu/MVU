@@ -25,7 +25,7 @@ output reg  signed[w-1 : 0] O = 0;
 always @(posedge clk) begin
 	if(clr) begin
 		O = 0;
-	end else if(clk) begin
+	end else begin
         if (load) begin
             O = I;
         end else if (acc) begin
