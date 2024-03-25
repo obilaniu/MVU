@@ -30,6 +30,23 @@ const int Pb = 0;                                   // Zero-padding in on the bo
 */
 
 
+// Case 1a: 3x3 conv, 10x10 feature map, 2 channel blocks in, 4 channel blocks out, 2x2 bits
+const int iprec = 2;                                // Input data precision
+const int wprec = 2;                                // Weight precision
+const int oprec = 2;                                // Output precision
+const int W = 10;                                   // Input width
+const int H = 10;                                   // Input height
+const int C = 2;                                    // Input channel blocks
+const int Fw = 3;                                   // Filter kernel width
+const int Fh = 3;                                   // Filter kernel height
+const int Fc = 4;                                   // Number of filter set blocks (i.e. number of output channel blocks)
+const int Sw = 1;                                   // Filter horizontal (width) stride
+const int Pl = 0;                                   // Zero-padding in on the left in the width dimension
+const int Pr = 0;                                   // Zero-padding in on the right in the width dimension
+const int Pt = 0;                                   // Zero-padding in on the top in the height dimension
+const int Pb = 0;                                   // Zero-padding in on the bottom in the height dimension
+
+
 // Case 2: 3x3 conv, 10x10 feature map, 2 channel blocks in, 2 channel blocks out, 1x1 bits 
 /*
 const int iprec = 1;                                // Input data precision
@@ -62,6 +79,7 @@ const int Pw = 1;                                   // Zero-padding in width dim
 const int Ph = 1;                                   // Zero-padding in height dimension
 */
 
+/*
 // Case 4: 3x3 conv, 32x32 feature map, 2 channel blocks in, 2 channel blocks out, 8x8 bits
 const int iprec = 8;                                // Input data precision
 const int wprec = 8;                                // Weight precision
@@ -77,13 +95,17 @@ const int Pl = 1;                                   // Zero-padding in on the le
 const int Pr = 1;                                   // Zero-padding in on the right in the width dimension
 const int Pt = 1;                                   // Zero-padding in on the top in the height dimension
 const int Pb = 1;                                   // Zero-padding in on the bottom in the height dimension
-
+*/
 
 // Tensors
 int i_t[H][W][C][iprec];                            // Input tensor
 int w_t[Fc][Fh][Fw][C][wprec];                      // Filter weight tensor
 int *i_tptr = (int*)i_t;                            // Input address pointer
 int *w_tptr = (int*)w_t;                            // Weight address pointer
+int s_t[Fc];                                        // Scaler array (for batch norm and scaled quantization)
+int b_t[Fc];                                        // Bias array (for batch norm and conv/fc)
+int *s_tptr = (int*)s_t;                            // Scaler address pointer
+int *b_tptr = (int*)b_t;                            // Bias address pointer
 
 // Computed MVU parameters to program into CSRs
 int ilength[NJUMPS];                                     // note: there are only 4 elements, but creating 5 since index starts at 1
@@ -95,20 +117,30 @@ int zigzag_step_sel;
 int shacc_load_sel;
 int ioffset;
 int woffset;
+int slength[NJUMPS];
+int sjump[NJUMPS];
+int blength[NJUMPS];
+int bjump[NJUMPS];
 
 
 // Internal parameters
-int i_j[NJUMPS];
 int i_zzoff;
 int w_zzoff;
 int cntdwn;
 int i_i[NJUMPS];
+int i_j[NJUMPS];
 int w_i[NJUMPS];
 int w_j[NJUMPS];
+int s_i[NJUMPS];
+int s_j[NJUMPS];
+int b_i[NJUMPS];
+int b_j[NJUMPS];
 int outaddr;
 
 char* i_jump_str[5];
 char* w_jump_str[5];
+char* s_jump_str[5];
+char* b_jump_str[5];
 
 
 void assignInternalParams()
@@ -119,6 +151,10 @@ void assignInternalParams()
         i_i[i] = ilength[i];
         w_i[i] = wlength[i];
         w_j[i] = wjump[i];
+        s_i[i] = slength[i];
+        s_j[i] = sjump[i];
+        b_i[i] = blength[i];
+        b_j[i] = bjump[i];
     }
     i_zzoff = 0;
     w_zzoff = 0;
@@ -126,6 +162,28 @@ void assignInternalParams()
     outaddr = 0;
     w_tptr += woffset;
     i_tptr += ioffset;
+    /*
+    s_i[0] = slength[0];
+    s_i[1] = slength[1];
+    s_i[2] = slength[2];
+    s_i[3] = slength[3];
+    s_i[3] = slength[3];
+    s_j[0] = sjump[0];
+    s_j[1] = sjump[1];
+    s_j[2] = sjump[2];
+    s_j[3] = sjump[3];
+    s_j[4] = sjump[4];
+    b_i[0] = blength[0];
+    b_i[1] = blength[1];
+    b_i[2] = blength[2];
+    b_i[3] = blength[3];
+    b_j[0] = bjump[0];
+    b_j[1] = bjump[1];
+    b_j[2] = bjump[2];
+    b_j[3] = bjump[3];
+    b_j[4] = bjump[4];
+    */
+    
 }
 
 
@@ -170,109 +228,86 @@ void bumpZigZag(int curjump)
 }
 
 
-int getNextInput()
-{   
+int getNextAddr(int *i, int *length, int *j, int **tptr, const char* tensorid, char** jump_str)
+{
     int jump = -1;
 
     // Figure out which jump to take
-    if (i_i[1] == 0 && i_i[2] == 0 && i_i[3] == 0 && i_i[4] == 0)
+    if (i[1] == 0 && i[2] == 0 && i[3] == 0 && i[4] == 0)
     {
-        i_i[4] = ilength[4];
-        i_i[3] = ilength[3];
-        i_i[2] = ilength[2];
-        i_i[1] = ilength[1];
-        i_tptr += i_j[0];
+        i[4] = length[4];
+        i[3] = length[3];
+        i[2] = length[2];
+        i[1] = length[1];
+        *tptr += j[0];
         jump = 0;
     }
-    else if (i_i[2] == 0 && i_i[3] == 0 && i_i[4] == 0)
+    else if (i[2] == 0 && i[3] == 0 && i[4] == 0)
     {
-        i_i[4] = ilength[4];
-        i_i[3] = ilength[3];
-        i_i[2] = ilength[2];
-        i_i[1]--;
-        i_tptr += i_j[1];
+        i[4] = length[4];
+        i[3] = length[3];
+        i[2] = length[2];
+        i[1]--;
+        *tptr += j[1];
         jump = 1;
     }
-    else if (i_i[3] == 0 && i_i[4] == 0)
+    else if (i[3] == 0 && i[4] == 0)
     {
-        i_i[4] = ilength[4];
-        i_i[3] = ilength[3];
-        i_i[2]--;
-        i_tptr += i_j[2];
+        i[4] = length[4];
+        i[3] = length[3];
+        i[2]--;
+        *tptr += j[2];
         jump = 2;
     }
-    else if (i_i[4] == 0)
+    else if (i[4] == 0)
     {
-        i_i[4] = ilength[4];
-        i_i[3]--;
-        i_tptr += i_j[3];
+        i[4] = length[4];
+        i[3]--;
+        *tptr += j[3];
         jump = 3;
     }
     else
     {
-        i_i[4]--;
-        i_tptr += i_j[4];     
+        i[4]--;
+        *tptr += j[4];     
         jump = 4;
     }
 
     // Print out jump if there is a message
-    if (i_jump_str[jump] != NULL)
-        printf("==> i_j[%d]: %s", jump, i_jump_str[jump]);  
+    if (jump_str[jump] != NULL)
+        printf("==> %s_j[%d]: %s", tensorid, jump, jump_str[jump]);  
 
     return jump;
+}
+
+int getNextInput()
+{
+    return getNextAddr(i_i, ilength, i_j, &i_tptr, "i", i_jump_str);
 }
 
 int getNextWeight()
 {
-    int jump = -1;
-
-    if (w_i[4] == 0 && w_i[3] == 0 && w_i[2] == 0 && w_i[1] == 0)
-    {
-        w_i[4] = wlength[4];
-        w_i[3] = wlength[3];
-        w_i[2] = wlength[2];
-        w_i[1] = wlength[1];
-        w_tptr += w_j[0];
-        jump = 0;
-    }
-    else if (w_i[4] == 0 && w_i[3] == 0 && w_i[2] == 0)
-    {
-        w_i[4] = wlength[4];
-        w_i[3] = wlength[3];
-        w_i[2] = wlength[2];
-        w_i[1]--;
-        w_tptr += w_j[1];
-        jump = 1;
-    }
-    else if (w_i[4] == 0 && w_i[3] == 0)
-    {
-        w_i[4] = wlength[4];
-        w_i[3] = wlength[3];
-        w_i[2]--;
-        w_tptr += w_j[2];
-        jump = 2;
-    }
-    else if (w_i[4] == 0)
-    {
-        w_i[4] = wlength[4];
-        w_i[3]--;
-        w_tptr += w_j[3];
-        jump = 3;
-    }
-    else
-    {
-        w_i[4]--;
-        w_tptr += w_j[4];
-        jump = 4;
-    }
-
-    // Print out jump if there is a message
-    if (w_jump_str[jump] != NULL)
-        printf("==> w_j[%d]: %s", jump, w_jump_str[jump]);  
-
-    return jump;
-
+    return getNextAddr(w_i, wlength, w_j, &w_tptr, "w", w_jump_str);
 }
+
+int getNextScaler(int curjump)
+{
+    if ((1 << curjump) & shacc_load_sel)
+    {
+        return getNextAddr(s_i, slength, s_j, &s_tptr, "s", s_jump_str);
+    }
+    return -1;
+}
+
+int getNextBias(int curjump)
+{
+    if ((1 << curjump) & shacc_load_sel)
+    {
+        return getNextAddr(b_i, blength, b_j, &b_tptr, "b", b_jump_str);
+    }
+    return -1;
+}
+
 
 int genNextOutput(int curjump)
 {
@@ -292,56 +327,7 @@ int genNextOutput(int curjump)
 */
 void setConv2dlineValid()
 {
-    // Scheme 1: Compute all output pixels for a single line, but only the first output channel block
-    // -note that this would require adding in jumps to the output address to skip over the locations
-    //  for the next output channel blocks
-    // -subsequent conv2dline operations would need to be executed to fill in the remaining output
-    //  channel blocks
-    /*
-    ilength0 = C*Fw-1;
-    ilength1 = Fh-1;
-    ilength2 = iprec*wprec-1;
-    ilength3 = ((W-Fw+1)/Sw - 1);
-    ijump0 = iprec*(C*(W-Fw) + 1);                    i_jump0_str = "Move to next row";
-    ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);          i_jump1_str = "Move back to start of window; bump zig-zag";
-    ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);   i_jump2_str = "Move window to right by horizontal stride";
-    ijump3 = 0;                                       i_jump3_str = "";
-    wlength0 = C*Fw*Fh-1;                             // Total size of a filter
-    wlength1 = 0;
-    wlength2 = 0;
-    wlength3 = 0;
-    wjump0 = -wprec*(C*Fw*Fh-1);                      // Move back to start of filter for next precision combo; Bump zig-zag
-    wjump1 = 0;
-    wjump2 = 0;
-    wjump3 = wjump0;
-    countdown = (C * Fw) * (Fh) * (iprec * wprec) * ((W-Fw+1)/Sw);
-    */
-
-   /*
-    // Scheme 2: Compute all of the output pixels for a single line including all output channel blocks
-    ilength0 = C*Fw-1;                                                          // Width of filter window X number of input channel blocks
-    ilength1 = Fh-1;                                                            // Height of filter
-    ilength2 = iprec*wprec*Fc-1;                                                // Number of bit combos X filter sets
-    ilength3 = 0;
-    ijump0 = iprec*(C*(W-Fw) + 1);                                              i_jump0_str = (char*)"Move to next row";
-    ijump1 = -iprec*(C*(Fh-1)*W + Fw*C - 1);                                    i_jump1_str = (char*)"Move back to start of window";
-    ijump2 = -iprec*(C*(Fh-1)*W + (Fw-Sw-1)*C + 1);                             i_jump2_str = (char*)"Move window to right by horizontal stride";
-    ijump3 = ijump2;                                                            i_jump3_str = (char*)"Move window to right by horizontal stride";
-    wlength0 = C*Fw*Fh-1;                                                       // Total size of one filter block
-    wlength1 = iprec*wprec-1;                                                   // Number of bit combos
-    wlength2 = Fc-1;                                                            // Number of filter blocks
-    wlength3 = 0;
-    wjump0 = -wprec*(C*Fw*Fh-1);                                                w_jump0_str = (char*)"Move back to start of filter for next precision combo";
-    wjump1 = wprec;                                                             w_jump1_str = (char*)"Move to next filter set block";
-    wjump2 = -wprec*(C*Fw*Fh*Fc-1);                                             w_jump2_str = (char*)"Move back to start of first filter set block for next window";
-    wjump3 = wjump2;                                                            w_jump3_str = (char*)"Move back to start of first filter set block for next window";
-    countdown = (C * Fw) * (Fh) * (iprec * wprec) * (Fc) * ((W-Fw+1)/Sw);
-    zigzag_step_sel = 1;
-    shacc_load_sel = 1 << 2;
-    woffset = 0;                                                                // Filter pointer offset
-    */
-
-    // Scheme 2: Compute all of the output pixels for a single line including all output channel blocks
+    // Scheme 1: Compute all of the output pixels for a single line including all output channel blocks
     ilength[4] = 0;
     ilength[3] = C*Fw-1;                                                        // Width of filter window X number of input channel blocks
     ilength[2] = Fh-1;                                                          // Height of filter
@@ -362,10 +348,28 @@ void setConv2dlineValid()
     wjump[0] = -wprec*(C*Fw*Fh*Fc-1);                                           w_jump_str[0] = (char*)"Move back to start of first filter set block for next window\n";
     countdown = (C * Fw) * (Fh) * (iprec * wprec) * (Fc) * ((W-Fw+1)/Sw);
     zigzag_step_sel = 0x7;                                                      // Step the zig-zag address generator on weight jump 2, 1, or 0
-    shacc_load_sel = 0x3;                                                       // Load shift/accumulator on weight jump 1
+    shacc_load_sel = 0x3;                                                       // Load shift/accumulator on weight jump 0 and 1
     woffset = 0;                                                                // Filter pointer offset
-    
+    slength[4] = 0;                                                             // Don't need this inner loop
+    slength[3] = 0;                                                             // Don't need this inner loop
+    slength[2] = 0;                                                             // Don't need this inner loop. NOTE: this is length0 in the HW
+    slength[1] = Fc-1;                                                          // NOTE: this is length1 in the HW
+    sjump[4] = 0;                                                               s_jump_str[4] = (char *)"";
+    sjump[3] = 0;                                                               s_jump_str[3] = (char *)"";
+    sjump[2] = 0;                                                               s_jump_str[2] = (char *)"";
+    sjump[1] = 1;                                                               s_jump_str[1] = (char*)"Move to next output channel block";          // NOTE: this is jump/stride 0 in the HW
+    sjump[0] = -Fc+1;                                                           s_jump_str[0] = (char*)"Move back to first output channel block";    // NOTE: this is jump/stride 1 in the HW
+    blength[4] = 0;                                                             // Don't need this inner loop
+    blength[3] = 0;                                                             // Don't need this inner loop
+    blength[2] = 0;                                                             // Don't need this inner loop
+    blength[1] = Fc-1;                                                          // NOTE: this is length1 in the HW
+    bjump[4] = 0;                                                               b_jump_str[4] = (char*)"";
+    bjump[3] = 0;                                                               b_jump_str[3] = (char*)"";
+    bjump[2] = 0;                                                               b_jump_str[2] = (char*)"";
+    bjump[1] = 1;                                                               b_jump_str[1] = (char*)"Move to next output channel block";          // NOTE: this is jump/stride 0 in the HW
+    bjump[0] = -Fc+1;                                                           b_jump_str[0] = (char*)"Move back to first output channel block";    // NOTE: this is jump/stride 1 in the HW    
 }
+
 
 /*
  Computes parameters to do the convolution in the corner/edge of an input feature map
@@ -373,6 +377,7 @@ void setConv2dlineValid()
  feature map is the same size as the input feature map in width and height (i.e. SAME in TF lingo)
  Pl and Pr are mutully exclusive, as are Pt and Pb. Set the one not being used to 0.
 */
+/*
 void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
 {/*
     // Upper left corner
@@ -473,10 +478,9 @@ void setConv2dlineEdgePadding(int Pl, int Pr, int Pt, int Pb)
     {
         printf("Error! Not a valid padding config!\n");
     }
-    */
-        
+       
 }
-
+*/
 
 
 int main()
@@ -525,6 +529,19 @@ int main()
         }       
     }
 
+    // Initialize the scaler tensor
+    for (int fc=0; fc < Fc; fc++)
+    {
+        s_t[fc] = fc;
+    }
+
+    // Initialize the bias tensor
+    for (int fc=0; fc < Fc; fc++)
+    {
+        b_t[fc] = fc;
+    }
+
+
     // Compute parameters for convolution
     //setConv2dlineEdgePadding(1, 0, 1, 0);           // Upper-left corner
     setConv2dlineValid();                           // Inner
@@ -537,6 +554,10 @@ int main()
     printf("ijump[4]  =%10d, ijump[3]  =%10d, ijump[2]  =%10d, ijump[1]  =%10d, ijump[0]  =%10d\n", ijump[4], ijump[3], ijump[2], ijump[1], ijump[0]);
     printf("wlength[4]=%10d, wlength[3]=%10d, wlength[2]=%10d, wlength[1]=%10d\n", wlength[4], wlength[3], wlength[2], wlength[1]);
     printf("wjump[4]  =%10d, wjump[3]  =%10d, wjump[2]  =%10d, wjump[1]  =%10d, wjump[0]  =%10d\n", wjump[4], wjump[3], wjump[2], wjump[1], wjump[0]);
+    printf("slength[4]=%10d, slength[3]=%10d, slength[2]=%10d, slength[1]=%10d\n", slength[4], slength[3], slength[2], slength[1]);
+    printf("sjump[4]  =%10d, sjump[3]  =%10d, sjump[2]  =%10d, sjump[1]  =%10d, sjump[0]  =%10d\n", sjump[4], sjump[3], sjump[2], sjump[1], sjump[0]);
+    printf("blength[4]=%10d, blength[3]=%10d, blength[2]=%10d, blength[1]=%10d\n", blength[4], blength[3], blength[2], blength[1]);
+    printf("bjump[4]  =%10d, bjump[3]  =%10d, bjump[2]  =%10d, bjump[1]  =%10d, bjump[0]  =%10d\n", bjump[4], bjump[3], bjump[2], bjump[1], bjump[0]);
     printf("ioffset=%d, woffset=%d, countdown=%d\n", ioffset, woffset, countdown);
     printf("\n");
 
@@ -550,11 +571,14 @@ int main()
         w_whichjump = getNextWeight();
         bumpZigZag(w_whichjump);
         genNextOutput(w_whichjump);
-
+        if (getNextScaler(w_whichjump) >= 0)
+            printf("==> s_tptr: %04d\n", *(s_tptr));
+        if (getNextBias(w_whichjump) >= 0)
+            printf("==> b_tptr: %04d\n", *(b_tptr));
     }
     
 
-    printf("\n\nFinal locations: i_tptr=%d, w_tptr=%d\n", *i_tptr, *w_tptr);
+    printf("\n\nFinal locations: i_tptr=%d, w_tptr=%d, s_ptr=%d, b_tptr=%d\n", *i_tptr, *w_tptr, *s_tptr, *b_tptr);
 
     return 0;
 }

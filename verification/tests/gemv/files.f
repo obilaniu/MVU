@@ -30,6 +30,7 @@
 ../../../verilog/controller.v
 ../../../verilog/shiftreg.v
 ../../../verilog/fixedpointscaler.v
+../../../verilog/ram_simple2port.v
 ../../../verilog/mvutop.sv
 ./gemv_tester.sv
 ../../lib/testbench/testbench_top.sv
