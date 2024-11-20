@@ -29,8 +29,8 @@ localparam
 // Registers and wires
 reg     [BCNTDWN-1 : 0]     counter_q;                  // Countdown counter
 reg                         done_q;                     // Done signal
-reg     [2:0]               state;                      // State
-reg     [2:0]               nextstate;                  // Next state
+reg     [2:0]               state = ST_IDLE;            // State
+reg     [2:0]               nextstate = ST_IDLE;        // Next state
 
 
 //
@@ -84,7 +84,7 @@ always @(posedge clk) begin
     if (clr) begin
 
         // Clear registers
-        counter_q = 0;
+        counter_q <= 0;
 
     end else begin
 

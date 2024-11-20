@@ -33,6 +33,7 @@ module testbench_top import utils::*;import testbench_pkg::*; ();
     `APB_ASSIGN ( apb_slave, apb_slave_dv )
     
     MVU_EXT_INTERFACE mvu_ext(clk);
+
     mvutop_wrapper mvutop_wrapper(mvu_ext, apb_slave);
 
     // Select which testbench to run
@@ -51,6 +52,26 @@ module testbench_top import utils::*;import testbench_pkg::*; ();
     initial begin
         logger = new(sim_log_file);
         tb = new(logger, mvu_ext, apb_slave_dv);
+
+        // Initialize intf @ time 0 for memory macros
+        mvu_ext.rst_n = 0;
+        mvu_ext.start = 0;
+        mvu_ext.ic_clr = 0;
+        mvu_ext.shacc_clr = 0;
+        mvu_ext.wrw_addr = 0;
+        mvu_ext.wrw_word = 0;
+        mvu_ext.wrw_en = 0;
+        mvu_ext.rdc_en = 0;
+        mvu_ext.rdc_addr = 0;
+        mvu_ext.wrc_en = 0;
+        mvu_ext.wrc_addr = 0;
+        mvu_ext.wrc_word = 0;
+        mvu_ext.wrs_en = 0;
+        mvu_ext.wrs_addr = 0;
+        mvu_ext.wrs_word = 0;
+        mvu_ext.wrb_en = 0;
+        mvu_ext.wrb_addr = 0;
+        mvu_ext.wrb_word = 0;
 
         tb.tb_setup();
         tb.run();
