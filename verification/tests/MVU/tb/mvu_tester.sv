@@ -11,6 +11,7 @@ module mvu_tester;
     parameter  NMVU    =  1;   /* Number of MVUs. Ideally a Power-of-2. */
     parameter  N       = 64;   /* N x N matrix-vector product size. Power-of-2. */
     parameter  NDBANK  = 32;   /* Number of 2N-bit, 512-element Data BANK. */
+    parameter  BBIAS   = 32;   // Bitwidth of bias values
 
     localparam BWBANKA = 9;             /* Bitwidth of Weights BANK Address */
     localparam BWBANKW = N*N;           /* Bitwidth of Weights BANK Word */
@@ -19,6 +20,11 @@ module mvu_tester;
 
     localparam BACC    = 27;            /* Bitwidth of Accumulators */
     localparam BSCALERB = 16;           /* Bitwidth of multiplier operands to scalers */
+
+    localparam BSBANKA     = 6;             // Bitwidth of Scaler BANK address
+    localparam BSBANKW     = BSCALERB*N;    // Bitwidth of Scaler BANK word
+    localparam BBBANKA     = 6;             // Bitwidth of Scaler BANK address
+    localparam BBBANKW     = BBIAS*N;       // Bitwidth of Scaler BANK word
 
     // Quantizer parameters
     localparam QMSBLOCBD  = $clog2(BACC);   // Bitwidth of the quantizer MSB location specifier
@@ -73,6 +79,20 @@ module mvu_tester;
     reg[     BDBANKA-1 : 0] wrc_addr;
     reg[     BDBANKW-1 : 0] wrc_word;
 
+    // Scaler memory signals
+    reg                rds_en;                 // Scaler memory: read enable
+    reg[BSBANKA-1 : 0] rds_addr;               // Scaler memory: read address
+    reg                wrs_en;                 // Scaler memory: write enable
+    reg[BSBANKA-1 : 0] wrs_addr;               // Scaler memory: write address
+    reg[BSBANKW-1 : 0] wrs_word;               // Scaler memory: write word
+
+// Bias memory signals
+    reg                rdb_en;                 // Bias memory: read enable
+    reg[BBBANKA-1 : 0] rdb_addr;               // Bias memory: read address
+    reg                wrb_en;                 // Bias memory: write enable
+    reg[BBBANKA-1 : 0] wrb_addr;               // Bias memory: write address
+    reg[BBBANKW-1 : 0] wrb_word;               // Bias memory: write word
+
     /* Local Wires */
     wire[        NMVU-1 : 0] ic_send_en;
     wire[NMVU*BDBANKW-1 : 0] ic_send_word;
@@ -120,7 +140,18 @@ module mvu_tester;
                             wrc_en[0],
                             wrc_grnt[0],
                             wrc_addr,
-                            wrc_word);
+                            wrc_word,
+                            rds_en,
+                            rds_addr,
+                            wrs_en,
+                            wrs_addr,   
+                            wrs_word,
+                            rdb_en,
+                            rdb_addr,
+                            wrb_en,
+                            wrb_addr,
+                            wrb_word
+    );
     
 
 

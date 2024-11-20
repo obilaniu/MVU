@@ -111,7 +111,7 @@ generate if(N > 1) begin: multiple
                 recv_addr[i*BADDR +: BADDR] <= 0;
                 recv_from[i*N +: N] <= 0;
                 recv_word[i*W +: W] <= 0;
-            end else if(clk) begin
+            end else begin
                 recv_from[i*N +: N] <= recv_from_c[i];
                 recv_en[i] <= recv_en_c[i];
                 recv_addr[i*BADDR +: BADDR] <= recv_addr_c[i];

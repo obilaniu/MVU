@@ -14,19 +14,19 @@
 `timescale 1ns/1ps
 
  module fixedpointscaler #(
-     BA     = 27,
-     BB     = 16,
-     BC     = 27,
-     BD     = 27,
-     BP     = 48
+     parameter BA     = 27,
+     parameter BB     = 16,
+     parameter BC     = 27,
+     parameter BD     = 27,
+     parameter BP     = 48
  )
  (
      input  wire                                clk,            // clock
      input  wire                                clr,            // clear/reset
-     input  wire    signed      [BA-1 : 0]      a,
+     input  wire    signed      [BA-1 : 0]      a,              // multiplicand
      input  wire    signed      [BB-1 : 0]      b,              // multiplier
-     input  wire    signed      [BC-1 : 0]      c,
-     input  wire    signed      [BD-1 : 0]      d,              // multiplicand
+     input  wire    signed      [BC-1 : 0]      c,              // post-add operand
+     input  wire    signed      [BD-1 : 0]      d,              // pre-add operand
      output wire    signed      [BP-1 : 0]      p               // output product
  );
 

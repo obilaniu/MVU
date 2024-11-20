@@ -1,8 +1,10 @@
 
-class base_tester extends testbench_base;
+`include "testbench_base.sv"
 
-    function new(Logger logger, virtual mvu_interface inf);
-        super.new(logger, inf);
+class base_tester extends mvu_testbench_base;
+
+    function new(Logger logger, virtual MVU_EXT_INTERFACE mvu_ext_if,  virtual APB_DV#(.ADDR_WIDTH(mvu_pkg::APB_ADDR_WIDTH), .DATA_WIDTH(mvu_pkg::APB_DATA_WIDTH))  apb);
+        super.new(logger, mvu_ext_if, apb);
     endfunction
 
     task tb_setup();

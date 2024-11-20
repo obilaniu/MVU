@@ -24,6 +24,7 @@
 ../../../../verilog/controller.v
 ../../../../verilog/shiftreg.v
 ../../../../verilog/fixedpointscaler.v
+../../../../verilog/ram_simple2port.v
 ../../../../verilog/mvutop.sv
 ../../../lib/utils/utils.sv
 ../tb/mvutop_tester.sv

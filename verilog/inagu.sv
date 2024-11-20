@@ -23,7 +23,7 @@ module inagu(
     imsb,
     wmsb,
     sh_out,
-    wagu_on_j,
+    wagu_on_j
 );
 
 // Parameters

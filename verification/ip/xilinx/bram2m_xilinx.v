@@ -1,4 +1,4 @@
-// (c) Copyright 1995-2021 Xilinx, Inc. All rights reserved.
+// (c) Copyright 1995-2022 Xilinx, Inc. All rights reserved.
 // 
 // This file contains confidential and proprietary information
 // of Xilinx, Inc. and is protected under U.S. and
@@ -87,8 +87,8 @@ input wire [8 : 0] addrb;
 output wire [4095 : 0] doutb;
 
   blk_mem_gen_v8_4_4 #(
-    .C_FAMILY("kintexu"),
-    .C_XDEVICEFAMILY("kintexu"),
+    .C_FAMILY("virtexuplus"),
+    .C_XDEVICEFAMILY("virtexuplus"),
     .C_ELABORATION_DIR("./"),
     .C_INTERFACE_TYPE(0),
     .C_AXI_TYPE(1),
@@ -161,7 +161,7 @@ output wire [4095 : 0] doutb;
     .C_DISABLE_WARN_BHV_RANGE(0),
     .C_COUNT_36K_BRAM("57"),
     .C_COUNT_18K_BRAM("0"),
-    .C_EST_POWER_SUMMARY("Estimated Power for IP     :     277.382912 mW")
+    .C_EST_POWER_SUMMARY("Estimated Power for IP     :     148.935104 mW")
   ) inst (
     .clka(clka),
     .rsta(1'D0),

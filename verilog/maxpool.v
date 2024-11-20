@@ -20,17 +20,17 @@ output reg  signed[N-1 : 0] O = 0;
 /* Logic */
 always @(posedge clk) begin
     if(max_clr) begin
-        O <= 0;
-    end else if(clk) begin
-        if(max_pool) begin
-            if(I>O) begin
-                O <= I;/* O = max(O,I) */
-            end else begin
-                O <= I;    /* Plain set */
-            end
+        O = 0;
+    end 
+    if(max_pool) begin
+        /* O = max(O,I) */
+        if(I>O) begin
+            O = I;
         end else begin
-            O <= I;
+            O = O;
         end
+    end else begin
+        O = I; /* Plain set */
     end
 end
 

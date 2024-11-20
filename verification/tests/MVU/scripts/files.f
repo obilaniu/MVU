@@ -14,5 +14,6 @@
 ../../../../verilog/vvp.v
 ../../../../verilog/quantser.v
 ../../../../verilog/fixedpointscaler.v
+../../../../verilog/ram_simple2port.v
 ../../../lib/utils/utils.sv
 ../tb/mvu_tester.sv
